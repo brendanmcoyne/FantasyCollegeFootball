@@ -53,6 +53,10 @@ function App() {
                         element={<JoinLeague />}
                     />
                     <Route
+                        path="/league/:leagueId/draft"
+                        element={<Draft />}
+                    />
+                    <Route
                         path="/league/:leagueId"
                         element={<League />}
                     />

@@ -81,3 +81,40 @@ on public.leagues
 for select
 to authenticated
 using (true);
+
+create policy "League members can view draft picks"
+on public.draft_picks
+for select
+to authenticated
+using (
+    public.is_league_member(league_id)
+);
+
+create policy "League members can make draft picks"
+on public.draft_picks
+for insert
+to authenticated
+with check (
+    public.is_league_member(league_id)
+);
+
+create policy "League members can view draft order"
+on public.draft_order
+for select
+to authenticated
+using (
+    public.is_league_member(league_id)
+);
+
+create policy "Commissioners can create draft order"
+on public.draft_order
+for insert
+to authenticated
+with check (
+    exists (
+        select 1
+        from public.leagues
+        where leagues.id = draft_order.league_id
+        and leagues.commissioner_id = auth.uid()
+    )
+);

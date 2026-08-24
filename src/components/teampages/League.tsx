@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { Link } from 'react-router-dom'
 
 interface LeagueData {
     id: string
@@ -97,6 +98,10 @@ export default function League() {
                     ))}
                 </ul>
             )}
+
+            <Link to={`/league/${league.id}/draft`}>
+                Open Draft Room
+            </Link>
         </div>
     )
 }
