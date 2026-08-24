@@ -149,6 +149,10 @@ export default function League() {
                 </ul>
             )}
 
+            <Link to={`/league/${league.id}/team`}>
+                My Team
+            </Link>
+
             <p>
                 Draft Status: <strong>{league.draft_status}</strong>
             </p>

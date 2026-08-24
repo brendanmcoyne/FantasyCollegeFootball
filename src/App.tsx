@@ -16,50 +16,16 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route
-                    path="/login"
-                    element={<Login />}
-                />
+                <Route path="/login" element={<Login />}/>
 
-                <Route
-                    element={
-                        <ProtectedRoute>
-                            <Layout />
-                        </ProtectedRoute>
-                    }
-                >
-                    <Route
-                        path="/"
-                        element={<Home />}
-                    />
-                    <Route
-                        path="/"
-                        element={<Draft />}
-                    />
-                    <Route
-                        path="/units"
-                        element={<Units />}
-                    />
-                    <Route
-                        path="/team"
-                        element={<MyTeam />}
-                    />
-                    <Route
-                        path="/create-league"
-                        element={<CreateLeague />}
-                    />
-                    <Route
-                        path="/join-league"
-                        element={<JoinLeague />}
-                    />
-                    <Route
-                        path="/league/:leagueId/draft"
-                        element={<Draft />}
-                    />
-                    <Route
-                        path="/league/:leagueId"
-                        element={<League />}
-                    />
+                <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/units" element={<Units />} />
+                    <Route path="/league/:leagueId/team" element={<MyTeam />} />
+                    <Route path="/create-league" element={<CreateLeague />} />
+                    <Route path="/join-league" element={<JoinLeague />} />
+                    <Route path="/league/:leagueId/draft" element={<Draft />} />
+                    <Route path="/league/:leagueId" element={<League />} />
                 </Route>
             </Routes>
         </BrowserRouter>

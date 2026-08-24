@@ -20,10 +20,6 @@ export default function Nav() {
                 League
             </NavLink>
 
-            <NavLink to="/team">
-                My Team
-            </NavLink>
-
             <NavLink to="/units">
                 Units
             </NavLink>

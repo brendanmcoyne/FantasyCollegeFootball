@@ -26,6 +26,7 @@ interface LeagueData {
     id: string
     draft_status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
     current_pick_number: number
+    current_turn_number: number
 }
 
 interface DraftOrder {
@@ -42,6 +43,7 @@ const STARTERS = {
 } as const
 
 const BENCH = 3
+const ROSTER_SIZE = 16
 
 export default function Draft() {
     const { leagueId } = useParams()
@@ -86,7 +88,7 @@ export default function Draft() {
                     error: leagueError,
                 } = await supabase
                     .from('leagues')
-                    .select('id, draft_status, current_pick_number')
+                    .select('id, draft_status, current_pick_number, current_turn_number')
                     .eq('id', leagueId)
                     .single()
 
@@ -155,34 +157,91 @@ export default function Draft() {
     }
 
     const memberCount = order.length
-    const round = Math.floor((league.current_pick_number - 1) / memberCount)
-    const positionInRound = (league.current_pick_number - 1) % memberCount
 
-    const draftIndex =
-        round % 2 === 0
-            ? positionInRound
-            : memberCount - 1 - positionInRound
+    const nextTurn = getNextEligibleDrafter(
+        league.current_turn_number
+    )
 
-    const currentDrafter = order[draftIndex]
+    if (!nextTurn) {
+        return <p>Draft complete!</p>
+    }
+
+    const currentDrafter = nextTurn.drafter
+    const actualTurnNumber = nextTurn.turn
+
+    const round = Math.floor(
+        (actualTurnNumber - 1) / memberCount
+    )
 
     const myTurn =
-        currentDrafter?.league_member_id === member.id
+        currentDrafter.league_member_id === member.id
 
     const countRoster = rosterCounts()
 
     const benchUsed =
         Object.entries(countRoster).reduce(
             (total, [type, count]) => {
-                const starterLimit =
-                    STARTERS[type as keyof typeof STARTERS]
-
-                return total + Math.max(
-                    0,
-                    count - starterLimit
-                )
+                const starterLimit = STARTERS[type as keyof typeof STARTERS]
+                return total + Math.max(0, count - starterLimit)
             },
             0
         )
+
+    function getMemberPickCount(memberId: string) {
+        return draftPicks.filter(
+            (pick) => pick.league_member_id === memberId
+        ).length
+    }
+
+    function isMemberRosterFull(memberId: string) {
+        return getMemberPickCount(memberId) >= ROSTER_SIZE
+    }
+
+    function getDrafterForTurn(turnNumber: number) {
+        const memberCount = order.length
+
+        const round = Math.floor(
+            (turnNumber - 1) / memberCount
+        )
+
+        const positionInRound =
+            (turnNumber - 1) % memberCount
+
+        const draftIndex =
+            round % 2 === 0
+                ? positionInRound
+                : memberCount - 1 - positionInRound
+
+        return order[draftIndex]
+    }
+
+    function getNextEligibleDrafter(startingTurn: number) {
+        let turn = startingTurn
+
+        const allRostersFull = order.every((entry) =>
+            isMemberRosterFull(entry.league_member_id)
+        )
+
+        if (allRostersFull) {
+            return null
+        }
+
+        while (true) {
+            const drafter = getDrafterForTurn(turn)
+
+            if (
+                drafter &&
+                !isMemberRosterFull(drafter.league_member_id)
+            ) {
+                return {
+                    drafter,
+                    turn,
+                }
+            }
+
+            turn++
+        }
+    }
 
     async function draftUnit(unit: DraftUnit) {
         if (!leagueId || !member || !league) {
@@ -196,8 +255,7 @@ export default function Draft() {
 
         setError('')
 
-        const { error: draftError } = await supabase.rpc(
-            'make_draft_pick',
+        const { error: draftError } = await supabase.rpc('make_draft_pick',
             {
                 target_league_id: leagueId,
                 target_league_member_id: member.id,
@@ -228,13 +286,28 @@ export default function Draft() {
         }
 
         setDraftPicks(picks ?? [])
-        setLeague({...league, current_pick_number: league.current_pick_number + 1})
+
+        const {
+            data: updatedLeague,
+            error: leagueError,
+        } = await supabase
+            .from('leagues')
+            .select(
+                'id, draft_status, current_pick_number, current_turn_number'
+            )
+            .eq('id', leagueId)
+            .single()
+
+        if (leagueError) {
+            setError(leagueError.message)
+            return
+        }
+
+        setLeague(updatedLeague)
     }
 
     function rosterCounts() {
-        const myPicks = draftPicks.filter(
-            (pick) => pick.league_member_id === member?.id
-        )
+        const myPicks = draftPicks.filter((pick) => pick.league_member_id === member?.id)
 
         const counts = {
             PASSING: 0,
@@ -246,9 +319,7 @@ export default function Draft() {
 
         for (const pick of myPicks) {
             if (pick.unit_type in counts) {
-                counts[
-                    pick.unit_type as keyof typeof counts
-                    ]++
+                counts[pick.unit_type as keyof typeof counts]++
             }
         }
 
@@ -268,8 +339,7 @@ export default function Draft() {
         const benchUsed =
             Object.entries(counts).reduce(
                 (total, [type, count]) => {
-                    const starterLimit =
-                        STARTERS[type as keyof typeof STARTERS]
+                    const starterLimit = STARTERS[type as keyof typeof STARTERS]
 
                     return total + Math.max(0, count - starterLimit)
                 },
@@ -293,24 +363,20 @@ export default function Draft() {
 
             {error && <p>{error}</p>}
 
-            <p>
-                Draft Status:{' '}
-                <strong>{league.draft_status}</strong>
-            </p>
+            <p>Draft Status:{' '}<strong>{league.draft_status}</strong></p>
+            <p>Round {round + 1}</p>
+            <p>Pick #{league.current_pick_number}</p>
+            <p>Snake Turn #{actualTurnNumber}</p>
 
-            <p>
-                Round {round + 1}
-            </p>
-
-            <p>
-                Pick #{league.current_pick_number}
-            </p>
-
-            <p>
-                {myTurn
-                    ? 'Your turn!'
-                    : 'Waiting for another team...'}
-            </p>
+            <div>
+                <h2>Your Roster</h2>
+                <p>Passing: {countRoster.PASSING} / 3</p>
+                <p>Rushing: {countRoster.RUSHING} / 3</p>
+                <p>Receiving: {countRoster.RECEIVING} / 3</p>
+                <p>Defense: {countRoster.DEFENSE} / 2</p>
+                <p>Special Teams: {countRoster.SPECIAL_TEAMS} / 2</p>
+                <p>Bench: {benchUsed} / 3</p>
+            </div>
 
             <div>
                 {units.map((unit) => {
@@ -336,35 +402,6 @@ export default function Draft() {
                     )
                 })}
             </div>
-
-            <div>
-                <h2>Your Roster</h2>
-
-                <p>
-                    Passing: {countRoster.PASSING} / 3
-                </p>
-
-                <p>
-                    Rushing: {countRoster.RUSHING} / 3
-                </p>
-
-                <p>
-                    Receiving: {countRoster.RECEIVING} / 3
-                </p>
-
-                <p>
-                    Defense: {countRoster.DEFENSE} / 2
-                </p>
-
-                <p>
-                    Special Teams: {countRoster.SPECIAL_TEAMS} / 2
-                </p>
-
-                <p>
-                    Bench: {benchUsed} / 3
-                </p>
-            </div>
-
         </div>
     )
 }
