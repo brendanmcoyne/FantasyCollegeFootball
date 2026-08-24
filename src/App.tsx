@@ -10,6 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Home from './components/teampages/Home'
 import MyTeam from './components/teampages/MyTeam'
 import Login from './components/teampages/Login'
+import CreateLeague from './components/teampages/CreateLeague'
 
 function App() {
     return (
@@ -35,6 +36,10 @@ function App() {
                     <Route
                         path="/team"
                         element={<MyTeam />}
+                    />
+                    <Route
+                        path="/create-league"
+                        element={<CreateLeague />}
                     />
                 </Route>
             </Routes>
