@@ -1,8 +1,4 @@
-import {
-    BrowserRouter,
-    Route,
-    Routes,
-} from 'react-router-dom'
+import {BrowserRouter, Route, Routes} from 'react-router-dom'
 
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -10,7 +6,11 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Home from './components/teampages/Home'
 import MyTeam from './components/teampages/MyTeam'
 import Login from './components/teampages/Login'
+import Draft from './components/teampages/Draft'
+import Units from './components/teampages/Units'
 import CreateLeague from './components/teampages/CreateLeague'
+import JoinLeague from './components/teampages/JoinLeague'
+import League from './components/teampages/League'
 
 function App() {
     return (
@@ -32,7 +32,14 @@ function App() {
                         path="/"
                         element={<Home />}
                     />
-
+                    <Route
+                        path="/"
+                        element={<Draft />}
+                    />
+                    <Route
+                        path="/units"
+                        element={<Units />}
+                    />
                     <Route
                         path="/team"
                         element={<MyTeam />}
@@ -40,6 +47,14 @@ function App() {
                     <Route
                         path="/create-league"
                         element={<CreateLeague />}
+                    />
+                    <Route
+                        path="/join-league"
+                        element={<JoinLeague />}
+                    />
+                    <Route
+                        path="/league/:leagueId"
+                        element={<League />}
                     />
                 </Route>
             </Routes>

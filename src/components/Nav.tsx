@@ -1,21 +1,44 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../components/Auth'
 
 export default function Nav() {
+    const { user, signOut } = useAuth()
+    const navigate = useNavigate()
+
+    async function handleSignOut() {
+        await signOut()
+        navigate('/login')
+    }
+
     return (
         <nav>
-            <div>
-                <NavLink to="/">
-                    Fantasy College Football
-                </NavLink>
-            </div>
+            <NavLink to="/">
+                Fantasy College Football
+            </NavLink>
 
-            <div>
-                <NavLink to="/">League</NavLink>
-                <NavLink to="/team">My Team</NavLink>
-                <NavLink to="/draft">Draft</NavLink>
-                <NavLink to="/players">Units</NavLink>
-                <NavLink to="/standings">Standings</NavLink>
-            </div>
+            <NavLink to="/">
+                League
+            </NavLink>
+
+            <NavLink to="/team">
+                My Team
+            </NavLink>
+
+            <NavLink to="/units">
+                Units
+            </NavLink>
+
+            {user && (
+                <>
+                    <span>
+                        {user.user_metadata?.full_name ?? user.email}
+                    </span>
+
+                    <button onClick={handleSignOut}>
+                        Sign Out
+                    </button>
+                </>
+            )}
         </nav>
     )
 }
