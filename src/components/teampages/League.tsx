@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Link } from 'react-router-dom'
+import { useAuth } from '../Auth'
 
 interface LeagueData {
     id: string
     name: string
     join_code: string
     commissioner_id: string
+    draft_status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
+    current_pick_number: number
 }
 
 interface LeagueMember {
@@ -19,6 +21,7 @@ interface LeagueMember {
 
 export default function League() {
     const { leagueId } = useParams()
+    const { user } = useAuth()
 
     const [league, setLeague] = useState<LeagueData | null>(null)
     const [members, setMembers] = useState<LeagueMember[]>([])
@@ -35,7 +38,9 @@ export default function League() {
 
             const { data: leagueData, error: leagueError } = await supabase
                 .from('leagues')
-                .select('id, name, join_code, commissioner_id')
+                .select(
+                    'id, name, join_code, commissioner_id, draft_status, current_pick_number'
+                )
                 .eq('id', leagueId)
                 .single()
 
@@ -77,6 +82,51 @@ export default function League() {
         return <p>League not found.</p>
     }
 
+    const isCommissioner =
+        user?.id === league.commissioner_id
+
+    async function handleStartDraft() {
+        if (!league || !isCommissioner) {
+            return
+        }
+
+        setError('')
+
+        const draftOrderRows = members.map((member, index) => ({
+            league_id: league.id,
+            league_member_id: member.id,
+            draft_position: index + 1,
+        }))
+
+        const { error: draftOrderError } = await supabase
+            .from('draft_order')
+            .insert(draftOrderRows)
+
+        if (draftOrderError) {
+            setError(draftOrderError.message)
+            return
+        }
+
+        const { error: leagueUpdateError } = await supabase
+            .from('leagues')
+            .update({
+                draft_status: 'IN_PROGRESS',
+                current_pick_number: 1,
+            })
+            .eq('id', league.id)
+
+        if (leagueUpdateError) {
+            setError(leagueUpdateError.message)
+            return
+        }
+
+        setLeague({
+            ...league,
+            draft_status: 'IN_PROGRESS',
+            current_pick_number: 1,
+        })
+    }
+
     return (
         <div>
             <h1>{league.name}</h1>
@@ -99,9 +149,22 @@ export default function League() {
                 </ul>
             )}
 
-            <Link to={`/league/${league.id}/draft`}>
-                Open Draft Room
-            </Link>
+            <p>
+                Draft Status: <strong>{league.draft_status}</strong>
+            </p>
+
+            {isCommissioner &&
+                league.draft_status === 'NOT_STARTED' && (
+                    <button onClick={handleStartDraft}>
+                        Start Draft
+                    </button>
+                )}
+
+            <div>
+                <Link to={`/league/${league.id}/draft`}>
+                    Open Draft Room
+                </Link>
+            </div>
         </div>
     )
 }
