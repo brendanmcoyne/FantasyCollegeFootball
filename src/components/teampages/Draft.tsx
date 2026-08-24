@@ -16,9 +16,32 @@ interface LeagueMember {
 
 interface DraftPick {
     id: string
+    league_member_id: string
     college_team_id: number
     unit_type: string
+    pick_number: number
 }
+
+interface LeagueData {
+    id: string
+    draft_status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
+    current_pick_number: number
+}
+
+interface DraftOrder {
+    league_member_id: string
+    draft_position: number
+}
+
+const STARTERS = {
+    PASSING: 3,
+    RUSHING: 3,
+    RECEIVING: 3,
+    DEFENSE: 2,
+    SPECIAL_TEAMS: 2,
+} as const
+
+const BENCH = 3
 
 export default function Draft() {
     const { leagueId } = useParams()
@@ -27,6 +50,8 @@ export default function Draft() {
     const [units, setUnits] = useState<DraftUnit[]>([])
     const [member, setMember] = useState<LeagueMember | null>(null)
     const [draftPicks, setDraftPicks] = useState<DraftPick[]>([])
+    const [league, setLeague] = useState<LeagueData | null>(null)
+    const [order, setOrder] = useState<DraftOrder[]>([])
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -43,10 +68,7 @@ export default function Draft() {
                 const teams = await getTeams()
                 setUnits(createDraftUnits(teams))
 
-                const {
-                    data: membership,
-                    error: membershipError,
-                } = await supabase
+                const {data: membership, error: membershipError} = await supabase
                     .from('league_members')
                     .select('id, user_id, team_name')
                     .eq('league_id', leagueId)
@@ -60,15 +82,41 @@ export default function Draft() {
                 setMember(membership)
 
                 const {
-                    data: picks,
-                    error: picksError,
+                    data: leagueData,
+                    error: leagueError,
                 } = await supabase
-                    .from('draft_picks')
-                    .select('id, college_team_id, unit_type')
+                    .from('leagues')
+                    .select('id, draft_status, current_pick_number')
+                    .eq('id', leagueId)
+                    .single()
+
+                if (leagueError) {
+                    throw leagueError
+                }
+
+                setLeague(leagueData)
+
+                const {data: orderData, error: orderError,} = await supabase
+                    .from('draft_order')
+                    .select('league_member_id, draft_position')
                     .eq('league_id', leagueId)
+                    .order('draft_position', {ascending: true})
+
+                if (orderError) {
+                    throw orderError
+                }
+
+                setOrder(orderData ?? [])
+
+                const { data: picks, error: picksError } = await supabase
+                    .from('draft_picks')
+                    .select('id, league_member_id, college_team_id, unit_type, pick_number')
+                    .eq('league_id', leagueId)
+                    .order('pick_number', { ascending: true })
 
                 if (picksError) {
-                    throw picksError
+                    setError(picksError.message)
+                    return
                 }
 
                 setDraftPicks(picks ?? [])
@@ -86,38 +134,149 @@ export default function Draft() {
         loadDraft()
     }, [leagueId, user])
 
+    if (loading) {
+        return <p>Loading draft...</p>
+    }
+
+    if (error && !member) {
+        return <p>{error}</p>
+    }
+
+    if (!league || !member) {
+        return <p>Draft unavailable.</p>
+    }
+
+    if (league.draft_status === 'NOT_STARTED') {
+        return <p>The draft has not started yet.</p>
+    }
+
+    if (order.length === 0) {
+        return <p>Draft order has not been created.</p>
+    }
+
+    const memberCount = order.length
+    const round = Math.floor((league.current_pick_number - 1) / memberCount)
+    const positionInRound = (league.current_pick_number - 1) % memberCount
+
+    const draftIndex =
+        round % 2 === 0
+            ? positionInRound
+            : memberCount - 1 - positionInRound
+
+    const currentDrafter = order[draftIndex]
+
+    const myTurn =
+        currentDrafter?.league_member_id === member.id
+
+    const countRoster = rosterCounts()
+
+    const benchUsed =
+        Object.entries(countRoster).reduce(
+            (total, [type, count]) => {
+                const starterLimit =
+                    STARTERS[type as keyof typeof STARTERS]
+
+                return total + Math.max(
+                    0,
+                    count - starterLimit
+                )
+            },
+            0
+        )
+
     async function draftUnit(unit: DraftUnit) {
-        if (!leagueId || !member) {
+        if (!leagueId || !member || !league) {
+            return
+        }
+
+        if (!myTurn) {
+            setError('It is not your turn.')
             return
         }
 
         setError('')
 
-        const { data, error } = await supabase
-            .from('draft_picks')
-            .insert({
-                league_id: leagueId,
-                league_member_id: member.id,
-                college_team_id: unit.teamId,
-                unit_type: unit.unitType,
-            })
-            .select()
-            .single()
+        const { error: draftError } = await supabase.rpc(
+            'make_draft_pick',
+            {
+                target_league_id: leagueId,
+                target_league_member_id: member.id,
+                target_college_team_id: unit.teamId,
+                target_unit_type: unit.unitType,
+            }
+        )
 
-        if (error) {
-            if (error.code === '23505') {
+        if (draftError) {
+            if (draftError.code === '23505') {
                 setError('That unit has already been drafted.')
             } else {
-                setError(error.message)
+                setError(draftError.message)
             }
 
             return
         }
 
-        setDraftPicks((current) => [
-            ...current,
-            data,
-        ])
+        const { data: picks, error: picksError } = await supabase
+            .from('draft_picks')
+            .select('id, league_member_id, college_team_id, unit_type, pick_number')
+            .eq('league_id', leagueId)
+            .order('pick_number', { ascending: true })
+
+        if (picksError) {
+            setError(picksError.message)
+            return
+        }
+
+        setDraftPicks(picks ?? [])
+        setLeague({...league, current_pick_number: league.current_pick_number + 1})
+    }
+
+    function rosterCounts() {
+        const myPicks = draftPicks.filter(
+            (pick) => pick.league_member_id === member?.id
+        )
+
+        const counts = {
+            PASSING: 0,
+            RUSHING: 0,
+            RECEIVING: 0,
+            DEFENSE: 0,
+            SPECIAL_TEAMS: 0,
+        }
+
+        for (const pick of myPicks) {
+            if (pick.unit_type in counts) {
+                counts[
+                    pick.unit_type as keyof typeof counts
+                    ]++
+            }
+        }
+
+        return counts
+    }
+
+    function canDraftUnitType(unitType: DraftUnit['unitType']) {
+        const counts = rosterCounts()
+
+        const starterLimit = STARTERS[unitType]
+        const currentCount = counts[unitType]
+
+        if (currentCount < starterLimit) {
+            return true
+        }
+
+        const benchUsed =
+            Object.entries(counts).reduce(
+                (total, [type, count]) => {
+                    const starterLimit =
+                        STARTERS[type as keyof typeof STARTERS]
+
+                    return total + Math.max(0, count - starterLimit)
+                },
+                0
+            )
+
+        return benchUsed < BENCH
     }
 
     function isDrafted(unit: DraftUnit) {
@@ -128,23 +287,36 @@ export default function Draft() {
         )
     }
 
-    if (loading) {
-        return <p>Loading draft...</p>
-    }
-
-    if (error && !member) {
-        return <p>{error}</p>
-    }
-
     return (
         <div>
             <h1>Draft Room</h1>
 
             {error && <p>{error}</p>}
 
+            <p>
+                Draft Status:{' '}
+                <strong>{league.draft_status}</strong>
+            </p>
+
+            <p>
+                Round {round + 1}
+            </p>
+
+            <p>
+                Pick #{league.current_pick_number}
+            </p>
+
+            <p>
+                {myTurn
+                    ? 'Your turn!'
+                    : 'Waiting for another team...'}
+            </p>
+
             <div>
                 {units.map((unit) => {
                     const drafted = isDrafted(unit)
+
+                    const eligible = canDraftUnitType(unit.unitType)
 
                     return (
                         <div key={unit.id}>
@@ -155,15 +327,44 @@ export default function Draft() {
                             {' '}
 
                             <button
-                                disabled={drafted}
+                                disabled={drafted || !myTurn || !eligible}
                                 onClick={() => draftUnit(unit)}
                             >
-                                {drafted ? 'Drafted' : 'Draft'}
+                                {drafted ? 'Drafted' : !eligible ? 'Roster Full' : myTurn ? 'Draft' : 'Waiting'}
                             </button>
                         </div>
                     )
                 })}
             </div>
+
+            <div>
+                <h2>Your Roster</h2>
+
+                <p>
+                    Passing: {countRoster.PASSING} / 3
+                </p>
+
+                <p>
+                    Rushing: {countRoster.RUSHING} / 3
+                </p>
+
+                <p>
+                    Receiving: {countRoster.RECEIVING} / 3
+                </p>
+
+                <p>
+                    Defense: {countRoster.DEFENSE} / 2
+                </p>
+
+                <p>
+                    Special Teams: {countRoster.SPECIAL_TEAMS} / 2
+                </p>
+
+                <p>
+                    Bench: {benchUsed} / 3
+                </p>
+            </div>
+
         </div>
     )
 }
