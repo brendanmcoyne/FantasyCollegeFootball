@@ -25,6 +25,7 @@ function App() {
                     <Route path="/create-league" element={<CreateLeague />} />
                     <Route path="/join-league" element={<JoinLeague />} />
                     <Route path="/league/:leagueId/draft" element={<Draft />} />
+
                     <Route path="/league/:leagueId" element={<League />} />
                 </Route>
             </Routes>

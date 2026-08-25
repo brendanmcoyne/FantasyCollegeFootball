@@ -5,13 +5,12 @@ import { getTeams } from '../../api/cfbApi'
 import { createDraftUnits } from '../../utils/Units'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
+import { STARTERS, BENCH, ROSTER_SIZE } from '../../rosters'
 
 import type { DraftUnit } from '../../types/fantasy'
 
 interface LeagueMember {
     id: string
-    user_id: string
-    team_name: string
 }
 
 interface DraftPick {
@@ -33,17 +32,6 @@ interface DraftOrder {
     league_member_id: string
     draft_position: number
 }
-
-const STARTERS = {
-    PASSING: 3,
-    RUSHING: 3,
-    RECEIVING: 3,
-    DEFENSE: 2,
-    SPECIAL_TEAMS: 2,
-} as const
-
-const BENCH = 3
-const ROSTER_SIZE = 16
 
 export default function Draft() {
     const { leagueId } = useParams()
@@ -70,9 +58,9 @@ export default function Draft() {
                 const teams = await getTeams()
                 setUnits(createDraftUnits(teams))
 
-                const {data: membership, error: membershipError} = await supabase
+                const { data: membership, error: membershipError } = await supabase
                     .from('league_members')
-                    .select('id, user_id, team_name')
+                    .select('id')
                     .eq('league_id', leagueId)
                     .eq('user_id', user.id)
                     .single()
@@ -83,10 +71,7 @@ export default function Draft() {
 
                 setMember(membership)
 
-                const {
-                    data: leagueData,
-                    error: leagueError,
-                } = await supabase
+                const { data: leagueData, error: leagueError } = await supabase
                     .from('leagues')
                     .select('id, draft_status, current_pick_number, current_turn_number')
                     .eq('id', leagueId)
@@ -157,10 +142,7 @@ export default function Draft() {
     }
 
     const memberCount = order.length
-
-    const nextTurn = getNextEligibleDrafter(
-        league.current_turn_number
-    )
+    const nextTurn = getNextEligibleDrafter(league.current_turn_number)
 
     if (!nextTurn) {
         return <p>Draft complete!</p>
@@ -199,13 +181,8 @@ export default function Draft() {
 
     function getDrafterForTurn(turnNumber: number) {
         const memberCount = order.length
-
-        const round = Math.floor(
-            (turnNumber - 1) / memberCount
-        )
-
-        const positionInRound =
-            (turnNumber - 1) % memberCount
+        const round = Math.floor((turnNumber - 1) / memberCount)
+        const positionInRound = (turnNumber - 1) % memberCount
 
         const draftIndex =
             round % 2 === 0
@@ -218,9 +195,7 @@ export default function Draft() {
     function getNextEligibleDrafter(startingTurn: number) {
         let turn = startingTurn
 
-        const allRostersFull = order.every((entry) =>
-            isMemberRosterFull(entry.league_member_id)
-        )
+        const allRostersFull = order.every((entry) => isMemberRosterFull(entry.league_member_id))
 
         if (allRostersFull) {
             return null
@@ -229,17 +204,11 @@ export default function Draft() {
         while (true) {
             const drafter = getDrafterForTurn(turn)
 
-            if (
-                drafter &&
-                !isMemberRosterFull(drafter.league_member_id)
-            ) {
-                return {
-                    drafter,
-                    turn,
-                }
+            if (drafter && !isMemberRosterFull(drafter.league_member_id)) {
+                return {drafter, turn}
             }
 
-            turn++
+            turn = turn + 1
         }
     }
 
@@ -287,14 +256,9 @@ export default function Draft() {
 
         setDraftPicks(picks ?? [])
 
-        const {
-            data: updatedLeague,
-            error: leagueError,
-        } = await supabase
+        const {data: updatedLeague, error: leagueError,} = await supabase
             .from('leagues')
-            .select(
-                'id, draft_status, current_pick_number, current_turn_number'
-            )
+            .select('id, draft_status, current_pick_number, current_turn_number')
             .eq('id', leagueId)
             .single()
 
@@ -340,7 +304,6 @@ export default function Draft() {
             Object.entries(counts).reduce(
                 (total, [type, count]) => {
                     const starterLimit = STARTERS[type as keyof typeof STARTERS]
-
                     return total + Math.max(0, count - starterLimit)
                 },
                 0
@@ -366,7 +329,6 @@ export default function Draft() {
             <p>Draft Status:{' '}<strong>{league.draft_status}</strong></p>
             <p>Round {round + 1}</p>
             <p>Pick #{league.current_pick_number}</p>
-            <p>Snake Turn #{actualTurnNumber}</p>
 
             <div>
                 <h2>Your Roster</h2>
@@ -381,21 +343,13 @@ export default function Draft() {
             <div>
                 {units.map((unit) => {
                     const drafted = isDrafted(unit)
-
                     const eligible = canDraftUnitType(unit.unitType)
 
                     return (
                         <div key={unit.id}>
-                            <strong>
-                                {unit.teamName} {unit.unitType}
-                            </strong>
+                            <strong>{unit.teamName} {unit.unitType}</strong>{' '}
 
-                            {' '}
-
-                            <button
-                                disabled={drafted || !myTurn || !eligible}
-                                onClick={() => draftUnit(unit)}
-                            >
+                            <button disabled={drafted || !myTurn || !eligible} onClick={() => draftUnit(unit)}>
                                 {drafted ? 'Drafted' : !eligible ? 'Roster Full' : myTurn ? 'Draft' : 'Waiting'}
                             </button>
                         </div>

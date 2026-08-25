@@ -11,18 +11,19 @@ create table leagues (
     name text not null,
     join_code text unique not null,
     commissioner_id uuid not null references profiles(id) on delete cascade,
-    created_at timestamptz default now()
+    created_at timestamptz default now(),
 
     draft_status text not null default 'NOT_STARTED'
-    check (
-        draft_status in (
-            'NOT_STARTED',
-            'IN_PROGRESS',
-            'COMPLETED'
-        )
-    ),
+        check (
+            draft_status in (
+                'NOT_STARTED',
+                'IN_PROGRESS',
+                'COMPLETED'
+            )
+        ),
 
     current_pick_number integer not null default 1,
+    current_turn_number integer not null default 1
 );
 
 create table league_members (
@@ -47,16 +48,17 @@ create table public.draft_picks (
         on delete cascade,
 
     college_team_id integer not null,
-        unit_type text not null
-            check (
-                unit_type in (
-                    'PASSING',
-                    'RUSHING',
-                    'RECEIVING',
-                    'DEFENSE',
-                    'SPECIAL_TEAMS'
-                )
-            ),
+
+    unit_type text not null
+        check (
+            unit_type in (
+                'PASSING',
+                'RUSHING',
+                'RECEIVING',
+                'DEFENSE',
+                'SPECIAL_TEAMS'
+            )
+        ),
 
     pick_number integer,
     created_at timestamptz default now(),
@@ -83,4 +85,53 @@ create table public.draft_order (
 
     unique (league_id, league_member_id),
     unique (league_id, draft_position)
+);
+
+create table public.roster_units (
+    id uuid primary key default gen_random_uuid(),
+
+    league_id uuid not null
+        references public.leagues(id)
+        on delete cascade,
+
+    league_member_id uuid not null
+        references public.league_members(id)
+        on delete cascade,
+
+    college_team_id integer not null,
+
+    unit_type text not null
+        check (
+            unit_type in (
+                'PASSING',
+                'RUSHING',
+                'RECEIVING',
+                'DEFENSE',
+                'SPECIAL_TEAMS'
+            )
+        ),
+
+    roster_slot text not null default 'STARTER'
+        check (
+            roster_slot in (
+                'STARTER',
+                'BENCH'
+            )
+        ),
+
+    acquired_via text not null
+        check (
+            acquired_via in (
+                'DRAFT',
+                'FREE_AGENCY'
+            )
+        ),
+
+    acquired_at timestamptz not null default now(),
+
+    unique (
+        league_id,
+        college_team_id,
+        unit_type
+    )
 );
