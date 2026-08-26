@@ -9,27 +9,51 @@ export interface ScheduledMatchup {
     team2Id: string
 }
 
+const REGULAR_SEASON_WEEKS = 10
+
 export function createRegularSeasonSchedule(
     teams: ScheduleTeam[]
 ): ScheduledMatchup[] {
-    if (teams.length !== 6) {
+    if (teams.length < 2) {
         throw new Error(
-            'The regular-season schedule currently requires exactly 6 teams.'
+            'A league must have at least 2 teams.'
+        )
+    }
+
+    if (teams.length % 2 !== 0) {
+        throw new Error(
+            'A league must have an even number of teams.'
         )
     }
 
     const ids = teams.map((team) => team.id)
 
-    const firstHalf: ScheduledMatchup[] = []
+    const matchups: ScheduledMatchup[] = []
 
     let rotation = [...ids]
 
-    for (let week = 1; week <= 5; week++) {
-        for (let i = 0; i < 3; i++) {
-            firstHalf.push({
+    for (let week = 1; week <= REGULAR_SEASON_WEEKS; week++) {
+        const roundNumber = week - 1
+
+        const cycleNumber = Math.floor(
+            roundNumber / (teams.length - 1)
+        )
+
+        for (let i = 0; i < teams.length / 2; i++) {
+            const team1 = rotation[i]
+            const team2 =
+                rotation[rotation.length - 1 - i]
+
+            matchups.push({
                 week,
-                team1Id: rotation[i],
-                team2Id: rotation[5 - i],
+                team1Id:
+                    cycleNumber % 2 === 0
+                        ? team1
+                        : team2,
+                team2Id:
+                    cycleNumber % 2 === 0
+                        ? team2
+                        : team1,
             })
         }
 
@@ -44,13 +68,5 @@ export function createRegularSeasonSchedule(
         ]
     }
 
-    const secondHalf = firstHalf.map(
-        (matchup) => ({
-            week: matchup.week + 5,
-            team1Id: matchup.team2Id,
-            team2Id: matchup.team1Id,
-        })
-    )
-
-    return [...firstHalf, ...secondHalf]
+    return matchups
 }

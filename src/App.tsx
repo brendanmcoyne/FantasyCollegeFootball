@@ -16,6 +16,8 @@ import Rosters from './components/teampages/Rosters'
 import Scoring from './components/teampages/Scoring'
 import TeamScores from './components/teampages/TeamScores'
 import WeekScores from './components/teampages/WeekScores'
+import Schedule from './components/teampages/Schedule'
+import Standings from './components/teampages/Standings'
 
 function App() {
     return (
@@ -36,6 +38,8 @@ function App() {
                     <Route path="/league/:leagueId" element={<League />} />
                     <Route path="/team-scores" element={<TeamScores />}/>
                     <Route path="/league/:leagueId/week-scores" element={<WeekScores />}/>
+                    <Route path="/league/:leagueId/schedule" element={<Schedule />}/>
+                    <Route path="/league/:leagueId/standings" element={<Standings />}/>
                 </Route>
             </Routes>
         </BrowserRouter>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
+import { createRegularSeasonSchedule } from '../../utils/leagueschedule'
 
 interface LeagueData {
     id: string
@@ -26,6 +27,7 @@ export default function League() {
     const [league, setLeague] = useState<LeagueData | null>(null)
     const [members, setMembers] = useState<LeagueMember[]>([])
     const [loading, setLoading] = useState(true)
+    const [hasSchedule, setHasSchedule] = useState(false)
     const [error, setError] = useState('')
 
     useEffect(() => {
@@ -60,6 +62,22 @@ export default function League() {
                 return
             }
 
+            const { count, error: matchupCountError } = await supabase
+                .from('league_matchups')
+                .select('id', {
+                    count: 'exact',
+                    head: true,
+                })
+                .eq('league_id', leagueId)
+
+            if (matchupCountError) {
+                setError(matchupCountError.message)
+                setLoading(false)
+                return
+            }
+
+            setHasSchedule((count ?? 0) > 0)
+
             setLeague(leagueData)
             setMembers(memberData ?? [])
             setLoading(false)
@@ -90,8 +108,36 @@ export default function League() {
 
         setError('')
 
+        if (members.length < 2) {
+            setError(
+                'The league must have at least 2 teams before starting the draft.'
+            )
+            return
+        }
+
+        if (members.length % 2 !== 0) {
+            setError(
+                'The league must have an even number of teams before starting the draft.'
+            )
+            return
+        }
+
         const draftOrderRows = members.map((member, index) =>
             ({league_id: league.id, league_member_id: member.id, draft_position: index + 1}))
+
+        const scheduleTeams = members.map((member) => ({
+            id: member.id,
+            teamName: member.team_name,
+        }))
+
+        const schedule = createRegularSeasonSchedule(scheduleTeams)
+
+        const matchupRows = schedule.map((matchup) => ({
+            league_id: league.id,
+            week: matchup.week,
+            team1_id: matchup.team1Id,
+            team2_id: matchup.team2Id,
+        }))
 
         const { error: draftOrderError } = await supabase
             .from('draft_order')
@@ -99,6 +145,15 @@ export default function League() {
 
         if (draftOrderError) {
             setError(draftOrderError.message)
+            return
+        }
+
+        const { error: matchupError } = await supabase
+            .from('league_matchups')
+            .insert(matchupRows)
+
+        if (matchupError) {
+            setError(matchupError.message)
             return
         }
 
@@ -113,6 +168,54 @@ export default function League() {
         }
 
         setLeague({...league, draft_status: 'IN_PROGRESS', current_pick_number: 1})
+    }
+
+    async function handleGenerateSchedule() {
+        if (!league || !isCommissioner) {
+            return
+        }
+
+        setError('')
+
+        if (members.length < 2) {
+            setError(
+                'The league must have at least 2 teams.'
+            )
+            return
+        }
+
+        if (members.length % 2 !== 0) {
+            setError(
+                'The league must have an even number of teams.'
+            )
+            return
+        }
+
+        const scheduleTeams = members.map((member) => ({
+            id: member.id,
+            teamName: member.team_name,
+        }))
+
+        const schedule =
+            createRegularSeasonSchedule(scheduleTeams)
+
+        const matchupRows = schedule.map((matchup) => ({
+            league_id: league.id,
+            week: matchup.week,
+            team1_id: matchup.team1Id,
+            team2_id: matchup.team2Id,
+        }))
+
+        const { error: matchupError } = await supabase
+            .from('league_matchups')
+            .insert(matchupRows)
+
+        if (matchupError) {
+            setError(matchupError.message)
+            return
+        }
+
+        setHasSchedule(true)
     }
 
     return (
@@ -146,10 +249,19 @@ export default function League() {
                             My Team
                         </Link>
                     </div>
-
                     <div>
                         <Link to={`/league/${league.id}/free-agents`}>
                             Free Agents
+                        </Link>
+                    </div>
+                    <div>
+                        <Link to={`/league/${league.id}/schedule`}>
+                            Schedule
+                        </Link>
+                    </div>
+                    <div>
+                        <Link to={`/league/${league.id}/standings`}>
+                            Standings
                         </Link>
                     </div>
                 </>
@@ -169,6 +281,13 @@ export default function League() {
                 league.draft_status === 'NOT_STARTED' && (
                     <button onClick={handleStartDraft}>
                         Start Draft
+                    </button>
+                )}
+
+            {isCommissioner &&
+                league.draft_status === 'COMPLETED' && !hasSchedule && (
+                    <button onClick={handleGenerateSchedule}>
+                        Generate Schedule
                     </button>
                 )}
 

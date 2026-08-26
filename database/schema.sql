@@ -135,3 +135,34 @@ create table public.roster_units (
         unit_type
     )
 );
+
+create table public.league_matchups (
+    id uuid primary key default gen_random_uuid(),
+
+    league_id uuid not null
+        references public.leagues(id)
+        on delete cascade,
+
+    week integer not null
+        check (week between 1 and 12),
+
+    team1_id uuid not null
+        references public.league_members(id)
+        on delete cascade,
+
+    team2_id uuid not null
+        references public.league_members(id)
+        on delete cascade,
+
+    team1_score numeric,
+    team2_score numeric,
+
+    winner_id uuid
+        references public.league_members(id)
+        on delete set null,
+
+    created_at timestamptz not null default now(),
+
+    unique (league_id, week, team1_id),
+    unique (league_id, week, team2_id)
+);
