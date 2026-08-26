@@ -292,8 +292,8 @@ export default function League() {
                 )}
 
             <div>
-                <Link to={`/league/${league.id}/week-scores`}>
-                    Week 1 Scores
+                <Link to={`/league/${league.id}/week-scores/1`}>
+                    Week Scores
                 </Link>
             </div>
         </div>

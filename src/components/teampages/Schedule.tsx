@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+
 import { supabase } from '../lib/supabase'
 
 interface LeagueMember {
@@ -14,6 +15,7 @@ interface Matchup {
     team2_id: string
     team1_score: number | null
     team2_score: number | null
+    winner_id: string | null
 }
 
 export default function Schedule() {
@@ -32,40 +34,59 @@ export default function Schedule() {
                 return
             }
 
-            const { data: memberData, error: memberError } =
-                await supabase
+            try {
+                const {
+                    data: memberData,
+                    error: memberError,
+                } = await supabase
                     .from('league_members')
                     .select('id, team_name')
                     .eq('league_id', leagueId)
 
-            if (memberError) {
-                setError(memberError.message)
-                setLoading(false)
-                return
-            }
+                if (memberError) {
+                    throw memberError
+                }
 
-            const { data: matchupData, error: matchupError } =
-                await supabase
+                const {
+                    data: matchupData,
+                    error: matchupError,
+                } = await supabase
                     .from('league_matchups')
                     .select(
-                        'id, week, team1_id, team2_id, team1_score, team2_score'
+                        'id, week, team1_id, team2_id, team1_score, team2_score, winner_id'
                     )
                     .eq('league_id', leagueId)
-                    .order('week', { ascending: true })
+                    .order('week', {
+                        ascending: true,
+                    })
 
-            if (matchupError) {
-                setError(matchupError.message)
+                if (matchupError) {
+                    throw matchupError
+                }
+
+                setMembers(memberData ?? [])
+                setMatchups(matchupData ?? [])
+            } catch (err) {
+                if (err instanceof Error) {
+                    setError(err.message)
+                } else {
+                    setError('Failed to load schedule.')
+                }
+            } finally {
                 setLoading(false)
-                return
             }
-
-            setMembers(memberData ?? [])
-            setMatchups(matchupData ?? [])
-            setLoading(false)
         }
 
         loadSchedule()
     }, [leagueId])
+
+    function getTeamName(memberId: string): string {
+        return (
+            members.find(
+                (member) => member.id === memberId
+            )?.team_name ?? 'Unknown Team'
+        )
+    }
 
     if (loading) {
         return <p>Loading schedule...</p>
@@ -75,56 +96,114 @@ export default function Schedule() {
         return <p>{error}</p>
     }
 
-    function getTeamName(memberId: string) {
-        return (
-            members.find((member) => member.id === memberId)
-                ?.team_name ?? 'Unknown Team'
-        )
-    }
-
     return (
         <div>
             <h1>League Schedule</h1>
 
-            {Array.from({ length: 10 }, (_, index) => {
-                const week = index + 1
+            {Array.from(
+                { length: 10 },
+                (_, index) => {
+                    const week = index + 1
 
-                const weekMatchups = matchups.filter(
-                    (matchup) => matchup.week === week
-                )
+                    const weekMatchups =
+                        matchups.filter(
+                            (matchup) =>
+                                matchup.week === week
+                        )
 
-                return (
-                    <section key={week}>
-                        <h2>Week {week}</h2>
+                    return (
+                        <section key={week}>
+                            <Link
+                                to={`/league/${leagueId}/week-scores/${week}`}
+                            >
+                                <h2>Week {week}</h2>
+                            </Link>
 
-                        {weekMatchups.length === 0 ? (
-                            <p>No matchups scheduled.</p>
-                        ) : (
-                            weekMatchups.map((matchup) => (
-                                <div key={matchup.id}>
-                                    <strong>
-                                        {getTeamName(matchup.team1_id)}
-                                    </strong>
+                            {weekMatchups.length ===
+                            0 ? (
+                                <p>
+                                    No matchups
+                                    scheduled.
+                                </p>
+                            ) : (
+                                weekMatchups.map(
+                                    (matchup) => {
+                                        const team1Name =
+                                            getTeamName(
+                                                matchup.team1_id
+                                            )
 
-                                    {matchup.team1_score !== null
-                                        ? ` — ${matchup.team1_score.toFixed(1)}`
-                                        : ''}
+                                        const team2Name =
+                                            getTeamName(
+                                                matchup.team2_id
+                                            )
 
-                                    {' vs '}
+                                        const hasScore =
+                                            matchup.team1_score !==
+                                            null &&
+                                            matchup.team2_score !==
+                                            null
 
-                                    <strong>
-                                        {getTeamName(matchup.team2_id)}
-                                    </strong>
+                                        return (
+                                            <div
+                                                key={
+                                                    matchup.id
+                                                }
+                                            >
+                                                {hasScore ? (
+                                                    <p>
+                                                        <strong>
+                                                            {
+                                                                team1Name
+                                                            }
+                                                        </strong>
 
-                                    {matchup.team2_score !== null
-                                        ? ` — ${matchup.team2_score.toFixed(1)}`
-                                        : ''}
-                                </div>
-                            ))
-                        )}
-                    </section>
-                )
-            })}
+                                                        {' — '}
+
+                                                        {matchup.team1_score?.toFixed(
+                                                            1
+                                                        )}
+
+                                                        {' vs '}
+
+                                                        {matchup.team2_score?.toFixed(
+                                                            1
+                                                        )}
+
+                                                        {' — '}
+
+                                                        <strong>
+                                                            {
+                                                                team2Name
+                                                            }
+                                                        </strong>
+                                                    </p>
+                                                ) : (
+                                                    <p>
+                                                        <strong>
+                                                            {
+                                                                team1Name
+                                                            }
+                                                        </strong>
+
+                                                        {' vs '}
+
+                                                        <strong>
+                                                            {
+                                                                team2Name
+                                                            }
+                                                        </strong>
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )
+                                    }
+                                )
+                            )}
+                        </section>
+                    )
+                }
+            )}
         </div>
     )
 }

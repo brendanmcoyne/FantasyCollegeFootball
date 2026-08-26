@@ -90,8 +90,7 @@ export default function Standings() {
 
                 ;(matchups ?? []).forEach((matchup: Matchup) => {
                     if (
-                        matchup.team1_score === null ||
-                        matchup.team2_score === null
+                        matchup.team1_score === null || matchup.team2_score === null
                     ) {
                         return
                     }
@@ -118,15 +117,9 @@ export default function Standings() {
                     ) {
                         team1.wins += 1
                         team2.losses += 1
-                    } else if (
-                        matchup.team2_score >
-                        matchup.team1_score
-                    ) {
+                    } else {
                         team2.wins += 1
                         team1.losses += 1
-                    } else {
-                        team1.ties += 1
-                        team2.ties += 1
                     }
                 })
 
@@ -184,7 +177,6 @@ export default function Standings() {
                     <th>Team</th>
                     <th>W</th>
                     <th>L</th>
-                    <th>T</th>
                     <th>PF</th>
                     <th>PA</th>
                 </tr>
@@ -205,10 +197,6 @@ export default function Standings() {
 
                         <td>
                             {team.losses}
-                        </td>
-
-                        <td>
-                            {team.ties}
                         </td>
 
                         <td>

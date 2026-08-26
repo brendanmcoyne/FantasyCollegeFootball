@@ -104,30 +104,22 @@ export async function getWeeklyStats(
                 points_scored: null,
                 points_per_game: null,
 
-                rushing_yards:
-                    toNumber(row['Rushing Yards']),
+                rushing_yards: toNumber(row['Rushing Yards']),
                 rushing_yards_per_game: null,
-                rushing_touchdowns:
-                    toNumber(row['Rushing TDs']),
-                rushing_fumbles_lost:
-                    toNumber(row['Rushing Fumbles']),
+                rushing_touchdowns: toNumber(row['Rushing TDs']),
+                rushing_fumbles_lost: toNumber(row['Rushing Fumbles']),
 
-                passing_yards:
-                    toNumber(row['Passing Yards']),
+                passing_yards: toNumber(row['Passing Yards']),
                 passing_yards_per_game: null,
-                passing_touchdowns:
-                    toNumber(row['Passing TDs']),
-                passing_interceptions:
-                    toNumber(row['Passing INTs']),
+                passing_touchdowns: toNumber(row['Passing TDs']),
+                passing_interceptions: toNumber(row['Passing INTs']),
 
-                receiving_fumbles_lost:
-                    toNumber(row['Receiving Fumbles']),
+                receiving_fumbles_lost: toNumber(row['Receiving Fumbles']),
 
                 total_yards: null,
                 total_yards_per_game: null,
 
-                points_allowed:
-                    toNumber(row['Points Allowed']),
+                points_allowed: toNumber(row['Points Allowed']),
                 points_allowed_per_game: null,
 
                 rushing_yards_allowed: null,
@@ -136,45 +128,29 @@ export async function getWeeklyStats(
                 passing_yards_allowed: null,
                 passing_yards_allowed_per_game: null,
 
-                total_yards_allowed:
-                    toNumber(row['Yards Allowed']),
+                total_yards_allowed: toNumber(row['Yards Allowed']),
                 total_yards_allowed_per_game: null,
 
-                defensive_interceptions:
-                    toNumber(row['Defensive INTs']),
-                defensive_fumble_recoveries:
-                    toNumber(row['Defensive Fumbles']),
-                defensive_touchdowns:
-                    toNumber(row['Defensive TDs']),
-                sacks:
-                    toNumber(row.Sacks),
-                safeties:
-                    toNumber(row.Safeties),
+                defensive_interceptions: toNumber(row['Defensive INTs']),
+                defensive_fumble_recoveries: toNumber(row['Defensive Fumbles']),
+                defensive_touchdowns: toNumber(row['Defensive TDs']),
+                sacks: toNumber(row.Sacks),
+                safeties: toNumber(row.Safeties),
 
                 turnovers: null,
                 takeaways: null,
 
-                field_goals_attempted:
-                    toNumber(row['FGs Attempted']),
-                field_goals_made:
-                    toNumber(row['FGs Made']),
+                field_goals_attempted: toNumber(row['FGs Attempted']),
+                field_goals_made: toNumber(row['FGs Made']),
                 field_goal_percentage: null,
+                field_goal_distances_made: parseFieldGoalDistances(row['FG Distances Made']),
 
-                field_goal_distances_made:
-                    parseFieldGoalDistances(
-                        row['FG Distances Made']
-                    ),
-
-                extra_points_attempted:
-                    toNumber(row['XPs Attempted']),
-                extra_points_made:
-                    toNumber(row['XPs Made']),
+                extra_points_attempted: toNumber(row['XPs Attempted']),
+                extra_points_made: toNumber(row['XPs Made']),
                 extra_point_percentage: null,
 
-                special_teams_touchdowns:
-                    toNumber(row['Special Teams TDs']),
-                blocked_kicks:
-                    toNumber(row['Blocked Kicks']),
+                special_teams_touchdowns: toNumber(row['Special Teams TDs']),
+                blocked_kicks: toNumber(row['Blocked Kicks']),
             },
         }))
 }
