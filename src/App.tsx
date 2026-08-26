@@ -11,6 +11,8 @@ import Units from './components/teampages/Units'
 import CreateLeague from './components/teampages/CreateLeague'
 import JoinLeague from './components/teampages/JoinLeague'
 import League from './components/teampages/League'
+import FreeAgents from './components/teampages/FreeAgents'
+import Rosters from './components/teampages/Rosters'
 
 function App() {
     return (
@@ -25,7 +27,8 @@ function App() {
                     <Route path="/create-league" element={<CreateLeague />} />
                     <Route path="/join-league" element={<JoinLeague />} />
                     <Route path="/league/:leagueId/draft" element={<Draft />} />
-
+                    <Route path="/league/:leagueId/free-agents" element={<FreeAgents />}/>
+                    <Route path="/league/:leagueId/team/:memberId" element={<Rosters />}/>
                     <Route path="/league/:leagueId" element={<League />} />
                 </Route>
             </Routes>

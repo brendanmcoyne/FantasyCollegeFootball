@@ -204,6 +204,62 @@ export default function MyTeam() {
         return (unitType.charAt(0) + unitType.slice(1).toLowerCase())
     }
 
+    function canMoveDirectlyToStarter(unit: RosterUnit) {
+        const starterCount = starters.filter(
+            (starter) => starter.unitType === unit.unitType
+        ).length
+
+        return starterCount < STARTERS[unit.unitType]
+    }
+
+    async function moveToStarter(unit: RosterUnit) {
+        if (!leagueId || !user) {
+            return
+        }
+
+        setError('')
+
+        const {
+            data: member,
+            error: memberError,
+        } = await supabase
+            .from('league_members')
+            .select('id')
+            .eq('league_id', leagueId)
+            .eq('user_id', user.id)
+            .single()
+
+        if (memberError) {
+            setError(memberError.message)
+            return
+        }
+
+        const { error: moveError } = await supabase.rpc(
+            'move_roster_unit_to_starter',
+            {
+                target_league_id: leagueId,
+                target_league_member_id: member.id,
+                target_roster_unit_id: unit.id,
+            }
+        )
+
+        if (moveError) {
+            setError(moveError.message)
+            return
+        }
+
+        setRoster((currentRoster) =>
+            currentRoster.map((rosterUnit) =>
+                rosterUnit.id === unit.id
+                    ? {
+                        ...rosterUnit,
+                        rosterSlot: 'STARTER',
+                    }
+                    : rosterUnit
+            )
+        )
+    }
+
     return (
         <div>
             <h1>{teamName}</h1>
@@ -229,9 +285,23 @@ export default function MyTeam() {
 
                             {' '}
 
-                            <button onClick={() => setSelectedBenchUnit(unit)}>
-                                Move to Starter
-                            </button>
+                            {canMoveDirectlyToStarter(unit) ? (
+                                <button
+                                    onClick={() =>
+                                        moveToStarter(unit)
+                                    }
+                                >
+                                    Move to Starter
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() =>
+                                        setSelectedBenchUnit(unit)
+                                    }
+                                >
+                                    Swap with Starter
+                                </button>
+                            )}
                         </li>
                     ))}
                 </ul>

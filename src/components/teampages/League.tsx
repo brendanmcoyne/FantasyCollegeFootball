@@ -38,9 +38,7 @@ export default function League() {
 
             const { data: leagueData, error: leagueError } = await supabase
                 .from('leagues')
-                .select(
-                    'id, name, join_code, commissioner_id, draft_status, current_pick_number'
-                )
+                .select('id, name, join_code, commissioner_id, draft_status, current_pick_number')
                 .eq('id', leagueId)
                 .single()
 
@@ -92,11 +90,8 @@ export default function League() {
 
         setError('')
 
-        const draftOrderRows = members.map((member, index) => ({
-            league_id: league.id,
-            league_member_id: member.id,
-            draft_position: index + 1,
-        }))
+        const draftOrderRows = members.map((member, index) =>
+            ({league_id: league.id, league_member_id: member.id, draft_position: index + 1}))
 
         const { error: draftOrderError } = await supabase
             .from('draft_order')
@@ -109,10 +104,7 @@ export default function League() {
 
         const { error: leagueUpdateError } = await supabase
             .from('leagues')
-            .update({
-                draft_status: 'IN_PROGRESS',
-                current_pick_number: 1,
-            })
+            .update({draft_status: 'IN_PROGRESS', current_pick_number: 1})
             .eq('id', league.id)
 
         if (leagueUpdateError) {
@@ -120,11 +112,7 @@ export default function League() {
             return
         }
 
-        setLeague({
-            ...league,
-            draft_status: 'IN_PROGRESS',
-            current_pick_number: 1,
-        })
+        setLeague({...league, draft_status: 'IN_PROGRESS', current_pick_number: 1})
     }
 
     return (
@@ -143,15 +131,35 @@ export default function League() {
                 <ul>
                     {members.map((member) => (
                         <li key={member.id}>
-                            {member.team_name}
+                            <Link to={`/league/${league.id}/team/${member.id}`}>
+                                {member.team_name}
+                            </Link>
                         </li>
                     ))}
                 </ul>
             )}
 
-            <Link to={`/league/${league.id}/team`}>
-                My Team
-            </Link>
+            {league.draft_status === 'COMPLETED' && (
+                <>
+                    <div>
+                        <Link to={`/league/${league.id}/team`}>
+                            My Team
+                        </Link>
+                    </div>
+
+                    <div>
+                        <Link to={`/league/${league.id}/free-agents`}>
+                            Free Agents
+                        </Link>
+                    </div>
+                </>
+            )}
+
+            <div>
+                <Link to={`/league/${league.id}/draft`}>
+                    {league.draft_status === 'COMPLETED' ? 'Draft Results' : 'Open Draft Room'}
+                </Link>
+            </div>
 
             <p>
                 Draft Status: <strong>{league.draft_status}</strong>
@@ -163,12 +171,6 @@ export default function League() {
                         Start Draft
                     </button>
                 )}
-
-            <div>
-                <Link to={`/league/${league.id}/draft`}>
-                    Open Draft Room
-                </Link>
-            </div>
         </div>
     )
 }
