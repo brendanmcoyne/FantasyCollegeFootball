@@ -86,25 +86,16 @@ export function specialTeamsScore(stats: TeamStats): number {
     const specialTeamTouchdowns = stats.special_teams_touchdowns ?? 0
     const blockedKicks = stats.blocked_kicks ?? 0
 
-    const extraPointsMissed =
-        Math.max(0, extraPointsAttempted - extraPointsMade)
-
-    const fieldGoalsMissed =
-        Math.max(0, fieldGoalsAttempted - fieldGoalsMade)
+    const extraPointsMissed = Math.max(0, extraPointsAttempted - extraPointsMade)
+    const fieldGoalsMissed = Math.max(0, fieldGoalsAttempted - fieldGoalsMade)
 
     const fieldGoalPoints = fieldGoalDistances.reduce(
-        (total, distance) =>
-            total + fieldGoalScore(distance),
-        0
-    )
+        (total, distance) => total + fieldGoalScore(distance), 0)
 
     return (extraPointsMade * 2 + extraPointsMissed * -2 + fieldGoalPoints + fieldGoalsMissed * -1 + specialTeamTouchdowns * 5 + blockedKicks * 3)
 }
 
-export function calculateUnitScore(
-    unitType: ScoringUnitType,
-    stats: TeamStats
-): number {
+export function calculateUnitScore(unitType: ScoringUnitType, stats: TeamStats): number {
     switch (unitType) {
         case 'PASSING':
             return passingScore(stats)

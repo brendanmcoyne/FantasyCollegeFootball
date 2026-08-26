@@ -64,79 +64,49 @@ export default function Units() {
             </p>
 
             <div>
-                <button
-                    onClick={() => setSelectedType('ALL')}
-                >
+                <button onClick={() => setSelectedType('ALL')}>
                     All
                 </button>
 
-                <button
-                    onClick={() => setSelectedType('PASSING')}
-                >
+                <button onClick={() => setSelectedType('PASSING')}>
                     QB
                 </button>
 
-                <button
-                    onClick={() =>
-                        setSelectedType('RUSHING')
-                    }
-                >
+                <button onClick={() => setSelectedType('RUSHING')}>
                     Rushing
                 </button>
 
-                <button
-                    onClick={() =>
-                        setSelectedType('RECEIVING')
-                    }
-                >
+                <button onClick={() => setSelectedType('RECEIVING')}>
                     Receiving
                 </button>
 
-                <button
-                    onClick={() =>
-                        setSelectedType('DEFENSE')
-                    }
-                >
+                <button onClick={() => setSelectedType('DEFENSE')}>
                     Defense
                 </button>
 
-                <button
-                    onClick={() =>
-                        setSelectedType('SPECIAL_TEAMS')
-                    }
-                >
+                <button onClick={() => setSelectedType('SPECIAL_TEAMS')}>
                     Special Teams
                 </button>
             </div>
 
             <div>
-                <button
-                    onClick={() => setSelectedConference('ALL')}
-                >
+                <button onClick={() => setSelectedConference('ALL')}>
                     All Conferences
                 </button>
 
-                <button
-                    onClick={() => setSelectedConference('ACC')}
-                >
+                <button onClick={() => setSelectedConference('ACC')}>
                     ACC
                 </button>
 
-                <button
-                    onClick={() => setSelectedConference('Big Ten')}
-                >
+                <button onClick={() => setSelectedConference('Big Ten')}>
                     Big Ten
                 </button>
 
-                <button
-                    onClick={() => setSelectedConference('Big 12')}
-                >
+                <button onClick={() => setSelectedConference('Big 12')}>
                     Big 12
                 </button>
 
-                <button
-                    onClick={() => setSelectedConference('SEC')}
-                >
+                <button onClick={() => setSelectedConference('SEC')}>
                     SEC
                 </button>
             </div>

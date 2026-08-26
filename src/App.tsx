@@ -13,6 +13,9 @@ import JoinLeague from './components/teampages/JoinLeague'
 import League from './components/teampages/League'
 import FreeAgents from './components/teampages/FreeAgents'
 import Rosters from './components/teampages/Rosters'
+import Scoring from './components/teampages/Scoring'
+import TeamScores from './components/teampages/TeamScores'
+import WeekScores from './components/teampages/WeekScores'
 
 function App() {
     return (
@@ -29,7 +32,10 @@ function App() {
                     <Route path="/league/:leagueId/draft" element={<Draft />} />
                     <Route path="/league/:leagueId/free-agents" element={<FreeAgents />}/>
                     <Route path="/league/:leagueId/team/:memberId" element={<Rosters />}/>
+                    <Route path="/scoring" element={<Scoring />}/>
                     <Route path="/league/:leagueId" element={<League />} />
+                    <Route path="/team-scores" element={<TeamScores />}/>
+                    <Route path="/league/:leagueId/week-scores" element={<WeekScores />}/>
                 </Route>
             </Routes>
         </BrowserRouter>

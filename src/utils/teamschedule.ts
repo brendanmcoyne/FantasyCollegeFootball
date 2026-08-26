@@ -1089,3 +1089,25 @@ export const schedules: Schedule[] = [
         week12: "Tennessee",
     },
 ]
+
+export function getTeamSchedule(teamName: string): Schedule | undefined {
+    return schedules.find(
+        (schedule) =>
+            schedule.team.toLowerCase() === teamName.toLowerCase()
+    )
+}
+
+export function getTeamOpponent(
+    teamName: string,
+    week: number
+): string | undefined {
+    const schedule = getTeamSchedule(teamName)
+
+    if (!schedule) {
+        return undefined
+    }
+
+    const weekKey = `week${week}` as keyof Schedule
+
+    return schedule[weekKey]
+}

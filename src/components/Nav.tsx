@@ -24,6 +24,10 @@ export default function Nav() {
                 Units
             </NavLink>
 
+            <NavLink to="/scoring">
+                Scoring
+            </NavLink>
+
 
             {user && (
                 <>

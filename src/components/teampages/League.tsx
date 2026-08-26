@@ -171,6 +171,12 @@ export default function League() {
                         Start Draft
                     </button>
                 )}
+
+            <div>
+                <Link to={`/league/${league.id}/week-scores`}>
+                    Week 1 Scores
+                </Link>
+            </div>
         </div>
     )
 }

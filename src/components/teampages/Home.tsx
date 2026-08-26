@@ -23,10 +23,7 @@ export default function Home() {
                 return
             }
 
-            const {
-                data: memberships,
-                error: membershipError,
-            } = await supabase
+            const { data: memberships, error: membershipError } = await supabase
                 .from('league_members')
                 .select('league_id')
                 .eq('user_id', user.id)
@@ -47,10 +44,7 @@ export default function Home() {
                 (membership) => membership.league_id
             )
 
-            const {
-                data: leagueData,
-                error: leagueError,
-            } = await supabase
+            const { data: leagueData, error: leagueError } = await supabase
                 .from('leagues')
                 .select('id, name, join_code')
                 .in('id', leagueIds)
