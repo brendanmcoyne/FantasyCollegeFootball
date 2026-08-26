@@ -118,3 +118,11 @@ with check (
         and leagues.commissioner_id = auth.uid()
     )
 );
+
+create policy "League members can view roster units"
+on public.roster_units
+for select
+                      to authenticated
+                      using (
+                      public.is_league_member(league_id)
+                      );

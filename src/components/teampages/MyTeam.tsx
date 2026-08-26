@@ -14,25 +14,19 @@ interface LeagueMember {
     team_name: string
 }
 
-interface DraftPick {
-    id: string
-    college_team_id: number
-    unit_type: RosterUnitType
-    pick_number: number
-    roster_slot: 'STARTER' | 'BENCH' | null
-}
-
 interface RosterUnit {
     id: string
+    collegeTeamId: number
     teamName: string
     unitType: RosterUnitType
-    pickNumber: number
-    rosterSlot: 'STARTER' | 'BENCH' | null
+    rosterSlot: 'STARTER' | 'BENCH'
+    acquiredVia: 'DRAFT' | 'FREE_AGENCY'
 }
 
-interface OrganizedRoster {
-    starters: Record<RosterUnitType, RosterUnit[]>
-    bench: RosterUnit[]
+interface RosterSectionProps {
+    title: string
+    units: RosterUnit[]
+    max: number
 }
 
 export default function MyTeam() {
@@ -44,6 +38,8 @@ export default function MyTeam() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
+    const [selectedBenchUnit, setSelectedBenchUnit] = useState<RosterUnit | null>(null)
+
     useEffect(() => {
         async function loadRoster() {
             if (!leagueId || !user) {
@@ -53,10 +49,7 @@ export default function MyTeam() {
             }
 
             try {
-                const {
-                    data: member,
-                    error: memberError,
-                } = await supabase
+                const { data: member, error: memberError } = await supabase
                     .from('league_members')
                     .select('id, team_name')
                     .eq('league_id', leagueId)
@@ -71,38 +64,31 @@ export default function MyTeam() {
 
                 setTeamName(leagueMember.team_name)
 
-                const { data: picks, error: picksError } = await supabase
-                    .from('draft_picks')
-                    .select('id, college_team_id, unit_type, pick_number, roster_slot')
+                const { data: rosterData, error: rosterError } = await supabase
+                    .from('roster_units')
+                    .select('id, college_team_id, unit_type, roster_slot, acquired_via')
                     .eq('league_id', leagueId)
                     .eq('league_member_id', leagueMember.id)
-                    .order('pick_number', {
-                        ascending: true,
-                    })
 
-                if (picksError) {
-                    throw picksError
+                if (rosterError) {
+                    throw rosterError
                 }
 
                 const teams = await getTeams()
-
                 const teamMap = new Map<number, CollegeTeam>()
 
-                teams.forEach((team) => {
-                    teamMap.set(team.id, team)
-                })
+                teams.forEach((team) => {teamMap.set(team.id, team)})
 
-                const rosterUnits: RosterUnit[] = (
-                    (picks ?? []) as DraftPick[]
-                ).map((pick) => ({
-                    id: pick.id,
-                    teamName:
-                        teamMap.get(pick.college_team_id)?.name ??
-                        'Unknown Team',
-                    unitType: pick.unit_type,
-                    pickNumber: pick.pick_number,
-                    rosterSlot: pick.roster_slot,
-                }))
+                const rosterUnits: RosterUnit[] = (rosterData ?? []).map(
+                    (unit) => ({
+                        id: unit.id,
+                        collegeTeamId: unit.college_team_id,
+                        teamName: teamMap.get(unit.college_team_id)?.name ?? 'Unknown Team',
+                        unitType: unit.unit_type as RosterUnitType,
+                        rosterSlot: unit.roster_slot as 'STARTER' | 'BENCH',
+                        acquiredVia: unit.acquired_via as | 'DRAFT' | 'FREE_AGENCY',
+                    })
+                )
 
                 setRoster(rosterUnits)
             } catch (err) {
@@ -127,7 +113,96 @@ export default function MyTeam() {
         return <p>{error}</p>
     }
 
-    const organizedRoster = organizeRoster(roster)
+    const starters = roster.filter((unit) => unit.rosterSlot === 'STARTER')
+    const bench = roster.filter((unit) => unit.rosterSlot === 'BENCH')
+    const passing = starters.filter((unit) => unit.unitType === 'PASSING')
+    const rushing = starters.filter((unit) => unit.unitType === 'RUSHING')
+    const receiving = starters.filter((unit) => unit.unitType === 'RECEIVING')
+    const defense = starters.filter((unit) => unit.unitType === 'DEFENSE')
+    const specialTeams = starters.filter((unit) => unit.unitType === 'SPECIAL_TEAMS')
+
+    async function swapUnits(benchUnit: RosterUnit, starterUnit: RosterUnit) {
+        if (!leagueId || !user) {
+            return
+        }
+
+        if (benchUnit.unitType !== starterUnit.unitType) {
+            setError('You can only swap units of the same type.')
+            return
+        }
+
+        setError('')
+
+        const { data: member, error: memberError } = await supabase
+            .from('league_members')
+            .select('id')
+            .eq('league_id', leagueId)
+            .eq('user_id', user.id)
+            .single()
+
+        if (memberError) {
+            setError(memberError.message)
+            return
+        }
+
+        const { error: swapError } = await supabase.rpc( 'swap_roster_units',
+            {
+                target_league_id: leagueId,
+                target_league_member_id: member.id,
+                bench_unit_id: benchUnit.id,
+                starter_unit_id: starterUnit.id,
+            }
+        )
+
+        if (swapError) {
+            setError(swapError.message)
+            return
+        }
+
+        setRoster((currentRoster) =>
+            currentRoster.map((unit) => {
+                if (unit.id === benchUnit.id) {
+                    return {...unit, rosterSlot: 'STARTER'}
+                }
+
+                if (unit.id === starterUnit.id) {
+                    return {...unit, rosterSlot: 'BENCH'}
+                }
+
+                return unit
+            })
+        )
+
+        setSelectedBenchUnit(null)
+    }
+
+    function RosterSection({ title, units, max }: RosterSectionProps) {
+        return (
+            <section>
+                <h3>
+                    {title} ({units.length}/{max})
+                </h3>
+
+                {units.length === 0 ? (
+                    <p>Empty</p>
+                ) : (
+                    <ul>
+                        {units.map((unit) => (
+                            <li key={unit.id}>{unit.teamName}</li>
+                        ))}
+                    </ul>
+                )}
+            </section>
+        )
+    }
+
+    function formatUnitType(unitType: RosterUnitType) {
+        if (unitType === 'SPECIAL_TEAMS') {
+            return 'Special Teams'
+        }
+
+        return (unitType.charAt(0) + unitType.slice(1).toLowerCase())
+    }
 
     return (
         <div>
@@ -135,128 +210,65 @@ export default function MyTeam() {
 
             <h2>Starters</h2>
 
-            <RosterSection
-                title="Passing"
-                units={organizedRoster.starters.PASSING}
-                max={STARTERS.PASSING}
-            />
-
-            <RosterSection
-                title="Rushing"
-                units={organizedRoster.starters.RUSHING}
-                max={STARTERS.RUSHING}
-            />
-
-            <RosterSection
-                title="Receiving"
-                units={organizedRoster.starters.RECEIVING}
-                max={STARTERS.RECEIVING}
-            />
-
-            <RosterSection
-                title="Defense"
-                units={organizedRoster.starters.DEFENSE}
-                max={STARTERS.DEFENSE}
-            />
-
-            <RosterSection
-                title="Special Teams"
-                units={organizedRoster.starters.SPECIAL_TEAMS}
-                max={STARTERS.SPECIAL_TEAMS}
-            />
+            <RosterSection title="Passing" units={passing} max={STARTERS.PASSING}/>
+            <RosterSection title="Rushing" units={rushing} max={STARTERS.RUSHING}/>
+            <RosterSection title="Receiving" units={receiving} max={STARTERS.RECEIVING}/>
+            <RosterSection title="Defense" units={defense} max={STARTERS.DEFENSE}/>
+            <RosterSection title="Special Teams" units={specialTeams} max={STARTERS.SPECIAL_TEAMS}/>
 
             <h2>Bench</h2>
 
-            {organizedRoster.bench.length === 0 ? (
+            {bench.length === 0 ? (
                 <p>No bench units.</p>
             ) : (
                 <ul>
-                    {organizedRoster.bench.map((unit) => (
+                    {bench.map((unit) => (
                         <li key={unit.id}>
                             {unit.teamName}{' '}
                             {formatUnitType(unit.unitType)}
+
+                            {' '}
+
+                            <button onClick={() => setSelectedBenchUnit(unit)}>
+                                Move to Starter
+                            </button>
                         </li>
                     ))}
                 </ul>
             )}
 
             <p>
-                Bench: {organizedRoster.bench.length} / {BENCH}
+                Bench: {bench.length} / {BENCH}
             </p>
-        </div>
-    )
-}
 
-function organizeRoster(roster: RosterUnit[]): OrganizedRoster {
-    const starters: Record<RosterUnitType, RosterUnit[]> = {
-        PASSING: [],
-        RUSHING: [],
-        RECEIVING: [],
-        DEFENSE: [],
-        SPECIAL_TEAMS: [],
-    }
+            {selectedBenchUnit && (
+                <div>
+                    <h3>
+                        Replace a {formatUnitType(selectedBenchUnit.unitType)} Starter
+                    </h3>
 
-    const bench: RosterUnit[] = []
+                    {starters
+                        .filter((starter) => starter.unitType === selectedBenchUnit.unitType)
+                        .map((starter) => (
+                            <div key={starter.id}>
+                    <span>
+                        {starter.teamName}{' '}
+                        {formatUnitType(starter.unitType)}
+                    </span>
 
-    const sortedRoster = [...roster].sort(
-        (a, b) => a.pickNumber - b.pickNumber
-    )
+                                {' '}
 
-    for (const unit of sortedRoster) {
-        const starterLimit = STARTERS[unit.unitType]
+                                <button onClick={() => swapUnits(selectedBenchUnit, starter)}>
+                                    Swap
+                                </button>
+                            </div>
+                        ))}
 
-        if (starters[unit.unitType].length < starterLimit) {
-            starters[unit.unitType].push(unit)
-        } else {
-            bench.push(unit)
-        }
-    }
-
-    return {
-        starters,
-        bench,
-    }
-}
-
-interface RosterSectionProps {
-    title: string
-    units: RosterUnit[]
-    max: number
-}
-
-function RosterSection({
-                           title,
-                           units,
-                           max,
-                       }: RosterSectionProps) {
-    return (
-        <section>
-            <h3>
-                {title} ({units.length}/{max})
-            </h3>
-
-            {units.length === 0 ? (
-                <p>Empty</p>
-            ) : (
-                <ul>
-                    {units.map((unit) => (
-                        <li key={unit.id}>
-                            {unit.teamName}
-                        </li>
-                    ))}
-                </ul>
+                    <button onClick={() => setSelectedBenchUnit(null)}>
+                        Cancel
+                    </button>
+                </div>
             )}
-        </section>
-    )
-}
-
-function formatUnitType(unitType: RosterUnitType) {
-    if (unitType === 'SPECIAL_TEAMS') {
-        return 'Special Teams'
-    }
-
-    return (
-        unitType.charAt(0) +
-        unitType.slice(1).toLowerCase()
+        </div>
     )
 }

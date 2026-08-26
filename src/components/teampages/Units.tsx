@@ -8,8 +8,8 @@ import type { DraftUnit, UnitType } from '../../types/fantasy'
 export default function Units() {
     const [teams, setTeams] = useState<CollegeTeam[]>([])
     const [units, setUnits] = useState<DraftUnit[]>([])
-    const [selectedType, setSelectedType] =
-        useState<UnitType | 'ALL'>('ALL')
+    const [selectedType, setSelectedType] = useState<UnitType | 'ALL'>('ALL')
+    const [selectedConference, setSelectedConference] = useState<string>('ALL')
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -43,12 +43,17 @@ export default function Units() {
         return <p>{error}</p>
     }
 
-    const filteredUnits =
-        selectedType === 'ALL'
-            ? units
-            : units.filter(
-                (unit) => unit.unitType === selectedType
-            )
+    const filteredUnits = units.filter((unit) => {
+        const matchesType =
+            selectedType === 'ALL' ||
+            unit.unitType === selectedType
+
+        const matchesConference =
+            selectedConference === 'ALL' ||
+            unit.conference === selectedConference
+
+        return matchesType && matchesConference
+    })
 
     return (
         <div>
@@ -101,6 +106,38 @@ export default function Units() {
                     }
                 >
                     Special Teams
+                </button>
+            </div>
+
+            <div>
+                <button
+                    onClick={() => setSelectedConference('ALL')}
+                >
+                    All Conferences
+                </button>
+
+                <button
+                    onClick={() => setSelectedConference('ACC')}
+                >
+                    ACC
+                </button>
+
+                <button
+                    onClick={() => setSelectedConference('Big Ten')}
+                >
+                    Big Ten
+                </button>
+
+                <button
+                    onClick={() => setSelectedConference('Big 12')}
+                >
+                    Big 12
+                </button>
+
+                <button
+                    onClick={() => setSelectedConference('SEC')}
+                >
+                    SEC
                 </button>
             </div>
 
