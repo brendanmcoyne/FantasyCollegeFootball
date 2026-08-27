@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
+import styled from 'styled-components'
 
 function generateJoinCode() {
     const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -15,6 +16,73 @@ function generateJoinCode() {
 
     return code
 }
+
+const CreatePage = styled.div`
+    display: flex;
+    justify-content: center;
+`
+
+const FormCard = styled.div`
+    width: min(520px, 100%);
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const FormGroup = styled.div`
+    display: grid;
+    gap: 8px;
+    margin-bottom: 18px;
+`
+
+const Label = styled.label`
+    font-weight: 700;
+    color: #374151;
+`
+
+const Input = styled.input`
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    padding: 11px 12px;
+    font-size: 1rem;
+    outline: none;
+
+    &:focus {
+        border-color: #6b7280;
+    }
+`
+
+const CreateButton = styled.button`
+    width: 100%;
+    border: none;
+    border-radius: 9px;
+    padding: 11px 14px;
+    background: #1f2937;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: #111827;
+    }
+
+    &:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+    }
+`
+
+const ErrorMessage = styled.p`
+    color: #991b1b;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 10px 12px;
+`
 
 export default function CreateLeague() {
     const { user } = useAuth()
@@ -41,16 +109,9 @@ export default function CreateLeague() {
 
         const joinCode = generateJoinCode()
 
-        const {
-            data: league,
-            error: leagueError,
-        } = await supabase
+        const {data: league, error: leagueError} = await supabase
             .from('leagues')
-            .insert({
-                name: leagueName.trim(),
-                join_code: joinCode,
-                commissioner_id: user.id,
-            })
+            .insert({name: leagueName.trim(), join_code: joinCode, commissioner_id: user.id})
             .select()
             .single()
 
@@ -62,11 +123,7 @@ export default function CreateLeague() {
 
         const { error: memberError } = await supabase
             .from('league_members')
-            .insert({
-                league_id: league.id,
-                user_id: user.id,
-                team_name: teamName.trim(),
-            })
+            .insert({league_id: league.id, user_id: user.id, team_name: teamName.trim()})
 
         if (memberError) {
             setError(memberError.message)
@@ -78,49 +135,53 @@ export default function CreateLeague() {
     }
 
     return (
-        <div>
-            <h1>Create League</h1>
+        <CreatePage>
+            <FormCard>
+                <h1>Create League</h1>
 
-            <div>
-                <label>
-                    League Name
-                </label>
+                <FormGroup>
+                    <Label>
+                        League Name
+                    </Label>
 
-                <input
-                    type="text"
-                    value={leagueName}
-                    onChange={(event) =>
-                        setLeagueName(event.target.value)
-                    }
-                    placeholder="Saturday Sickos"
-                />
-            </div>
+                    <Input
+                        type="text"
+                        value={leagueName}
+                        onChange={(event) =>
+                            setLeagueName(event.target.value)
+                        }
+                        placeholder="Enter Message"
+                    />
+                </FormGroup>
 
-            <div>
-                <label>
-                    Your Team Name
-                </label>
+                <FormGroup>
+                    <Label>
+                        Your Team Name
+                    </Label>
 
-                <input
-                    type="text"
-                    value={teamName}
-                    onChange={(event) =>
-                        setTeamName(event.target.value)
-                    }
-                    placeholder="Coyne Dawgs"
-                />
-            </div>
+                    <Input
+                        type="text"
+                        value={teamName}
+                        onChange={(event) =>
+                            setTeamName(event.target.value)
+                        }
+                        placeholder="Enter Message"
+                    />
+                </FormGroup>
 
-            {error && (
-                <p>{error}</p>
-            )}
+                {error && (
+                    <ErrorMessage>
+                        {error}
+                    </ErrorMessage>
+                )}
 
-            <button
-                onClick={handleCreateLeague}
-                disabled={loading}
-            >
-                {loading ? 'Creating...' : 'Create League'}
-            </button>
-        </div>
+                <CreateButton
+                    onClick={handleCreateLeague}
+                    disabled={loading}
+                >
+                    {loading ? 'Creating...' : 'Create League'}
+                </CreateButton>
+            </FormCard>
+        </CreatePage>
     )
 }
