@@ -19,6 +19,16 @@ interface OwnedUnit {
     roster_slot: 'STARTER' | 'BENCH'
 }
 
+interface FreeAgentTransaction {
+    id: string
+    league_member_id: string
+    added_college_team_id: number
+    added_unit_type: string
+    dropped_college_team_id: number
+    dropped_unit_type: string
+    created_at: string
+}
+
 interface MyRosterUnit {
     id: string
     collegeTeamId: number
@@ -36,6 +46,7 @@ interface FreeAgentUnit extends DraftUnit {
 
 interface LeagueMember {
     id: string
+    team_name: string
 }
 
 export default function FreeAgents() {
@@ -46,16 +57,13 @@ export default function FreeAgents() {
     const [ownedUnits, setOwnedUnits] = useState<OwnedUnit[]>([])
     const [myRoster, setMyRoster] = useState<MyRosterUnit[]>([])
     const [member, setMember] = useState<LeagueMember | null>(null)
+    const [transactions, setTransactions] = useState<FreeAgentTransaction[]>([])
+    const [teams, setTeams] = useState<CollegeTeam[]>([])
+    const [members, setMembers] = useState<LeagueMember[]>([])
 
-    const [selectedType, setSelectedType] =
-        useState<UnitType | 'ALL'>('ALL')
-
-    const [selectedConference, setSelectedConference] =
-        useState('ALL')
-
-    const [selectedFreeAgent, setSelectedFreeAgent] =
-        useState<FreeAgentUnit | null>(null)
-
+    const [selectedType, setSelectedType] = useState<UnitType | 'ALL'>('ALL')
+    const [selectedConference, setSelectedConference] = useState('ALL')
+    const [selectedFreeAgent, setSelectedFreeAgent] = useState<FreeAgentUnit | null>(null)
     const [currentWeek, setCurrentWeek] = useState(1)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -70,6 +78,7 @@ export default function FreeAgents() {
 
             try {
                 const teams = await getTeams()
+                setTeams(teams)
 
                 const teamMap = new Map<number, CollegeTeam>()
 
@@ -114,12 +123,24 @@ export default function FreeAgents() {
 
                 setUnits(unitsWithLocks)
 
+                const { data: memberData, error: memberDataError } =
+                    await supabase
+                        .from('league_members')
+                        .select('id, team_name')
+                        .eq('league_id', leagueId)
+
+                if (memberDataError) {
+                    throw memberDataError
+                }
+
+                setMembers(memberData ?? [])
+
                 const {
                     data: membership,
                     error: membershipError,
                 } = await supabase
                     .from('league_members')
-                    .select('id')
+                    .select('id, team_name')
                     .eq('league_id', leagueId)
                     .eq('user_id', user.id)
                     .single()
@@ -145,6 +166,23 @@ export default function FreeAgents() {
                 }
 
                 setOwnedUnits(owned ?? [])
+
+                const {
+                    data: transactionData,
+                    error: transactionError,
+                } = await supabase
+                    .from('free_agent_transactions')
+                    .select(
+                        'id, league_member_id, added_college_team_id, added_unit_type, dropped_college_team_id, dropped_unit_type, created_at'
+                    )
+                    .eq('league_id', leagueId)
+                    .order('created_at', { ascending: false })
+
+                if (transactionError) {
+                    throw transactionError
+                }
+
+                setTransactions(transactionData ?? [])
 
                 const myUnits: MyRosterUnit[] =
                     (owned ?? [])
@@ -200,6 +238,7 @@ export default function FreeAgents() {
             }
         }
 
+
         loadFreeAgents()
     }, [leagueId, user])
 
@@ -236,6 +275,10 @@ export default function FreeAgents() {
     if (loading) {
         return <p>Loading free agents...</p>
     }
+
+    const teamMap = new Map(
+        teams.map((team) => [team.id, team])
+    )
 
     const freeAgents = units.filter((unit) =>
         !ownedUnits.some(
@@ -346,6 +389,7 @@ export default function FreeAgents() {
 
         window.location.reload()
     }
+
 
     return (
         <div>
@@ -500,6 +544,46 @@ export default function FreeAgents() {
                         Cancel
                     </button>
                 </div>
+            )}
+            <hr />
+
+            <h2>Free Agency History</h2>
+
+            {transactions.length === 0 ? (
+                <p>No free agency moves yet.</p>
+            ) : (
+                transactions.map((transaction) => {
+                    const fantasyTeam = members.find(
+                        (member) =>
+                            member.id === transaction.league_member_id
+                    )
+
+                    const addedTeam = teamMap.get(
+                        transaction.added_college_team_id
+                    )
+
+                    const droppedTeam = teamMap.get(
+                        transaction.dropped_college_team_id
+                    )
+
+                    return (
+                        <div key={transaction.id}>
+                            <strong>
+                                {fantasyTeam?.team_name ?? 'Unknown Team'}
+                            </strong>
+
+                            {' — Added '}
+
+                            {addedTeam?.name ?? 'Unknown Team'}{' '}
+                            {formatUnitType(transaction.added_unit_type)}
+
+                            {' — Dropped '}
+
+                            {droppedTeam?.name ?? 'Unknown Team'}{' '}
+                            {formatUnitType(transaction.dropped_unit_type)}
+                        </div>
+                    )
+                })
             )}
         </div>
     )

@@ -11,6 +11,7 @@ import type { DraftUnit } from '../../types/fantasy'
 
 interface LeagueMember {
     id: string
+    team_name: string
 }
 
 interface DraftPick {
@@ -42,6 +43,7 @@ export default function Draft() {
     const [draftPicks, setDraftPicks] = useState<DraftPick[]>([])
     const [league, setLeague] = useState<LeagueData | null>(null)
     const [order, setOrder] = useState<DraftOrder[]>([])
+    const [members, setMembers] = useState<LeagueMember[]>([])
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -60,7 +62,7 @@ export default function Draft() {
 
                 const { data: membership, error: membershipError } = await supabase
                     .from('league_members')
-                    .select('id')
+                    .select('id, team_name')
                     .eq('league_id', leagueId)
                     .eq('user_id', user.id)
                     .single()
@@ -70,6 +72,17 @@ export default function Draft() {
                 }
 
                 setMember(membership)
+
+                const { data: memberData, error: memberDataError } = await supabase
+                    .from('league_members')
+                    .select('id, team_name')
+                    .eq('league_id', leagueId)
+
+                if (memberDataError) {
+                    throw memberDataError
+                }
+
+                setMembers(memberData ?? [])
 
                 const { data: leagueData, error: leagueError } = await supabase
                     .from('leagues')
@@ -145,7 +158,33 @@ export default function Draft() {
     const nextTurn = getNextEligibleDrafter(league.current_turn_number)
 
     if (!nextTurn) {
-        return <p>Draft complete!</p>
+        return (
+            <div>
+                <p>Draft complete!</p>
+                <h1>Draft Results</h1>
+
+                {draftPicks.map((pick) => {
+                    const unit = units.find(
+                        (unit) =>
+                            unit.teamId === pick.college_team_id &&
+                            unit.unitType === pick.unit_type
+                    )
+                    const drafter = members.find(
+                        (member) => member.id === pick.league_member_id
+                    )
+
+                    return (
+                        <div key={pick.id}>
+                            Pick #{pick.pick_number} —{' '}
+                            {unit?.teamName ?? 'Unknown Team'}{' '}
+                            {formatUnitType(pick.unit_type)}
+                            {' — '}
+                            {drafter?.team_name ?? 'Unknown Team'}
+                        </div>
+                    )
+                })}
+            </div>
+        )
     }
 
     const currentDrafter = nextTurn.drafter
@@ -358,4 +397,11 @@ export default function Draft() {
             </div>
         </div>
     )
+}
+
+function formatUnitType(unitType: string): string {
+    return unitType === 'SPECIAL_TEAMS'
+        ? 'Special Teams'
+        : unitType.charAt(0) +
+        unitType.slice(1).toLowerCase()
 }

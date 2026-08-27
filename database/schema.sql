@@ -166,3 +166,17 @@ create table public.league_matchups (
     unique (league_id, week, team1_id),
     unique (league_id, week, team2_id)
 );
+
+alter table public.free_agent_transactions
+    enable row level security;
+
+drop policy if exists "League members can view free agency history"
+on public.free_agent_transactions;
+
+create policy "League members can view free agency history"
+on public.free_agent_transactions
+for select
+                    to authenticated
+                    using (
+                    public.is_league_member(league_id)
+                    );

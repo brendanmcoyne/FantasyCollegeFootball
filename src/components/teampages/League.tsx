@@ -167,6 +167,7 @@ export default function League() {
             .update({
                 draft_status: 'IN_PROGRESS',
                 current_pick_number: 1,
+                current_turn_number: 1,
             })
             .eq('id', league.id)
 

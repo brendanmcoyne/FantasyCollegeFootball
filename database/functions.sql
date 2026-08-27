@@ -94,46 +94,53 @@ security definer
 set search_path = public
 as $$
 declare
-    current_pick integer;
+current_pick integer;
+    current_turn integer;
     all_rosters_full boolean;
 begin
-    select current_pick_number
-    into current_pick
-    from public.leagues
-    where id = target_league_id;
+select
+    current_pick_number,
+    current_turn_number
+into
+    current_pick,
+    current_turn
+from public.leagues
+where id = target_league_id;
 
-    insert into public.draft_picks (
-        league_id,
-        league_member_id,
-        college_team_id,
-        unit_type,
-        pick_number
-    )
-    values (
-        target_league_id,
-        target_league_member_id,
-        target_college_team_id,
-        target_unit_type,
-        current_pick
-    );
+insert into public.draft_picks (
+    league_id,
+    league_member_id,
+    college_team_id,
+    unit_type,
+    pick_number
+)
+values (
+           target_league_id,
+           target_league_member_id,
+           target_college_team_id,
+           target_unit_type,
+           current_pick
+       );
 
-    update public.leagues
-    set current_pick_number = current_pick + 1
-    where id = target_league_id;
+update public.leagues
+set
+    current_pick_number = current_pick + 1,
+    current_turn_number = current_turn + 1
+where id = target_league_id;
 
-    select bool_and(pick_count >= 16)
-    into all_rosters_full
-    from (
-        select
-            lm.id,
-            count(dp.id) as pick_count
-        from public.league_members lm
-        left join public.draft_picks dp
-            on dp.league_member_id = lm.id
-            and dp.league_id = lm.league_id
-        where lm.league_id = target_league_id
-        group by lm.id
-    ) roster_counts;
+select bool_and(pick_count >= 16)
+into all_rosters_full
+from (
+         select
+             lm.id,
+             count(dp.id) as pick_count
+         from public.league_members lm
+                  left join public.draft_picks dp
+                            on dp.league_member_id = lm.id
+                                and dp.league_id = lm.league_id
+         where lm.league_id = target_league_id
+         group by lm.id
+     ) roster_counts;
 
 if all_rosters_full then
 update public.leagues
@@ -141,8 +148,8 @@ set draft_status = 'COMPLETED'
 where id = target_league_id;
 
 perform public.populate_rosters_from_draft(
-        target_league_id
-    );
+            target_league_id
+        );
 end if;
 end;
 $$;
@@ -219,6 +226,9 @@ passing_count integer;
     defense_count integer;
     special_teams_count integer;
     roster_count integer;
+
+    dropped_team_id integer;
+    dropped_unit_type text;
 begin
     if add_unit_type not in (
         'PASSING',
