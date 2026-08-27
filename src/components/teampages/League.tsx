@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
 import { createRegularSeasonSchedule } from '../../utils/leagueschedule'
+import { CURRENT_WEEK } from '../../bigseasonfile'
 
 interface LeagueData {
     id: string
@@ -40,7 +41,9 @@ export default function League() {
 
             const { data: leagueData, error: leagueError } = await supabase
                 .from('leagues')
-                .select('id, name, join_code, commissioner_id, draft_status, current_pick_number')
+                .select(
+                    'id, name, join_code, commissioner_id, draft_status, current_pick_number'
+                )
                 .eq('id', leagueId)
                 .single()
 
@@ -77,7 +80,6 @@ export default function League() {
             }
 
             setHasSchedule((count ?? 0) > 0)
-
             setLeague(leagueData)
             setMembers(memberData ?? [])
             setLoading(false)
@@ -122,22 +124,18 @@ export default function League() {
             return
         }
 
-        const draftOrderRows = members.map((member, index) =>
-            ({league_id: league.id, league_member_id: member.id, draft_position: index + 1}))
-
-        const scheduleTeams = members.map((member) => ({
-            id: member.id,
-            teamName: member.team_name,
-        }))
-
-        const schedule = createRegularSeasonSchedule(scheduleTeams)
-
-        const matchupRows = schedule.map((matchup) => ({
+        const draftOrderRows = members.map((member, index) => ({
             league_id: league.id,
-            week: matchup.week,
-            team1_id: matchup.team1Id,
-            team2_id: matchup.team2Id,
+            league_member_id: member.id,
+            draft_position: index + 1,
         }))
+
+        const schedule = createRegularSeasonSchedule(
+            members.map((member) => ({
+                id: member.id,
+                teamName: member.team_name,
+            }))
+        )
 
         const { error: draftOrderError } = await supabase
             .from('draft_order')
@@ -150,24 +148,38 @@ export default function League() {
 
         const { error: matchupError } = await supabase
             .from('league_matchups')
-            .insert(matchupRows)
+            .insert(
+                schedule.map((matchup) => ({
+                    league_id: league.id,
+                    week: matchup.week,
+                    team1_id: matchup.team1Id,
+                    team2_id: matchup.team2Id,
+                }))
+            )
 
         if (matchupError) {
             setError(matchupError.message)
             return
         }
 
-        const { error: leagueUpdateError } = await supabase
+        const { error: updateError } = await supabase
             .from('leagues')
-            .update({draft_status: 'IN_PROGRESS', current_pick_number: 1})
+            .update({
+                draft_status: 'IN_PROGRESS',
+                current_pick_number: 1,
+            })
             .eq('id', league.id)
 
-        if (leagueUpdateError) {
-            setError(leagueUpdateError.message)
+        if (updateError) {
+            setError(updateError.message)
             return
         }
 
-        setLeague({...league, draft_status: 'IN_PROGRESS', current_pick_number: 1})
+        setLeague({
+            ...league,
+            draft_status: 'IN_PROGRESS',
+            current_pick_number: 1,
+        })
     }
 
     async function handleGenerateSchedule() {
@@ -177,38 +189,30 @@ export default function League() {
 
         setError('')
 
-        if (members.length < 2) {
-            setError(
-                'The league must have at least 2 teams.'
-            )
-            return
-        }
-
-        if (members.length % 2 !== 0) {
+        if (members.length < 2 || members.length % 2 !== 0) {
             setError(
                 'The league must have an even number of teams.'
             )
             return
         }
 
-        const scheduleTeams = members.map((member) => ({
-            id: member.id,
-            teamName: member.team_name,
-        }))
-
-        const schedule =
-            createRegularSeasonSchedule(scheduleTeams)
-
-        const matchupRows = schedule.map((matchup) => ({
-            league_id: league.id,
-            week: matchup.week,
-            team1_id: matchup.team1Id,
-            team2_id: matchup.team2Id,
-        }))
+        const schedule = createRegularSeasonSchedule(
+            members.map((member) => ({
+                id: member.id,
+                teamName: member.team_name,
+            }))
+        )
 
         const { error: matchupError } = await supabase
             .from('league_matchups')
-            .insert(matchupRows)
+            .insert(
+                schedule.map((matchup) => ({
+                    league_id: league.id,
+                    week: matchup.week,
+                    team1_id: matchup.team1Id,
+                    team2_id: matchup.team2Id,
+                }))
+            )
 
         if (matchupError) {
             setError(matchupError.message)
@@ -228,19 +232,15 @@ export default function League() {
 
             <h2>League Members</h2>
 
-            {members.length === 0 ? (
-                <p>No members yet.</p>
-            ) : (
-                <ul>
-                    {members.map((member) => (
-                        <li key={member.id}>
-                            <Link to={`/league/${league.id}/team/${member.id}`}>
-                                {member.team_name}
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
-            )}
+            <ul>
+                {members.map((member) => (
+                    <li key={member.id}>
+                        <Link to={`/league/${league.id}/team/${member.id}`}>
+                            {member.team_name}
+                        </Link>
+                    </li>
+                ))}
+            </ul>
 
             {league.draft_status === 'COMPLETED' && (
                 <>
@@ -249,16 +249,19 @@ export default function League() {
                             My Team
                         </Link>
                     </div>
+
                     <div>
                         <Link to={`/league/${league.id}/free-agents`}>
                             Free Agents
                         </Link>
                     </div>
+
                     <div>
                         <Link to={`/league/${league.id}/schedule`}>
                             Schedule
                         </Link>
                     </div>
+
                     <div>
                         <Link to={`/league/${league.id}/standings`}>
                             Standings
@@ -269,12 +272,15 @@ export default function League() {
 
             <div>
                 <Link to={`/league/${league.id}/draft`}>
-                    {league.draft_status === 'COMPLETED' ? 'Draft Results' : 'Open Draft Room'}
+                    {league.draft_status === 'COMPLETED'
+                        ? 'Draft Results'
+                        : 'Open Draft Room'}
                 </Link>
             </div>
 
             <p>
-                Draft Status: <strong>{league.draft_status}</strong>
+                Draft Status:{' '}
+                <strong>{league.draft_status}</strong>
             </p>
 
             {isCommissioner &&
@@ -285,14 +291,17 @@ export default function League() {
                 )}
 
             {isCommissioner &&
-                league.draft_status === 'COMPLETED' && !hasSchedule && (
+                league.draft_status === 'COMPLETED' &&
+                !hasSchedule && (
                     <button onClick={handleGenerateSchedule}>
                         Generate Schedule
                     </button>
                 )}
 
             <div>
-                <Link to={`/league/${league.id}/week-scores/1`}>
+                <Link
+                    to={`/league/${league.id}/week-scores/${CURRENT_WEEK}`}
+                >
                     Week Scores
                 </Link>
             </div>

@@ -2,29 +2,13 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { supabase } from '../lib/supabase'
-
-interface LeagueMember {
-    id: string
-    team_name: string
-}
-
-interface Matchup {
-    id: string
-    week: number
-    team1_id: string
-    team2_id: string
-    team1_score: number | null
-    team2_score: number | null
-}
+import { CURRENT_WEEK } from '../../bigseasonfile'
 
 interface Standing {
     memberId: string
     teamName: string
-
     wins: number
     losses: number
-    ties: number
-
     pointsFor: number
     pointsAgainst: number
 }
@@ -45,65 +29,50 @@ export default function Standings() {
             }
 
             try {
-                const {
-                    data: members,
-                    error: membersError,
-                } = await supabase
-                    .from('league_members')
-                    .select('id, team_name')
-                    .eq('league_id', leagueId)
+                const { data: members, error: membersError } =
+                    await supabase
+                        .from('league_members')
+                        .select('id, team_name')
+                        .eq('league_id', leagueId)
 
-                if (membersError) {
-                    throw membersError
-                }
+                if (membersError) throw membersError
 
-                const {
-                    data: matchups,
-                    error: matchupsError,
-                } = await supabase
-                    .from('league_matchups')
-                    .select(
-                        'id, week, team1_id, team2_id, team1_score, team2_score'
-                    )
-                    .eq('league_id', leagueId)
-                    .lte('week', 10)
+                const { data: matchups, error: matchupsError } =
+                    await supabase
+                        .from('league_matchups')
+                        .select(
+                            'team1_id, team2_id, team1_score, team2_score'
+                        )
+                        .eq('league_id', leagueId)
+                        .lt('week', CURRENT_WEEK)
 
-                if (matchupsError) {
-                    throw matchupsError
-                }
+                if (matchupsError) throw matchupsError
 
-                const standingMap = new Map<string, Standing>()
+                const standingsMap = new Map<string, Standing>()
 
-                ;(members ?? []).forEach((member: LeagueMember) => {
-                    standingMap.set(member.id, {
+                ;(members ?? []).forEach((member) => {
+                    standingsMap.set(member.id, {
                         memberId: member.id,
                         teamName: member.team_name,
-
                         wins: 0,
                         losses: 0,
-                        ties: 0,
-
                         pointsFor: 0,
                         pointsAgainst: 0,
                     })
                 })
 
-                ;(matchups ?? []).forEach((matchup: Matchup) => {
+                ;(matchups ?? []).forEach((matchup) => {
                     if (
-                        matchup.team1_score === null || matchup.team2_score === null
+                        matchup.team1_score === null ||
+                        matchup.team2_score === null
                     ) {
                         return
                     }
 
-                    const team1 =
-                        standingMap.get(matchup.team1_id)
+                    const team1 = standingsMap.get(matchup.team1_id)
+                    const team2 = standingsMap.get(matchup.team2_id)
 
-                    const team2 =
-                        standingMap.get(matchup.team2_id)
-
-                    if (!team1 || !team2) {
-                        return
-                    }
+                    if (!team1 || !team2) return
 
                     team1.pointsFor += matchup.team1_score
                     team1.pointsAgainst += matchup.team2_score
@@ -111,45 +80,29 @@ export default function Standings() {
                     team2.pointsFor += matchup.team2_score
                     team2.pointsAgainst += matchup.team1_score
 
-                    if (
-                        matchup.team1_score >
-                        matchup.team2_score
-                    ) {
-                        team1.wins += 1
-                        team2.losses += 1
+                    if (matchup.team1_score >= matchup.team2_score) {
+                        team1.wins++
+                        team2.losses++
                     } else {
-                        team2.wins += 1
-                        team1.losses += 1
+                        team2.wins++
+                        team1.losses++
                     }
                 })
 
-                const sortedStandings =
-                    Array.from(standingMap.values()).sort(
-                        (a, b) => {
-                            if (b.wins !== a.wins) {
-                                return b.wins - a.wins
-                            }
-
-                            if (a.losses !== b.losses) {
-                                return a.losses - b.losses
-                            }
-
-                            return (
-                                b.pointsFor -
-                                a.pointsFor
-                            )
-                        }
+                setStandings(
+                    Array.from(standingsMap.values()).sort(
+                        (a, b) =>
+                            b.wins - a.wins ||
+                            a.losses - b.losses ||
+                            b.pointsFor - a.pointsFor
                     )
-
-                setStandings(sortedStandings)
+                )
             } catch (err) {
-                if (err instanceof Error) {
-                    setError(err.message)
-                } else {
-                    setError(
-                        'Failed to load standings.'
-                    )
-                }
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : 'Failed to load standings.'
+                )
             } finally {
                 setLoading(false)
             }
@@ -186,26 +139,11 @@ export default function Standings() {
                 {standings.map((team, index) => (
                     <tr key={team.memberId}>
                         <td>{index + 1}</td>
-
-                        <td>
-                            {team.teamName}
-                        </td>
-
-                        <td>
-                            {team.wins}
-                        </td>
-
-                        <td>
-                            {team.losses}
-                        </td>
-
-                        <td>
-                            {team.pointsFor.toFixed(1)}
-                        </td>
-
-                        <td>
-                            {team.pointsAgainst.toFixed(1)}
-                        </td>
+                        <td>{team.teamName}</td>
+                        <td>{team.wins}</td>
+                        <td>{team.losses}</td>
+                        <td>{team.pointsFor.toFixed(1)}</td>
+                        <td>{team.pointsAgainst.toFixed(1)}</td>
                     </tr>
                 ))}
                 </tbody>

@@ -930,19 +930,11 @@ async function determineCurrentWeek(): Promise<number> {
                             null
                     )
 
-            if (
-                gameStarts.length === 0
-            ) {
+            if (gameStarts.length === 0) {
                 continue
             }
 
-            const earliestGameStart =
-                Math.min(
-                    ...gameStarts.map(
-                        (gameStart) =>
-                            gameStart.getTime()
-                    )
-                )
+            const earliestGameStart = Math.min(...gameStarts.map((gameStart) => gameStart.getTime()))
 
             if (now.getTime() >= earliestGameStart) {
                 return week
