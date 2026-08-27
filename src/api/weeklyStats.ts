@@ -6,12 +6,14 @@ import { WEEKLY_DATA_URLS } from '../data/weekdata'
 export interface WeeklyTeamData {
     team: string
     conference: string
+    gameStart: Date | null
     stats: TeamStats
 }
 
 interface SpreadsheetRow {
     Team: string
     Conference: string
+    'Game Start': string
 
     'Passing Yards': string
     'Passing TDs': string
@@ -66,6 +68,20 @@ function parseFieldGoalDistances(
         .filter((distance) => !Number.isNaN(distance))
 }
 
+function parseGameStart(value: string | undefined): Date | null {
+    if (!value?.trim()) {
+        return null
+    }
+
+    const parsed = new Date(value.trim())
+
+    if (Number.isNaN(parsed.getTime())) {
+        return null
+    }
+
+    return parsed
+}
+
 export async function getWeeklyStats(
     week: number
 ): Promise<WeeklyTeamData[]> {
@@ -99,6 +115,8 @@ export async function getWeeklyStats(
             team: row.Team.trim(),
             conference: row.Conference?.trim() ?? '',
 
+            gameStart: parseGameStart(row['Game Start']),
+            
             stats: {
                 games_played: null,
                 points_scored: null,
