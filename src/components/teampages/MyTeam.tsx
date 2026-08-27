@@ -6,6 +6,9 @@ import { useAuth } from '../Auth'
 import { getTeams } from '../../api/cfbApi'
 import { getWeeklyStats } from '../../api/weeklyStats'
 
+import { getTeamOpponent } from '../../utils/teamschedule'
+import { CURRENT_WEEK } from '../../bigseasonfile'
+
 import {
     STARTERS,
     BENCH,
@@ -43,7 +46,6 @@ export default function MyTeam() {
 
     const [teamName, setTeamName] = useState('')
     const [roster, setRoster] = useState<RosterUnit[]>([])
-    const [currentWeek, setCurrentWeek] = useState(1)
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -112,13 +114,8 @@ export default function MyTeam() {
                     )
                 })
 
-                const week =
-                    await determineCurrentWeek()
-
-                setCurrentWeek(week)
-
                 const weeklyStats =
-                    await getWeeklyStats(week)
+                    await getWeeklyStats(CURRENT_WEEK)
 
                 const weeklyMap =
                     new Map<
@@ -485,9 +482,9 @@ export default function MyTeam() {
                                         unit.id
                                     }
                                 >
-                                    {
-                                        unit.teamName
-                                    }
+                                    {unit.teamName} {formatUnitType(unit.unitType)}
+                                    {' — '}
+                                    vs {getTeamOpponent(unit.teamName, CURRENT_WEEK) ?? 'Unknown'}
 
                                     {unit.gameStart && (
                                         <>
@@ -648,7 +645,7 @@ export default function MyTeam() {
             <h1>{teamName}</h1>
 
             <p>
-                Week {currentWeek}
+                Week {CURRENT_WEEK}
             </p>
 
             <h2>Starters</h2>
@@ -708,12 +705,9 @@ export default function MyTeam() {
                                     unit.id
                                 }
                             >
-                                {
-                                    unit.teamName
-                                }{' '}
-                                {formatUnitType(
-                                    unit.unitType
-                                )}
+                                {unit.teamName} {formatUnitType(unit.unitType)}
+                                {' — '}
+                                vs {getTeamOpponent(unit.teamName, CURRENT_WEEK) ?? 'Unknown'}
 
                                 {unit.gameStart && (
                                     <>
@@ -900,49 +894,4 @@ function formatGameStart(
             minute: '2-digit',
         }
     )
-}
-
-async function determineCurrentWeek(): Promise<number> {
-    const now = new Date()
-
-    for (
-        let week = 10;
-        week >= 1;
-        week--
-    ) {
-        try {
-            const weeklyStats =
-                await getWeeklyStats(
-                    week
-                )
-
-            const gameStarts =
-                weeklyStats
-                    .map(
-                        (team) =>
-                            team.gameStart
-                    )
-                    .filter(
-                        (
-                            gameStart
-                        ): gameStart is Date =>
-                            gameStart !==
-                            null
-                    )
-
-            if (gameStarts.length === 0) {
-                continue
-            }
-
-            const earliestGameStart = Math.min(...gameStarts.map((gameStart) => gameStart.getTime()))
-
-            if (now.getTime() >= earliestGameStart) {
-                return week
-            }
-        } catch {
-            continue
-        }
-    }
-
-    return 1
 }
