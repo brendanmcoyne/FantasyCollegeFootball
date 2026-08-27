@@ -317,7 +317,7 @@ export default function League() {
 
     return (
         <LeaguePage>
-            <BackButton onClick={() => navigate(-1)}>
+            <BackButton onClick={() => navigate(`/`)}>
                 ← Back
             </BackButton>
 

@@ -446,8 +446,6 @@ export default function WeekScores() {
                     )
                 }
 
-                const team1Won = team1.starterTotal >= team2.starterTotal
-
                 return (
                     <MatchupCard key={matchup.id}>
                         <MatchupTeam>

@@ -6,8 +6,10 @@ import { createDraftUnits } from '../../utils/Units'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
 import { STARTERS, BENCH, ROSTER_SIZE } from '../../rosters'
+import type { CollegeTeam } from '../../types/football'
+import { getUnitStats } from '../../utils/unitStats'
 
-import type { DraftUnit } from '../../types/fantasy'
+import type { DraftUnit, UnitType } from '../../types/fantasy'
 import {BackButton} from "../../styles/commonstyles";
 
 import styled from 'styled-components'
@@ -219,6 +221,46 @@ const ErrorMessage = styled.div`
     font-weight: 600;
 `
 
+const FiltersCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 18px;
+    display: grid;
+    gap: 18px;
+`
+
+const FilterGroup = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+`
+
+const FilterButton = styled.button<{ $active?: boolean }>`
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: ${({ $active }) =>
+    $active ? '#1f2937' : '#ffffff'};
+    color: ${({ $active }) =>
+    $active ? '#ffffff' : '#374151'};
+
+    &:hover {
+        background: ${({ $active }) =>
+    $active ? '#111827' : '#f3f4f6'};
+    }
+`
+
+const UnitStats = styled.div`
+    margin-top: 8px;
+    display: grid;
+    gap: 3px;
+    color: #4b5563;
+    font-size: 0.85rem;
+`
+
 export default function Draft() {
     const { leagueId } = useParams()
     const { user } = useAuth()
@@ -229,6 +271,10 @@ export default function Draft() {
     const [league, setLeague] = useState<LeagueData | null>(null)
     const [order, setOrder] = useState<DraftOrder[]>([])
     const [members, setMembers] = useState<LeagueMember[]>([])
+
+    const [teams, setTeams] = useState<CollegeTeam[]>([])
+    const [selectedType, setSelectedType] = useState<UnitType | 'ALL'>('ALL')
+    const [selectedConference, setSelectedConference] = useState('ALL')
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -244,6 +290,8 @@ export default function Draft() {
 
             try {
                 const teams = await getTeams()
+
+                setTeams(teams)
                 setUnits(createDraftUnits(teams))
 
                 const { data: membership, error: membershipError } = await supabase
@@ -319,6 +367,66 @@ export default function Draft() {
 
         loadDraft()
     }, [leagueId, user])
+
+    useEffect(() => {
+        if (!leagueId) {
+            return
+        }
+
+        const channel = supabase
+            .channel(`draft-${leagueId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'draft_picks',
+                    filter: `league_id=eq.${leagueId}`,
+                },
+                async () => {
+                    const { data: picks, error: picksError } =
+                        await supabase
+                            .from('draft_picks')
+                            .select(
+                                'id, league_member_id, college_team_id, unit_type, pick_number'
+                            )
+                            .eq('league_id', leagueId)
+                            .order('pick_number', { ascending: true })
+
+                    if (!picksError) {
+                        setDraftPicks(picks ?? [])
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'leagues',
+                    filter: `id=eq.${leagueId}`,
+                },
+                async () => {
+                    const { data: updatedLeague, error: leagueError } =
+                        await supabase
+                            .from('leagues')
+                            .select(
+                                'id, draft_status, current_pick_number, current_turn_number'
+                            )
+                            .eq('id', leagueId)
+                            .single()
+
+                    if (!leagueError) {
+                        setLeague(updatedLeague)
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [leagueId])
 
     if (loading) {
         return <p>Loading draft...</p>
@@ -578,6 +686,18 @@ export default function Draft() {
         )
     }
 
+    const filteredUnits = units.filter((unit) => {
+        const matchesType =
+            selectedType === 'ALL' ||
+            unit.unitType === selectedType
+
+        const matchesConference =
+            selectedConference === 'ALL' ||
+            unit.conference === selectedConference
+
+        return matchesType && matchesConference
+    })
+
     return (
         <DraftPage>
             <DraftHeader>
@@ -648,11 +768,73 @@ export default function Draft() {
                 </RosterCounts>
             </RosterCard>
 
+            <FiltersCard>
+                <div>
+                    <h3>Unit Type</h3>
+
+                    <FilterGroup>
+                        {[
+                            'ALL',
+                            'PASSING',
+                            'RUSHING',
+                            'RECEIVING',
+                            'DEFENSE',
+                            'SPECIAL_TEAMS',
+                        ].map((type) => (
+                            <FilterButton
+                                key={type}
+                                $active={selectedType === type}
+                                onClick={() =>
+                                    setSelectedType(
+                                        type as UnitType | 'ALL'
+                                    )
+                                }
+                            >
+                                {type === 'ALL'
+                                    ? 'All'
+                                    : formatUnitType(type)}
+                            </FilterButton>
+                        ))}
+                    </FilterGroup>
+                </div>
+
+                <div>
+                    <h3>Conference</h3>
+
+                    <FilterGroup>
+                        {[
+                            'ALL',
+                            'ACC',
+                            'Big Ten',
+                            'Big 12',
+                            'SEC',
+                        ].map((conference) => (
+                            <FilterButton
+                                key={conference}
+                                $active={
+                                    selectedConference === conference
+                                }
+                                onClick={() =>
+                                    setSelectedConference(conference)
+                                }
+                            >
+                                {conference === 'ALL'
+                                    ? 'All Conferences'
+                                    : conference}
+                            </FilterButton>
+                        ))}
+                    </FilterGroup>
+                </div>
+            </FiltersCard>
+
             <DraftGrid>
-                {units.map((unit) => {
+                {filteredUnits.map((unit) => {
                     const drafted = isDrafted(unit)
-                    const eligible =
-                        canDraftUnitType(unit.unitType)
+                    const eligible = canDraftUnitType(unit.unitType)
+
+                    const team = teams.find(
+                        (team) => team.id === unit.teamId
+                    )
 
                     return (
                         <DraftUnitCard key={unit.id}>
@@ -668,7 +850,13 @@ export default function Draft() {
 
                                 <DraftUnitType>
                                     {formatUnitType(unit.unitType)}
+                                    {' • '}
+                                    {unit.conference}
                                 </DraftUnitType>
+
+                                <UnitStats>
+                                    {getUnitStats(unit.unitType, team)}
+                                </UnitStats>
                             </DraftUnitInfo>
 
                             <DraftButton
