@@ -2,12 +2,79 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
+import styled from 'styled-components'
 
 interface League {
     id: string
     name: string
     join_code: string
 }
+
+const HomePage = styled.div`
+    display: grid;
+    gap: 24px;
+`
+
+const HeroCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const ActionGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+`
+
+const ActionLink = styled(Link)`
+    display: block;
+    padding: 18px;
+    background: #1f2937;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 12px;
+    font-weight: 700;
+    text-align: center;
+
+    &:hover {
+        background: #111827;
+    }
+`
+
+const SectionCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const LeagueList = styled.div`
+    display: grid;
+    gap: 10px;
+`
+
+const LeagueLink = styled(Link)`
+    display: block;
+    padding: 14px 16px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    color: #111827;
+    text-decoration: none;
+    font-weight: 700;
+
+    &:hover {
+        background: #f3f4f6;
+    }
+`
+
+const EmptyText = styled.p`
+    color: #6b7280;
+`
 
 export default function Home() {
     const { user } = useAuth()
@@ -63,38 +130,49 @@ export default function Home() {
     }, [user])
 
     return (
-        <div>
-            <h1>Fantasy College Football</h1>
+        <HomePage>
+            <HeroCard>
+                <h1>Welcome to Fantasy College Football!</h1>
 
-            <div>
-                <Link to="/create-league">
-                    Create League
-                </Link>
-            </div>
+                <p>
+                    Create a league, join your friends, and manage your college football units.
+                </p>
 
-            <div>
-                <Link to="/join-league">
-                    Join League
-                </Link>
-            </div>
+                <ActionGrid>
+                    <ActionLink to="/create-league">
+                        Create League
+                    </ActionLink>
 
-            <h2>My Leagues</h2>
+                    <ActionLink to="/join-league">
+                        Join League
+                    </ActionLink>
+                </ActionGrid>
+            </HeroCard>
 
-            {loading && <p>Loading leagues...</p>}
+            <SectionCard>
+                <h2>My Leagues</h2>
 
-            {error && <p>{error}</p>}
+                {loading && <p>Loading leagues...</p>}
 
-            {!loading && !error && leagues.length === 0 && (
-                <p>You aren't in any leagues yet.</p>
-            )}
+                {error && <p>{error}</p>}
 
-            {leagues.map((league) => (
-                <div key={league.id}>
-                    <Link to={`/league/${league.id}`}>
-                        {league.name}
-                    </Link>
-                </div>
-            ))}
-        </div>
+                {!loading && !error && leagues.length === 0 && (
+                    <EmptyText>
+                        You aren't in any leagues yet.
+                    </EmptyText>
+                )}
+
+                <LeagueList>
+                    {leagues.map((league) => (
+                        <LeagueLink
+                            key={league.id}
+                            to={`/league/${league.id}`}
+                        >
+                            {league.name}
+                        </LeagueLink>
+                    ))}
+                </LeagueList>
+            </SectionCard>
+        </HomePage>
     )
 }

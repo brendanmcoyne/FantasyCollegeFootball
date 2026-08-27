@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
@@ -16,7 +16,7 @@ import type { WeeklyTeamData } from '../../api/weeklyStats'
 
 import styled from 'styled-components'
 
-import { Card } from '../../styles/commonstyles'
+import {BackButton} from '../../styles/commonstyles'
 import { getTeamLogo, TeamLogo } from '../../styles/logos'
 
 interface LeagueMember {
@@ -41,14 +41,10 @@ interface RosterSectionProps {
     max: number
 }
 
-const SectionCard = styled(Card)`
-    margin-bottom: 20px;
-`
-
 const UnitList = styled.div`
     display: grid;
     gap: 10px;
-`
+`;
 
 const UnitRow = styled.div`
     display: flex;
@@ -58,22 +54,22 @@ const UnitRow = styled.div`
     background: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
-`
+`;
 
 const UnitInfo = styled.div`
     flex: 1;
-`
+`;
 
 const UnitName = styled.div`
     font-weight: 700;
     color: #111827;
-`
+`;
 
 const UnitDetails = styled.div`
     margin-top: 3px;
     color: #6b7280;
     font-size: 0.9rem;
-`
+`;
 
 export default function MyTeam() {
     const { leagueId } = useParams()
@@ -86,6 +82,7 @@ export default function MyTeam() {
     const [error, setError] = useState('')
 
     const [selectedBenchUnit, setSelectedBenchUnit] = useState<RosterUnit | null>(null)
+    const navigate = useNavigate()
 
     useEffect(() => {
         async function loadRoster() {
@@ -287,6 +284,7 @@ export default function MyTeam() {
     function RosterSection({title, units, max}: RosterSectionProps) {
         return (
             <section>
+
                 <h3>{title} ({units.length}/{max})</h3>
 
                 {units.length === 0 ? (<p>Empty</p>) : (
@@ -408,6 +406,10 @@ export default function MyTeam() {
 
     return (
         <div>
+            <BackButton onClick={() => navigate(-1)}>
+                ← Back
+            </BackButton>
+
             <h1>{teamName}</h1>
 
             <p>Week {CURRENT_WEEK}</p>

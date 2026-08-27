@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { supabase } from '../lib/supabase'
 import { getTeams } from '../../api/cfbApi'
 
+import styled from 'styled-components'
+import { TeamLogo, getTeamLogo } from '../../styles/logos'
 import { STARTERS, BENCH, type RosterUnitType } from '../../rosters'
+import { BackButton } from '../../styles/commonstyles'
 
 import type { CollegeTeam } from '../../types/football'
 
@@ -22,6 +25,30 @@ interface RosterUnit {
     acquiredVia: 'DRAFT' | 'FREE_AGENCY'
 }
 
+const UnitList = styled.div`
+    display: grid;
+    gap: 10px;
+`
+
+const UnitRow = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+`
+
+const UnitInfo = styled.div`
+    flex: 1;
+`
+
+const UnitName = styled.div`
+    font-weight: 700;
+    color: #111827;
+`
+
 export default function Rosters() {
     const { leagueId, memberId } = useParams()
 
@@ -29,6 +56,7 @@ export default function Rosters() {
     const [roster, setRoster] = useState<RosterUnit[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const navigate = useNavigate()
 
     useEffect(() => {
         async function loadRoster() {
@@ -148,6 +176,10 @@ export default function Rosters() {
 
     return (
         <div>
+            <BackButton onClick={() => navigate(-1)}>
+                ← Back
+            </BackButton>
+
             <h1>{teamName}</h1>
 
             <h2>Starters</h2>
@@ -187,14 +219,23 @@ export default function Rosters() {
             {bench.length === 0 ? (
                 <p>No bench units.</p>
             ) : (
-                <ul>
+                <UnitList>
                     {bench.map((unit) => (
-                        <li key={unit.id}>
-                            {unit.teamName}{' '}
-                            {formatUnitType(unit.unitType)}
-                        </li>
+                        <UnitRow key={unit.id}>
+                            <TeamLogo
+                                src={getTeamLogo(unit.teamName)}
+                                alt={unit.teamName}
+                            />
+
+                            <UnitInfo>
+                                <UnitName>
+                                    {unit.teamName}{' '}
+                                    {formatUnitType(unit.unitType)}
+                                </UnitName>
+                            </UnitInfo>
+                        </UnitRow>
                     ))}
-                </ul>
+                </UnitList>
             )}
 
             <p>
@@ -210,11 +251,7 @@ interface RosterSectionProps {
     max: number
 }
 
-function RosterSection({
-                           title,
-                           units,
-                           max,
-                       }: RosterSectionProps) {
+function RosterSection({title, units, max}: RosterSectionProps) {
     return (
         <section>
             <h3>
@@ -224,13 +261,23 @@ function RosterSection({
             {units.length === 0 ? (
                 <p>Empty</p>
             ) : (
-                <ul>
+                <UnitList>
                     {units.map((unit) => (
-                        <li key={unit.id}>
-                            {unit.teamName}
-                        </li>
+                        <UnitRow key={unit.id}>
+                            <TeamLogo
+                                src={getTeamLogo(unit.teamName)}
+                                alt={unit.teamName}
+                            />
+
+                            <UnitInfo>
+                                <UnitName>
+                                    {unit.teamName}{' '}
+                                    {formatUnitType(unit.unitType)}
+                                </UnitName>
+                            </UnitInfo>
+                        </UnitRow>
                     ))}
-                </ul>
+                </UnitList>
             )}
         </section>
     )

@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useNavigate, Link, useParams } from 'react-router-dom'
 
 import { supabase } from '../lib/supabase'
 import { getTeams } from '../../api/cfbApi'
 import { getWeeklyStats } from '../../api/weeklyStats'
 import { calculateUnitScore } from '../../utils/scoring'
 import { CURRENT_WEEK } from '../../bigseasonfile'
+import styled from 'styled-components'
 
 import type { CollegeTeam } from '../../types/football'
 import type { ScoringUnitType } from '../../utils/scoring'
 import type { WeeklyTeamData } from '../../api/weeklyStats'
+import {BackButton} from "../../styles/commonstyles";
 
 interface RosterRow {
     id: string
@@ -49,6 +51,145 @@ const UNIT_ORDER: ScoringUnitType[] = [
     'SPECIAL_TEAMS',
 ]
 
+const ScoresPage = styled.div`
+    display: grid;
+    gap: 24px;
+`
+
+const HeaderCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const WeekLinks = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+`
+
+const WeekLink = styled(Link)<{ $active?: boolean }>`
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    background: ${({ $active }) =>
+    $active ? '#1f2937' : '#ffffff'};
+    color: ${({ $active }) =>
+    $active ? '#ffffff' : '#374151'};
+    border: 1px solid #d1d5db;
+
+    &:hover {
+        background: ${({ $active }) =>
+    $active ? '#111827' : '#f3f4f6'};
+    }
+`
+
+const Status = styled.span`
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    font-weight: 700;
+    color: #374151;
+`
+
+const SectionCard = styled.section`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const MatchupRow = styled.div`
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid #e5e7eb;
+`
+
+const TeamLeft = styled.div`
+    text-align: right;
+    font-weight: 700;
+`
+
+const TeamRight = styled.div`
+    text-align: left;
+    font-weight: 700;
+`
+
+const MatchupScore = styled.div`
+    font-weight: 700;
+    color: #374151;
+    min-width: 110px;
+    text-align: center;
+`
+
+const TeamScoreCard = styled.div`
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+`
+
+const UnitRow = styled.div`
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 7px 0;
+    border-bottom: 1px solid #e5e7eb;
+
+    &:last-child {
+        border-bottom: none;
+    }
+`
+
+const MatchupCard = styled.div`
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 14px;
+`
+
+const MatchupTeam = styled.div`
+    padding: 18px;
+`
+
+const MatchupTeamHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+`
+
+const MatchupTeamName = styled.h3`
+    margin: 0;
+`
+
+const BigScore = styled.div`
+    font-size: 1.6rem;
+    font-weight: 700;
+`
+
+const ScoreUnit = styled.div`
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+`
+
 export default function WeekScores() {
     const { leagueId, week: weekParam } = useParams()
     const week = Number(weekParam)
@@ -57,6 +198,7 @@ export default function WeekScores() {
     const [matchups, setMatchups] = useState<LeagueMatchup[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const navigate = useNavigate()
 
     const weekStarted = week <= CURRENT_WEEK
     const weekComplete = week < CURRENT_WEEK
@@ -254,33 +396,37 @@ export default function WeekScores() {
     }
 
     return (
-        <div>
+        <ScoresPage>
+            <HeaderCard>
+            <BackButton onClick={() => navigate(`/league/${leagueId}`)}>
+                ← Back
+            </BackButton>
+
             <h1>Week {week} League Scores</h1>
 
-            <div>
-                {Array.from({ length: 10 }, (_, index) => (
-                    <Link
-                        key={index + 1}
-                        to={`/league/${leagueId}/week-scores/${index + 1}`}
-                        style={{ marginRight: '10px' }}
-                    >
-                        Week {index + 1}
-                    </Link>
-                ))}
-            </div>
+                <WeekLinks>
+                    {Array.from({ length: 10 }, (_, index) => {
+                        const weekNumber = index + 1
+
+                        return (
+                            <WeekLink
+                                key={weekNumber}
+                                to={`/league/${leagueId}/week-scores/${weekNumber}`}
+                                $active={weekNumber === week}
+                            >
+                                Week {weekNumber}
+                            </WeekLink>
+                        )
+                    })}
+                </WeekLinks>
 
             <p>
-                <strong>
-                    {weekComplete
-                        ? 'Final'
-                        : weekStarted
-                            ? 'In Progress'
-                            : 'Not Started'}
-                </strong>
+                <Status>{weekComplete ? 'Final' : weekStarted ? 'In Progress' : 'Not Started'}</Status>
             </p>
-
+            </HeaderCard>
             <hr />
 
+            <SectionCard>
             <h2>Matchups</h2>
 
             {matchups.map((matchup) => {
@@ -296,82 +442,106 @@ export default function WeekScores() {
 
                 if (!weekStarted) {
                     return (
-                        <h3 key={matchup.id}>
-                            {team1.teamName} vs {team2.teamName}
-                        </h3>
+                        <h3 key={matchup.id}>{team1.teamName} vs {team2.teamName}</h3>
                     )
                 }
 
-                const team1Won =
-                    team1.starterTotal >= team2.starterTotal
+                const team1Won = team1.starterTotal >= team2.starterTotal
 
                 return (
-                    <h3 key={matchup.id}>
-                        {weekComplete && team1Won ? 'Winner: ' : ''}
-                        {team1.teamName} — {team1.starterTotal.toFixed(1)}
-                        {' vs '}
-                        {team2.starterTotal.toFixed(1)} —{' '}
-                        {weekComplete && !team1Won ? 'Winner: ' : ''}
-                        {team2.teamName}
-                    </h3>
+                    <MatchupCard key={matchup.id}>
+                        <MatchupTeam>
+                            <MatchupTeamHeader>
+                                <MatchupTeamName>
+                                    {team1.teamName}
+                                </MatchupTeamName>
+
+                                <BigScore>
+                                    {weekStarted
+                                        ? team1.starterTotal.toFixed(1)
+                                        : '-'}
+                                </BigScore>
+                            </MatchupTeamHeader>
+
+                            {[...team1.starters]
+                                .sort(
+                                    (a, b) =>
+                                        UNIT_ORDER.indexOf(a.unitType) -
+                                        UNIT_ORDER.indexOf(b.unitType)
+                                )
+                                .map((unit) => (
+                                <ScoreUnit key={unit.rosterId}>
+                                <span>
+                                    {unit.teamName}{' '}
+                                    {formatUnitType(unit.unitType)}
+                                </span>
+
+                                    <strong>
+                                        {unit.score.toFixed(1)}
+                                    </strong>
+                                </ScoreUnit>
+                            ))}
+
+                            <h4>Bench</h4>
+
+                            {team1.bench.map((unit) => (
+                                <div key={unit.rosterId}>
+                                    {unit.teamName}{' '}
+                                    {formatUnitType(unit.unitType)}
+                                </div>
+                            ))}
+                        </MatchupTeam>
+
+                        <MatchupTeam>
+                            <MatchupTeamHeader>
+                                <MatchupTeamName>
+                                    {team2.teamName}
+                                </MatchupTeamName>
+
+                                <BigScore>
+                                    {weekStarted
+                                        ? team2.starterTotal.toFixed(1)
+                                        : '-'}
+                                </BigScore>
+                            </MatchupTeamHeader>
+
+                            {[...team2.starters]
+                                .sort(
+                                    (a, b) =>
+                                        UNIT_ORDER.indexOf(a.unitType) -
+                                        UNIT_ORDER.indexOf(b.unitType)
+                                )
+                                .map((unit) => (
+                                <ScoreUnit key={unit.rosterId}>
+                                <span>
+                                    {unit.teamName}{' '}
+                                    {formatUnitType(unit.unitType)}
+                                </span>
+
+                                    <strong>
+                                        {unit.score.toFixed(1)}
+                                    </strong>
+                                </ScoreUnit>
+                            ))}
+                            <h4>Bench</h4>
+
+                            {team2.bench.map((unit) => (
+                                <div key={unit.rosterId}>
+                                    {unit.teamName}{' '}
+                                    {formatUnitType(unit.unitType)}
+                                </div>
+                            ))}
+                        </MatchupTeam>
+                    </MatchupCard>
                 )
             })}
-
+            </SectionCard>
             <hr />
 
-            <h2>Team Score Breakdowns</h2>
-
-            {scores.map((team) => {
-                const starters = [...team.starters].sort(
-                    (a, b) =>
-                        UNIT_ORDER.indexOf(a.unitType) -
-                        UNIT_ORDER.indexOf(b.unitType)
-                )
-
-                const bench = [...team.bench].sort(
-                    (a, b) =>
-                        UNIT_ORDER.indexOf(a.unitType) -
-                        UNIT_ORDER.indexOf(b.unitType)
-                )
-
-                return (
-                    <section key={team.memberId}>
-                        <h2>
-                            {team.teamName} — {team.starterTotal.toFixed(1)}
-                        </h2>
-
-                        <h3>Starters</h3>
-
-                        {starters.map((unit) => (
-                            <div key={unit.rosterId}>
-                                {unit.teamName}{' '}
-                                {formatUnitType(unit.unitType)}
-                                {' — '}
-                                {unit.score.toFixed(1)}
-                            </div>
-                        ))}
-
-                        <h3>Bench</h3>
-
-                        {bench.map((unit) => (
-                            <div key={unit.rosterId}>
-                                {unit.teamName}{' '}
-                                {formatUnitType(unit.unitType)}
-                                {' — '}
-                                {unit.score.toFixed(1)}
-                            </div>
-                        ))}
-
-                        <hr />
-                    </section>
-                )
-            })}
-        </div>
+        </ScoresPage>
     )
 }
 
 function formatUnitType(unitType: ScoringUnitType): string {
-    return unitType === 'SPECIAL_TEAMS'
-        ? 'Special Teams'
-        : unitType.charAt(0) + unitType.slice(1).toLowerCase()
+    return unitType === 'SPECIAL_TEAMS' ? 'Special Teams' : unitType.charAt(0) + unitType.slice(1).toLowerCase()
 }

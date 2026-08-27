@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { supabase } from '../lib/supabase'
 import { CURRENT_WEEK } from '../../bigseasonfile'
+
+import styled from 'styled-components'
+import {BackButton} from "../../styles/commonstyles";
 
 interface Standing {
     memberId: string
@@ -13,12 +16,70 @@ interface Standing {
     pointsAgainst: number
 }
 
+const StandingsPage = styled.div`
+    display: grid;
+    gap: 24px;
+`
+
+const StandingsCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const StyledTable = styled.table`
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+        background: #f3f4f6;
+        color: #374151;
+        font-weight: 700;
+    }
+
+    tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    tbody tr:last-child td {
+        border-bottom: none;
+    }
+`
+
+const Rank = styled.td`
+    font-weight: 700;
+    width: 70px;
+`
+
+const Team = styled.td`
+    font-weight: 700;
+    color: #111827;
+`
+
+const Record = styled.td`
+    font-weight: 600;
+`
+
+const Points = styled.td`
+    color: #4b5563;
+`
+
 export default function Standings() {
     const { leagueId } = useParams()
 
     const [standings, setStandings] = useState<Standing[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const navigate = useNavigate()
 
     useEffect(() => {
         async function loadStandings() {
@@ -120,10 +181,15 @@ export default function Standings() {
     }
 
     return (
-        <div>
+        <StandingsPage>
+            <BackButton onClick={() => navigate(-1)}>
+                ← Back
+            </BackButton>
+
             <h1>Standings</h1>
 
-            <table>
+            <StandingsCard>
+            <StyledTable>
                 <thead>
                 <tr>
                     <th>Rank</th>
@@ -138,16 +204,17 @@ export default function Standings() {
                 <tbody>
                 {standings.map((team, index) => (
                     <tr key={team.memberId}>
-                        <td>{index + 1}</td>
-                        <td>{team.teamName}</td>
-                        <td>{team.wins}</td>
-                        <td>{team.losses}</td>
-                        <td>{team.pointsFor.toFixed(1)}</td>
-                        <td>{team.pointsAgainst.toFixed(1)}</td>
+                        <Rank>{index + 1}</Rank>
+                        <Team>{team.teamName}</Team>
+                        <Record>{team.wins}</Record>
+                        <Record>{team.losses}</Record>
+                        <Points>{team.pointsFor.toFixed(1)}</Points>
+                        <Points>{team.pointsAgainst.toFixed(1)}</Points>
                     </tr>
                 ))}
                 </tbody>
-            </table>
-        </div>
+            </StyledTable>
+            </StandingsCard>
+        </StandingsPage>
     )
 }

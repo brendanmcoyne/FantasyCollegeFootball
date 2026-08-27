@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useNavigate, Link, useParams } from 'react-router-dom'
 import styled from 'styled-components'
+import { BackButton } from '../../styles/commonstyles'
 
 import { supabase } from '../lib/supabase'
 
@@ -22,7 +23,7 @@ interface Matchup {
 const SchedulePage = styled.div`
     display: grid;
     gap: 24px;
-`
+`;
 
 const WeekCard = styled.section`
     background: #ffffff;
@@ -44,7 +45,7 @@ const WeekHeader = styled(Link)`
     &:hover {
         text-decoration: underline;
     }
-`
+`;
 
 const MatchupRow = styled.div`
     display: grid;
@@ -57,32 +58,27 @@ const MatchupRow = styled.div`
     &:first-of-type {
         border-top: none;
     }
-`
+`;
 
 const TeamName = styled.div`
     font-weight: 700;
     color: #111827;
-`
+`;
 
 const Team1 = styled(TeamName)`
     text-align: right;
-`
+`;
 
 const Team2 = styled(TeamName)`
     text-align: left;
-`
+`;
 
 const Score = styled.div`
     font-weight: 700;
     color: #374151;
     min-width: 110px;
     text-align: center;
-`
-
-const EmptyText = styled.p`
-    color: #6b7280;
-    margin: 0;
-`
+`;
 
 export default function Schedule() {
     const { leagueId } = useParams()
@@ -91,6 +87,7 @@ export default function Schedule() {
     const [matchups, setMatchups] = useState<Matchup[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const navigate = useNavigate()
 
     useEffect(() => {
         async function loadSchedule() {
@@ -150,6 +147,10 @@ export default function Schedule() {
 
     return (
         <SchedulePage>
+            <BackButton onClick={() => navigate(-1)}>
+                ← Back
+            </BackButton>
+            
             <h1>League Schedule</h1>
 
             {Array.from(

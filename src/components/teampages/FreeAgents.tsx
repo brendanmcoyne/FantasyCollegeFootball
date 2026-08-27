@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { getTeams } from '../../api/cfbApi'
 import { getWeeklyStats } from '../../api/weeklyStats'
@@ -12,6 +12,9 @@ import type { CollegeTeam } from '../../types/football'
 import type { RosterUnitType } from '../../rosters'
 
 import { CURRENT_WEEK } from '../../bigseasonfile'
+import {BackButton} from "../../styles/commonstyles";
+import { TeamLogo, getTeamLogo } from '../../styles/logos'
+import styled from 'styled-components'
 
 interface OwnedUnit {
     id: string
@@ -51,6 +54,124 @@ interface LeagueMember {
     team_name: string
 }
 
+const FreeAgentsPage = styled.div`
+    display: grid;
+    gap: 24px;
+`
+
+const HeaderCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const FiltersCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 18px;
+    display: grid;
+    gap: 18px;
+`
+
+const FilterGroup = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+`
+
+const FilterButton = styled.button<{ $active?: boolean }>`
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background: ${({ $active }) =>
+    $active ? '#1f2937' : '#ffffff'};
+    color: ${({ $active }) =>
+    $active ? '#ffffff' : '#374151'};
+
+    &:hover {
+        background: ${({ $active }) =>
+    $active ? '#111827' : '#f3f4f6'};
+    }
+`
+
+const FreeAgentGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(260px, 1fr)
+    );
+    gap: 14px;
+`
+
+const FreeAgentCard = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+`
+
+const UnitInfo = styled.div`
+    flex: 1;
+`
+
+const UnitName = styled.div`
+    font-weight: 700;
+    color: #111827;
+`
+
+const UnitMeta = styled.div`
+    margin-top: 4px;
+    color: #6b7280;
+    font-size: 0.9rem;
+`
+
+const ActionButton = styled.button`
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #1f2937;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+    }
+`
+
+const SelectionCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+`
+
+const HistoryCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+`
+
+const HistoryRow = styled.div`
+    padding: 10px 0;
+    border-bottom: 1px solid #e5e7eb;
+
+    &:last-child {
+        border-bottom: none;
+    }
+`
+
 export default function FreeAgents() {
     const { leagueId } = useParams()
     const { user } = useAuth()
@@ -68,6 +189,7 @@ export default function FreeAgents() {
     const [selectedFreeAgent, setSelectedFreeAgent] = useState<FreeAgentUnit | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const navigate = useNavigate()
 
     useEffect(() => {
         async function loadFreeAgents() {
@@ -390,103 +512,116 @@ export default function FreeAgents() {
 
 
     return (
-        <div>
-            <h1>Free Agents</h1>
+        <FreeAgentsPage>
+            <HeaderCard>
+                <BackButton onClick={() => navigate(-1)}>
+                    ← Back
+                </BackButton>
 
-            <p>Week {CURRENT_WEEK}</p>
+                <h1>Free Agents</h1>
 
-            {error && <p>{error}</p>}
+                <p>Week {CURRENT_WEEK}</p>
+            </HeaderCard>
 
-            <div>
-                <h3>Unit Type</h3>
+            <FiltersCard>
+                <div>
+                    <h3>Unit Type</h3>
 
-                {[
-                    'ALL',
-                    'PASSING',
-                    'RUSHING',
-                    'RECEIVING',
-                    'DEFENSE',
-                    'SPECIAL_TEAMS',
-                ].map((type) => (
-                    <button
-                        key={type}
-                        onClick={() =>
-                            setSelectedType(
-                                type as UnitType | 'ALL'
-                            )
-                        }
-                    >
-                        {formatUnitType(type)}
-                    </button>
-                ))}
-            </div>
+                    <FilterGroup>
+                        {[
+                            'ALL',
+                            'PASSING',
+                            'RUSHING',
+                            'RECEIVING',
+                            'DEFENSE',
+                            'SPECIAL_TEAMS',
+                        ].map((type) => (
+                            <FilterButton
+                                key={type}
+                                $active={selectedType === type}
+                                onClick={() =>
+                                    setSelectedType(
+                                        type as UnitType | 'ALL'
+                                    )
+                                }
+                            >
+                                {formatUnitType(type)}
+                            </FilterButton>
+                        ))}
+                    </FilterGroup>
+                </div>
 
-            <div>
-                <h3>Conference</h3>
+                <div>
+                    <h3>Conference</h3>
 
-                {[
-                    'ALL',
-                    'ACC',
-                    'Big Ten',
-                    'Big 12',
-                    'SEC',
-                ].map((conference) => (
-                    <button
-                        key={conference}
-                        onClick={() =>
-                            setSelectedConference(
-                                conference
-                            )
-                        }
-                    >
-                        {conference === 'ALL'
-                            ? 'All Conferences'
-                            : conference}
-                    </button>
-                ))}
-            </div>
+                    <FilterGroup>
+                        {[
+                            'ALL',
+                            'ACC',
+                            'Big Ten',
+                            'Big 12',
+                            'SEC',
+                        ].map((conference) => (
+                            <FilterButton
+                                key={conference}
+                                $active={
+                                    selectedConference === conference
+                                }
+                                onClick={() =>
+                                    setSelectedConference(conference)
+                                }
+                            >
+                                {conference === 'ALL'
+                                    ? 'All Conferences'
+                                    : conference}
+                            </FilterButton>
+                        ))}
+                    </FilterGroup>
+                </div>
+            </FiltersCard>
 
             <hr />
 
-            {filteredFreeAgents.map((unit) => (
-                <div key={unit.id}>
-                    <strong>
-                        {unit.teamName}{' '}
-                        {formatUnitType(
-                            unit.unitType
-                        )}
-                    </strong>
+            <FreeAgentGrid>
+                {filteredFreeAgents.map((unit) => (
+                    <FreeAgentCard key={unit.id}>
+                        <TeamLogo
+                            src={getTeamLogo(unit.teamName)}
+                            alt={unit.teamName}
+                        />
 
-                    {' — '}
-                    {unit.conference}
+                        <UnitInfo>
+                            <UnitName>
+                                {unit.teamName}{' '}
+                                {formatUnitType(unit.unitType)}
+                            </UnitName>
 
-                    {unit.gameStart && (
-                        <>
-                            {' — '}
-                            {formatGameStart(
-                                unit.gameStart
-                            )}
-                        </>
-                    )}
+                            <UnitMeta>
+                                {unit.conference}
 
-                    {' '}
+                                {unit.gameStart && (
+                                    <>
+                                        {' • '}
+                                        {formatGameStart(unit.gameStart)}
+                                    </>
+                                )}
+                            </UnitMeta>
+                        </UnitInfo>
 
-                    <button
-                        disabled={unit.locked}
-                        onClick={() => {
-                            setError('')
-                            setSelectedFreeAgent(
-                                unit
-                            )
-                        }}
-                    >
-                        {unit.locked
-                            ? 'Locked'
-                            : 'Add'}
-                    </button>
-                </div>
-            ))}
+                        <ActionButton
+                            disabled={unit.locked}
+                            onClick={() => {
+                                setError('')
+                                setSelectedFreeAgent(unit)
+                            }}
+                        >
+                            {unit.locked ? 'Locked' : 'Add'}
+                        </ActionButton>
+                    </FreeAgentCard>
+                ))}
+            </FreeAgentGrid>
 
+            <SelectionCard>
             {selectedFreeAgent && (
                 <div>
                     <h2>
@@ -500,23 +635,31 @@ export default function FreeAgents() {
                     <p>Choose a unit to drop:</p>
 
                     {myRoster.map((unit) => (
-                        <div key={unit.id}>
-                            {unit.teamName}{' '}
-                            {formatUnitType(unit.unitType)}
+                        <FreeAgentCard key={unit.id}>
+                            <TeamLogo
+                                src={getTeamLogo(unit.teamName)}
+                                alt={unit.teamName}
+                            />
 
-                            {unit.gameStart && (
-                                <>
-                                    {' — '}
-                                    {formatGameStart(unit.gameStart)}
-                                </>
-                            )}
+                            <UnitInfo>
+                                <UnitName>
+                                    {unit.teamName}{' '}
+                                    {formatUnitType(unit.unitType)}
+                                </UnitName>
 
-                            {' '}
+                                <UnitMeta>
+                                    {unit.gameStart &&
+                                        formatGameStart(unit.gameStart)}
+                                </UnitMeta>
+                            </UnitInfo>
 
-                            <button disabled={unit.locked} onClick={() => makeMove(unit)}>
+                            <ActionButton
+                                disabled={unit.locked}
+                                onClick={() => makeMove(unit)}
+                            >
                                 {unit.locked ? 'Locked' : 'Drop'}
-                            </button>
-                        </div>
+                            </ActionButton>
+                        </FreeAgentCard>
                     ))}
 
                     <button onClick={() => setSelectedFreeAgent(null)}>
@@ -524,22 +667,24 @@ export default function FreeAgents() {
                     </button>
                 </div>
             )}
-            <hr />
+            </SelectionCard>
 
+            {error && (<p>{error}</p>)}
+
+            <HistoryCard>
             <h2>Free Agency History</h2>
 
             {transactions.length === 0 ? (
                 <p>No free agency moves yet.</p>
             ) : (
                 transactions.map((transaction) => {
-                    const fantasyTeam = members.find(
-                        (member) => member.id === transaction.league_member_id)
+                    const fantasyTeam = members.find((member) => member.id === transaction.league_member_id)
 
                     const addedTeam = teamMap.get(transaction.added_college_team_id)
                     const droppedTeam = teamMap.get(transaction.dropped_college_team_id)
 
                     return (
-                        <div key={transaction.id}>
+                        <HistoryRow key={transaction.id}>
                             <strong>
                                 {fantasyTeam?.team_name ?? 'Unknown Team'}
                             </strong>
@@ -553,11 +698,12 @@ export default function FreeAgents() {
 
                             {droppedTeam?.name ?? 'Unknown Team'}{' '}
                             {formatUnitType(transaction.dropped_unit_type)}
-                        </div>
+                        </HistoryRow>
                     )
                 })
             )}
-        </div>
+            </HistoryCard>
+        </FreeAgentsPage>
     )
 }
 

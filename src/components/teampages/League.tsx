@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useNavigate, Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
 import { createRegularSeasonSchedule } from '../../utils/leagueschedule'
 import { CURRENT_WEEK } from '../../bigseasonfile'
+import styled from 'styled-components'
+import { BackButton } from "../../styles/commonstyles";
 
 interface LeagueData {
     id: string
@@ -21,6 +23,95 @@ interface LeagueMember {
     joined_at: string
 }
 
+const LeaguePage = styled.div`
+    display: grid;
+    gap: 24px;
+`;
+
+const HeaderCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`;
+
+const SectionCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`;
+
+const MemberList = styled.div`
+    display: grid;
+    gap: 10px;
+`;
+
+const MemberLink = styled(Link)`
+    display: block;
+    padding: 12px 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    color: #111827;
+    text-decoration: none;
+    font-weight: 600;
+
+    &:hover {
+        background: #f3f4f6;
+    }
+`;
+
+const ActionGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+`;
+
+const ActionLink = styled(Link)`
+    display: block;
+    padding: 18px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    color: #111827;
+    text-decoration: none;
+    font-weight: 700;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+
+    &:hover {
+        background: #f9fafb;
+        transform: translateY(-1px);
+    }
+`;
+
+const Status = styled.span`
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #e5e7eb;
+    color: #374151;
+    font-weight: 700;
+    font-size: 0.85rem;
+`;
+
+const PrimaryButton = styled.button`
+    border: none;
+    border-radius: 10px;
+    padding: 11px 16px;
+    background: #1f2937;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+        background: #111827;
+    }
+`;
+
 export default function League() {
     const { leagueId } = useParams()
     const { user } = useAuth()
@@ -30,6 +121,7 @@ export default function League() {
     const [loading, setLoading] = useState(true)
     const [hasSchedule, setHasSchedule] = useState(false)
     const [error, setError] = useState('')
+    const navigate = useNavigate()
 
     useEffect(() => {
         async function loadLeague() {
@@ -224,88 +316,85 @@ export default function League() {
     }
 
     return (
-        <div>
-            <h1>{league.name}</h1>
+        <LeaguePage>
+            <BackButton onClick={() => navigate(-1)}>
+                ← Back
+            </BackButton>
 
-            <p>
-                Join Code: <strong>{league.join_code}</strong>
-            </p>
+            <HeaderCard>
+                <h1>{league.name}</h1>
 
-            <h2>League Members</h2>
+                {league.draft_status !== 'COMPLETED' && (
+                    <p>
+                        Join Code: <strong>{league.join_code}</strong>
+                    </p>
+                )}
 
-            <ul>
-                {members.map((member) => (
-                    <li key={member.id}>
-                        <Link to={`/league/${league.id}/team/${member.id}`}>
+                <p>
+                    Draft Status:{' '}
+                    <Status>
+                        {league.draft_status.split('_').join(' ')}
+                    </Status>
+                </p>
+            </HeaderCard>
+
+            <SectionCard>
+                <h2>League Members</h2>
+
+                <MemberList>
+                    {members.map((member) => (
+                        <MemberLink key={member.id} to={`/league/${league.id}/team/${member.id}`}>
                             {member.team_name}
-                        </Link>
-                    </li>
-                ))}
-            </ul>
+                        </MemberLink>
+                    ))}
+                </MemberList>
+            </SectionCard>
 
-            {league.draft_status === 'COMPLETED' && (
-                <>
-                    <div>
-                        <Link to={`/league/${league.id}/team`}>
+            <ActionGrid>
+                {league.draft_status === 'COMPLETED' && (
+                    <>
+                        <ActionLink to={`/league/${league.id}/team`}>
                             My Team
-                        </Link>
-                    </div>
+                        </ActionLink>
 
-                    <div>
-                        <Link to={`/league/${league.id}/free-agents`}>
+                        <ActionLink to={`/league/${league.id}/free-agents`}>
                             Free Agents
-                        </Link>
-                    </div>
+                        </ActionLink>
 
-                    <div>
-                        <Link to={`/league/${league.id}/schedule`}>
+                        <ActionLink to={`/league/${league.id}/schedule`}>
                             Schedule
-                        </Link>
-                    </div>
+                        </ActionLink>
 
-                    <div>
-                        <Link to={`/league/${league.id}/standings`}>
+                        <ActionLink to={`/league/${league.id}/standings`}>
                             Standings
-                        </Link>
-                    </div>
-                </>
-            )}
+                        </ActionLink>
+                    </>
+                )}
 
-            <div>
-                <Link to={`/league/${league.id}/draft`}>
+                <ActionLink to={`/league/${league.id}/draft`}>
                     {league.draft_status === 'COMPLETED'
-                        ? 'Draft Results'
-                        : 'Open Draft Room'}
-                </Link>
-            </div>
+                        ? 'Draft Results' : 'Open Draft Room'}
+                </ActionLink>
 
-            <p>
-                Draft Status:{' '}
-                <strong>{league.draft_status}</strong>
-            </p>
+                <ActionLink to={`/league/${league.id}/week-scores/${CURRENT_WEEK}`}>
+                    Week Scores
+                </ActionLink>
+            </ActionGrid>
 
             {isCommissioner &&
                 league.draft_status === 'NOT_STARTED' && (
-                    <button onClick={handleStartDraft}>
+                    <PrimaryButton onClick={handleStartDraft}>
                         Start Draft
-                    </button>
+                    </PrimaryButton>
                 )}
 
             {isCommissioner &&
                 league.draft_status === 'COMPLETED' &&
                 !hasSchedule && (
-                    <button onClick={handleGenerateSchedule}>
+                    <PrimaryButton onClick={handleGenerateSchedule}>
                         Generate Schedule
-                    </button>
+                    </PrimaryButton>
                 )}
-
-            <div>
-                <Link
-                    to={`/league/${league.id}/week-scores/${CURRENT_WEEK}`}
-                >
-                    Week Scores
-                </Link>
-            </div>
-        </div>
+        </LeaguePage>
     )
 }

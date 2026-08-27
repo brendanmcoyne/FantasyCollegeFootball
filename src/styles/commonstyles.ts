@@ -19,10 +19,17 @@ export const Card = styled.div`
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 `
 
-export const TeamLogo = styled.img`
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-    border-radius: 8px;
+export const BackButton = styled.button`
     background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 9px 14px;
+    color: #374151;
+    font-weight: 600;
+    cursor: pointer;
+    width: fit-content;
+
+    &:hover {
+        background: #f3f4f6;
+    }
 `

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { getTeams } from '../../api/cfbApi'
 import { createDraftUnits } from '../../utils/Units'
@@ -8,6 +8,7 @@ import { useAuth } from '../Auth'
 import { STARTERS, BENCH, ROSTER_SIZE } from '../../rosters'
 
 import type { DraftUnit } from '../../types/fantasy'
+import {BackButton} from "../../styles/commonstyles";
 
 interface LeagueMember {
     id: string
@@ -47,6 +48,7 @@ export default function Draft() {
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const navigate = useNavigate()
 
     useEffect(() => {
         async function loadDraft() {
@@ -361,6 +363,10 @@ export default function Draft() {
 
     return (
         <div>
+            <BackButton onClick={() => navigate(-1)}>
+                ← Back
+            </BackButton>
+
             <h1>Draft Room</h1>
 
             {error && <p>{error}</p>}
