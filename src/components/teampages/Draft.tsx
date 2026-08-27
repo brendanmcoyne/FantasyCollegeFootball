@@ -10,6 +10,9 @@ import { STARTERS, BENCH, ROSTER_SIZE } from '../../rosters'
 import type { DraftUnit } from '../../types/fantasy'
 import {BackButton} from "../../styles/commonstyles";
 
+import styled from 'styled-components'
+import { TeamLogo, getTeamLogo } from '../../styles/logos'
+
 interface LeagueMember {
     id: string
     team_name: string
@@ -34,6 +37,187 @@ interface DraftOrder {
     league_member_id: string
     draft_position: number
 }
+
+const ResultsPage = styled.div`
+    display: grid;
+    gap: 20px;
+`
+
+const ResultsHeader = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const ResultsList = styled.div`
+    display: grid;
+    gap: 10px;
+`
+
+const PickRow = styled.div`
+    display: grid;
+    grid-template-columns: 70px 48px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 12px 14px;
+`
+
+const PickNumber = styled.div`
+    font-weight: 700;
+    color: #6b7280;
+`
+
+const PickInfo = styled.div`
+    min-width: 0;
+`
+
+const PickTeam = styled.div`
+    font-weight: 700;
+    color: #111827;
+`
+
+const PickType = styled.div`
+    margin-top: 3px;
+    color: #6b7280;
+    font-size: 0.9rem;
+`
+
+const Drafter = styled.div`
+    font-weight: 700;
+    color: #374151;
+    text-align: right;
+`
+
+const DraftPage = styled.div`
+    display: grid;
+    gap: 20px;
+`
+
+const DraftHeader = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const DraftInfo = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 14px;
+`
+
+const InfoBadge = styled.div`
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 600;
+    color: #374151;
+`
+
+const TurnStatus = styled.div<{ $myTurn: boolean }>`
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-weight: 700;
+    background: ${({ $myTurn }) =>
+    $myTurn ? '#dcfce7' : '#f3f4f6'};
+    color: ${({ $myTurn }) =>
+    $myTurn ? '#166534' : '#6b7280'};
+`
+
+const RosterCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 18px;
+`
+
+const RosterCounts = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+`
+
+const RosterCount = styled.div`
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #374151;
+    font-weight: 600;
+`
+
+const DraftGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(250px, 1fr)
+    );
+    gap: 14px;
+`
+
+const DraftUnitCard = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 14px;
+`
+
+const DraftUnitInfo = styled.div`
+    flex: 1;
+    min-width: 0;
+`
+
+const DraftUnitName = styled.div`
+    font-weight: 700;
+    color: #111827;
+`
+
+const DraftUnitType = styled.div`
+    margin-top: 3px;
+    color: #6b7280;
+    font-size: 0.9rem;
+`
+
+const DraftButton = styled.button`
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #1f2937;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: #111827;
+    }
+
+    &:disabled {
+        background: #d1d5db;
+        color: #6b7280;
+        cursor: not-allowed;
+    }
+`
+
+const ErrorMessage = styled.div`
+    padding: 10px 14px;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    color: #991b1b;
+    font-weight: 600;
+`
 
 export default function Draft() {
     const { leagueId } = useParams()
@@ -161,31 +345,64 @@ export default function Draft() {
 
     if (!nextTurn) {
         return (
-            <div>
-                <p>Draft complete!</p>
-                <h1>Draft Results</h1>
+            <ResultsPage>
+                <ResultsHeader>
+                    <BackButton
+                        onClick={() =>
+                            navigate(`/league/${leagueId}`)
+                        }
+                    >
+                        ← Back to League
+                    </BackButton>
 
-                {draftPicks.map((pick) => {
-                    const unit = units.find(
-                        (unit) =>
-                            unit.teamId === pick.college_team_id &&
-                            unit.unitType === pick.unit_type
-                    )
-                    const drafter = members.find(
-                        (member) => member.id === pick.league_member_id
-                    )
+                    <h1>Draft Results</h1>
+                    <p>Draft complete!</p>
+                </ResultsHeader>
 
-                    return (
-                        <div key={pick.id}>
-                            Pick #{pick.pick_number} —{' '}
-                            {unit?.teamName ?? 'Unknown Team'}{' '}
-                            {formatUnitType(pick.unit_type)}
-                            {' — '}
-                            {drafter?.team_name ?? 'Unknown Team'}
-                        </div>
-                    )
-                })}
-            </div>
+                <ResultsList>
+                    {draftPicks.map((pick) => {
+                        const unit = units.find(
+                            (unit) =>
+                                unit.teamId === pick.college_team_id &&
+                                unit.unitType === pick.unit_type
+                        )
+
+                        const drafter = members.find(
+                            (member) =>
+                                member.id === pick.league_member_id
+                        )
+
+                        return (
+                            <PickRow key={pick.id}>
+                                <PickNumber>
+                                    #{pick.pick_number}
+                                </PickNumber>
+
+                                {unit && (
+                                    <TeamLogo
+                                        src={getTeamLogo(unit.teamName)}
+                                        alt={unit.teamName}
+                                    />
+                                )}
+
+                                <PickInfo>
+                                    <PickTeam>
+                                        {unit?.teamName ?? 'Unknown Team'}
+                                    </PickTeam>
+
+                                    <PickType>
+                                        {formatUnitType(pick.unit_type)}
+                                    </PickType>
+                                </PickInfo>
+
+                                <Drafter>
+                                    {drafter?.team_name ?? 'Unknown Team'}
+                                </Drafter>
+                            </PickRow>
+                        )
+                    })}
+                </ResultsList>
+            </ResultsPage>
         )
     }
 
@@ -362,46 +579,121 @@ export default function Draft() {
     }
 
     return (
-        <div>
-            <BackButton onClick={() => navigate(-1)}>
-                ← Back
-            </BackButton>
+        <DraftPage>
+            <DraftHeader>
+                <BackButton
+                    onClick={() =>
+                        navigate(`/league/${leagueId}`)
+                    }
+                >
+                    ← Back to League
+                </BackButton>
 
-            <h1>Draft Room</h1>
+                <h1>Draft Room</h1>
 
-            {error && <p>{error}</p>}
+                <DraftInfo>
+                    <InfoBadge>
+                        Round {round + 1}
+                    </InfoBadge>
 
-            <p>Draft Status:{' '}<strong>{league.draft_status}</strong></p>
-            <p>Round {round + 1}</p>
-            <p>Pick #{league.current_pick_number}</p>
+                    <InfoBadge>
+                        Pick #{league.current_pick_number}
+                    </InfoBadge>
 
-            <div>
+                    <InfoBadge>
+                        Status: {league.draft_status.split('_').join(' ')}
+                    </InfoBadge>
+                </DraftInfo>
+
+                <TurnStatus $myTurn={myTurn}>
+                    {myTurn
+                        ? 'Your turn!'
+                        : 'Waiting for another team...'}
+                </TurnStatus>
+
+                {error && (
+                    <ErrorMessage>
+                        {error}
+                    </ErrorMessage>
+                )}
+            </DraftHeader>
+
+            <RosterCard>
                 <h2>Your Roster</h2>
-                <p>Passing: {countRoster.PASSING} / 3</p>
-                <p>Rushing: {countRoster.RUSHING} / 3</p>
-                <p>Receiving: {countRoster.RECEIVING} / 3</p>
-                <p>Defense: {countRoster.DEFENSE} / 2</p>
-                <p>Special Teams: {countRoster.SPECIAL_TEAMS} / 2</p>
-                <p>Bench: {benchUsed} / 3</p>
-            </div>
 
-            <div>
+                <RosterCounts>
+                    <RosterCount>
+                        Passing: {countRoster.PASSING} / 3
+                    </RosterCount>
+
+                    <RosterCount>
+                        Rushing: {countRoster.RUSHING} / 3
+                    </RosterCount>
+
+                    <RosterCount>
+                        Receiving: {countRoster.RECEIVING} / 3
+                    </RosterCount>
+
+                    <RosterCount>
+                        Defense: {countRoster.DEFENSE} / 2
+                    </RosterCount>
+
+                    <RosterCount>
+                        Special Teams: {countRoster.SPECIAL_TEAMS} / 2
+                    </RosterCount>
+
+                    <RosterCount>
+                        Bench: {benchUsed} / 3
+                    </RosterCount>
+                </RosterCounts>
+            </RosterCard>
+
+            <DraftGrid>
                 {units.map((unit) => {
                     const drafted = isDrafted(unit)
-                    const eligible = canDraftUnitType(unit.unitType)
+                    const eligible =
+                        canDraftUnitType(unit.unitType)
 
                     return (
-                        <div key={unit.id}>
-                            <strong>{unit.teamName} {unit.unitType}</strong>{' '}
+                        <DraftUnitCard key={unit.id}>
+                            <TeamLogo
+                                src={getTeamLogo(unit.teamName)}
+                                alt={unit.teamName}
+                            />
 
-                            <button disabled={drafted || !myTurn || !eligible} onClick={() => draftUnit(unit)}>
-                                {drafted ? 'Drafted' : !eligible ? 'Roster Full' : myTurn ? 'Draft' : 'Waiting'}
-                            </button>
-                        </div>
+                            <DraftUnitInfo>
+                                <DraftUnitName>
+                                    {unit.teamName}
+                                </DraftUnitName>
+
+                                <DraftUnitType>
+                                    {formatUnitType(unit.unitType)}
+                                </DraftUnitType>
+                            </DraftUnitInfo>
+
+                            <DraftButton
+                                disabled={
+                                    drafted ||
+                                    !myTurn ||
+                                    !eligible
+                                }
+                                onClick={() =>
+                                    draftUnit(unit)
+                                }
+                            >
+                                {drafted
+                                    ? 'Drafted'
+                                    : !eligible
+                                        ? 'Roster Full'
+                                        : myTurn
+                                            ? 'Draft'
+                                            : 'Waiting'}
+                            </DraftButton>
+                        </DraftUnitCard>
                     )
                 })}
-            </div>
-        </div>
+            </DraftGrid>
+        </DraftPage>
     )
 }
 

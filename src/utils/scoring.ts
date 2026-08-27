@@ -97,19 +97,10 @@ export function specialTeamsScore(stats: TeamStats): number {
 
 export function calculateUnitScore(unitType: ScoringUnitType, stats: TeamStats): number {
     switch (unitType) {
-        case 'PASSING':
-            return passingScore(stats)
-
-        case 'RUSHING':
-            return rushingScore(stats)
-
-        case 'RECEIVING':
-            return receivingScore(stats)
-
-        case 'DEFENSE':
-            return defenseScore(stats)
-
-        case 'SPECIAL_TEAMS':
-            return specialTeamsScore(stats)
+        case 'PASSING':return passingScore(stats)
+        case 'RUSHING':return rushingScore(stats)
+        case 'RECEIVING':return receivingScore(stats)
+        case 'DEFENSE':return defenseScore(stats)
+        case 'SPECIAL_TEAMS':return specialTeamsScore(stats)
     }
 }

@@ -3,7 +3,7 @@ import { useAuth } from '../components/Auth'
 import styled from 'styled-components'
 
 const BigNav = styled.nav`
-    background: #1f2937;
+    background: #2f293b;
     color: white;
     padding: 14px 24px;
 `
