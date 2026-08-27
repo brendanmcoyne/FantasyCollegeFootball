@@ -11,6 +11,8 @@ import type { DraftUnit, UnitType } from '../../types/fantasy'
 import type { CollegeTeam } from '../../types/football'
 import type { RosterUnitType } from '../../rosters'
 
+import { CURRENT_WEEK } from '../../bigseasonfile'
+
 interface OwnedUnit {
     id: string
     college_team_id: number
@@ -64,7 +66,6 @@ export default function FreeAgents() {
     const [selectedType, setSelectedType] = useState<UnitType | 'ALL'>('ALL')
     const [selectedConference, setSelectedConference] = useState('ALL')
     const [selectedFreeAgent, setSelectedFreeAgent] = useState<FreeAgentUnit | null>(null)
-    const [currentWeek, setCurrentWeek] = useState(1)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
@@ -86,10 +87,7 @@ export default function FreeAgents() {
                     teamMap.set(team.id, team)
                 })
 
-                const week = await determineCurrentWeek()
-                setCurrentWeek(week)
-
-                const weeklyStats = await getWeeklyStats(week)
+                const weeklyStats = await getWeeklyStats(CURRENT_WEEK)
 
                 const weeklyMap = new Map(
                     weeklyStats.map((team) => [
@@ -395,7 +393,7 @@ export default function FreeAgents() {
         <div>
             <h1>Free Agents</h1>
 
-            <p>Week {currentWeek}</p>
+            <p>Week {CURRENT_WEEK}</p>
 
             {error && <p>{error}</p>}
 
@@ -499,48 +497,29 @@ export default function FreeAgents() {
                         )}
                     </h2>
 
-                    <p>
-                        Choose a unit to drop:
-                    </p>
+                    <p>Choose a unit to drop:</p>
 
                     {myRoster.map((unit) => (
                         <div key={unit.id}>
                             {unit.teamName}{' '}
-                            {formatUnitType(
-                                unit.unitType
-                            )}
+                            {formatUnitType(unit.unitType)}
 
                             {unit.gameStart && (
                                 <>
                                     {' — '}
-                                    {formatGameStart(
-                                        unit.gameStart
-                                    )}
+                                    {formatGameStart(unit.gameStart)}
                                 </>
                             )}
 
                             {' '}
 
-                            <button
-                                disabled={unit.locked}
-                                onClick={() =>
-                                    makeMove(unit)
-                                }
-                            >
-                                {unit.locked
-                                    ? 'Locked'
-                                    : 'Drop'}
+                            <button disabled={unit.locked} onClick={() => makeMove(unit)}>
+                                {unit.locked ? 'Locked' : 'Drop'}
                             </button>
                         </div>
                     ))}
 
-                    <button
-                        onClick={() =>
-                            setSelectedFreeAgent(
-                                null
-                            )
-                        }
-                    >
+                    <button onClick={() => setSelectedFreeAgent(null)}>
                         Cancel
                     </button>
                 </div>
@@ -554,17 +533,10 @@ export default function FreeAgents() {
             ) : (
                 transactions.map((transaction) => {
                     const fantasyTeam = members.find(
-                        (member) =>
-                            member.id === transaction.league_member_id
-                    )
+                        (member) => member.id === transaction.league_member_id)
 
-                    const addedTeam = teamMap.get(
-                        transaction.added_college_team_id
-                    )
-
-                    const droppedTeam = teamMap.get(
-                        transaction.dropped_college_team_id
-                    )
+                    const addedTeam = teamMap.get(transaction.added_college_team_id)
+                    const droppedTeam = teamMap.get(transaction.dropped_college_team_id)
 
                     return (
                         <div key={transaction.id}>
@@ -618,22 +590,4 @@ function formatUnitType(type: string): string {
     }
 
     return (type.charAt(0) + type.slice(1).toLowerCase())
-}
-
-async function determineCurrentWeek(): Promise<number> {
-    const now = new Date()
-
-    for (let week = 10; week >= 1; week--) {
-        const weeklyStats = await getWeeklyStats(week)
-
-        const starts = weeklyStats
-            .map((team) => team.gameStart)
-            .filter((date): date is Date => date !== null)
-
-        if (starts.some((date) => now.getTime() >= date.getTime())) {
-            return week
-        }
-    }
-
-    return 1
 }

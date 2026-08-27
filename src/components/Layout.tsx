@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import Nav from "./Nav";
+import { Page, Content } from '../styles/commonstyles'
 
 export default function Layout() {
     return (
@@ -7,7 +8,11 @@ export default function Layout() {
             <Nav />
 
             <main>
-                <Outlet />
+                <Page>
+                    <Content>
+                        <Outlet />
+                    </Content>
+                </Page>
             </main>
         </>
     );

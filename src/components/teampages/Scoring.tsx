@@ -1,17 +1,87 @@
+import styled from 'styled-components'
+
+const ScoringPage = styled.div`;
+    display: grid;
+    gap: 24px;
+`;
+
+const IntroCard = styled.div`;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+`;
+
+const SectionCard = styled.section`;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`;
+
+const SectionTitle = styled.h2`;
+    margin-top: 0;
+    margin-bottom: 14px;
+    color: #111827;
+`;
+
+const Subheading = styled.h3`;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: #374151;
+`;
+
+const StyledTable = styled.table`;
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+
+    th,
+    td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+    }
+
+    th {
+        background: #f3f4f6;
+        color: #374151;
+        font-weight: 700;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tbody tr:hover {
+        background: #f9fafb;
+    }
+`;
+
+const Note = styled.p`;
+    color: #6b7280;
+    line-height: 1.6;
+`;
+
 export default function Scoring() {
     return (
-        <div>
-            <h1>Scoring Guidelines</h1>
+        <ScoringPage>
+            <IntroCard>
+                <h1>Scoring Guidelines</h1>
 
-            <p>
-                Fantasy points are earned by each college team's
-                individual unit. Only units in your starting lineup
-                count toward your weekly score.
-            </p>
+                <p>
+                    Fantasy points are earned by each college team's
+                    individual unit. Only units in your starting lineup
+                    count toward your weekly score.
+                </p>
+            </IntroCard>
 
-            <h2>Passing</h2>
+            <SectionCard>
+                <SectionTitle>Passing</SectionTitle>
 
-            <table>
+                <StyledTable>
                 <thead>
                 <tr>
                     <th>Statistic</th>
@@ -32,11 +102,13 @@ export default function Scoring() {
                     <td>-3</td>
                 </tr>
                 </tbody>
-            </table>
+                </StyledTable>
+            </SectionCard>
 
-            <h2>Rushing</h2>
+            <SectionCard>
+            <SectionTitle>Rushing</SectionTitle>
 
-            <table>
+            <StyledTable>
                 <thead>
                 <tr>
                     <th>Statistic</th>
@@ -57,11 +129,14 @@ export default function Scoring() {
                     <td>-3</td>
                 </tr>
                 </tbody>
-            </table>
+            </StyledTable>
 
-            <h2>Receiving</h2>
+            </SectionCard>
 
-            <table>
+            <SectionCard>
+            <SectionTitle>Receiving</SectionTitle>
+
+            <StyledTable>
                 <thead>
                 <tr>
                     <th>Statistic</th>
@@ -82,15 +157,17 @@ export default function Scoring() {
                     <td>-3</td>
                 </tr>
                 </tbody>
-            </table>
+            </StyledTable>
+            </SectionCard>
 
-            <h2>Defense</h2>
+            <SectionCard>
+            <SectionTitle>Defense</SectionTitle>
 
             <p>
                 Each defense starts the week with 30 points. Points are deducted based on points and total yards allowed.
             </p>
 
-            <table>
+            <StyledTable>
                 <thead>
                 <tr>
                     <th>Statistic</th>
@@ -119,11 +196,13 @@ export default function Scoring() {
                     <td>+4</td>
                 </tr>
                 </tbody>
-            </table>
+            </StyledTable>
+            </SectionCard>
 
-            <h3>Points Allowed</h3>
+            <SectionCard>
+            <SectionTitle>Points Allowed</SectionTitle>
 
-            <table>
+            <StyledTable>
                 <thead>
                 <tr>
                     <th>Points Allowed</th>
@@ -140,11 +219,13 @@ export default function Scoring() {
                 <tr><td>35–41</td><td>-20</td></tr>
                 <tr><td>42+</td><td>-25</td></tr>
                 </tbody>
-            </table>
+            </StyledTable>
+            </SectionCard>
 
-            <h3>Yards Allowed</h3>
+            <SectionCard>
+            <SectionTitle>Yards Allowed</SectionTitle>
 
-            <table>
+            <StyledTable>
                 <thead>
                 <tr>
                     <th>Total Yards Allowed</th>
@@ -161,11 +242,13 @@ export default function Scoring() {
                 <tr><td>500–549</td><td>-12</td></tr>
                 <tr><td>550+</td><td>-15</td></tr>
                 </tbody>
-            </table>
+            </StyledTable>
+            </SectionCard>
 
-            <h2>Special Teams</h2>
+            <SectionCard>
+            <SectionTitle>Special Teams</SectionTitle>
 
-            <table>
+            <StyledTable>
                 <thead>
                 <tr>
                     <th>Statistic</th>
@@ -198,11 +281,12 @@ export default function Scoring() {
                     <td>+3</td>
                 </tr>
                 </tbody>
-            </table>
+            </StyledTable>
+            </SectionCard>
 
-            <p>
+            <SectionCard>
                 Example: A 25-yard field goal is worth 3 points, a 40-yard field goal is worth 4 points, and a 53-yard field goal is worth 5.3 points.
-            </p>
-        </div>
+            </SectionCard>
+        </ScoringPage>
     )
 }
