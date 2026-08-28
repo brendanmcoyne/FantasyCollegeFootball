@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom';
 import { getTeams } from '../../api/cfbApi'
 import { createDraftUnits } from '../../utils/Units'
 import { getUnitStats } from '../../utils/unitStats'
@@ -99,6 +100,24 @@ const UnitMeta = styled.div`
     font-size: 0.9rem;
 `
 
+const RankingsButton = styled(Link)`
+    display: inline-block;
+    width: fit-content;
+    margin-top: 12px;
+    padding: 10px 16px;
+
+    background: #1f2937;
+    color: #ffffff;
+
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+
+    &:hover {
+        background: #111827;
+    }
+`
+
 export default function Units() {
     const [teams, setTeams] = useState<CollegeTeam[]>([])
     const [units, setUnits] = useState<DraftUnit[]>([])
@@ -149,14 +168,17 @@ export default function Units() {
         return matchesType && matchesConference
     })
 
+
     return (
         <UnitsPage>
             <HeaderCard>
                 <h1>College Football Units</h1>
 
-                <p>
-                    {teams.length} teams | {units.length} draftable units
-                </p>
+                <p>{teams.length} teams | {units.length} draftable units</p>
+
+                <RankingsButton to="/units/rankings">
+                    View 2025 Rankings
+                </RankingsButton>
             </HeaderCard>
 
             <FiltersCard>
@@ -164,45 +186,27 @@ export default function Units() {
                     <h3>Unit Type</h3>
 
                     <FilterGroup>
-                        <FilterButton
-                            $active={selectedType === 'ALL'}
-                            onClick={() => setSelectedType('ALL')}
-                        >
+                        <FilterButton $active={selectedType === 'ALL'} onClick={() => setSelectedType('ALL')}>
                             All
                         </FilterButton>
 
-                        <FilterButton
-                            $active={selectedType === 'PASSING'}
-                            onClick={() => setSelectedType('PASSING')}
-                        >
+                        <FilterButton $active={selectedType === 'PASSING'} onClick={() => setSelectedType('PASSING')}>
                             Passing
                         </FilterButton>
 
-                        <FilterButton
-                            $active={selectedType === 'RUSHING'}
-                            onClick={() => setSelectedType('RUSHING')}
-                        >
+                        <FilterButton $active={selectedType === 'RUSHING'} onClick={() => setSelectedType('RUSHING')}>
                             Rushing
                         </FilterButton>
 
-                        <FilterButton
-                            $active={selectedType === 'RECEIVING'}
-                            onClick={() => setSelectedType('RECEIVING')}
-                        >
+                        <FilterButton $active={selectedType === 'RECEIVING'} onClick={() => setSelectedType('RECEIVING')}>
                             Receiving
                         </FilterButton>
 
-                        <FilterButton
-                            $active={selectedType === 'DEFENSE'}
-                            onClick={() => setSelectedType('DEFENSE')}
-                        >
+                        <FilterButton $active={selectedType === 'DEFENSE'} onClick={() => setSelectedType('DEFENSE')}>
                             Defense
                         </FilterButton>
 
-                        <FilterButton
-                            $active={selectedType === 'SPECIAL_TEAMS'}
-                            onClick={() => setSelectedType('SPECIAL_TEAMS')}
-                        >
+                        <FilterButton $active={selectedType === 'SPECIAL_TEAMS'} onClick={() => setSelectedType('SPECIAL_TEAMS')}>
                             Special Teams
                         </FilterButton>
                     </FilterGroup>
@@ -212,25 +216,13 @@ export default function Units() {
                     <h3>Conference</h3>
 
                     <FilterGroup>
-                        {[
-                            'ALL',
-                            'ACC',
-                            'Big Ten',
-                            'Big 12',
-                            'SEC',
-                        ].map((conference) => (
+                        {['ALL', 'ACC', 'Big Ten', 'Big 12', 'SEC'].map((conference) => (
                             <FilterButton
                                 key={conference}
-                                $active={
-                                    selectedConference === conference
-                                }
-                                onClick={() =>
-                                    setSelectedConference(conference)
-                                }
+                                $active={selectedConference === conference}
+                                onClick={() => setSelectedConference(conference)}
                             >
-                                {conference === 'ALL'
-                                    ? 'All Conferences'
-                                    : conference}
+                                {conference === 'ALL' ? 'All Conferences' : conference}
                             </FilterButton>
                         ))}
                     </FilterGroup>
@@ -239,30 +231,18 @@ export default function Units() {
 
             <UnitGrid>
                 {filteredUnits.map((unit) => {
-                    const team = teams.find(
-                        (team) => team.id === unit.teamId
-                    )
+                    const team = teams.find((team) => team.id === unit.teamId)
 
                     return (
                         <UnitCard key={unit.id}>
-                            <TeamLogo
-                                src={getTeamLogo(unit.teamName)}
-                                alt={unit.teamName}
-                            />
+                            <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
 
                             <UnitInfo>
-                                <UnitName>
-                                    {unit.teamName}{' '}
-                                    {formatUnitType(unit.unitType)}
-                                </UnitName>
+                                <UnitName>{unit.teamName}{' '}{formatUnitType(unit.unitType)}</UnitName>
 
-                                <UnitMeta>
-                                    {unit.conference}
-                                </UnitMeta>
+                                <UnitMeta>{unit.conference}</UnitMeta>
 
-                                <UnitStats>
-                                    {getUnitStats(unit.unitType, team)}
-                                </UnitStats>
+                                <UnitStats>{getUnitStats(unit.unitType, team)}</UnitStats>
                             </UnitInfo>
                         </UnitCard>
                     )
@@ -273,8 +253,6 @@ export default function Units() {
 }
 
 function formatUnitType(unitType: UnitType) {
-    return unitType === 'SPECIAL_TEAMS'
-        ? 'Special Teams'
-        : unitType.charAt(0) +
-        unitType.slice(1).toLowerCase()
+    return (unitType === 'SPECIAL_TEAMS')
+        ? 'Special Teams' : unitType.charAt(0) + unitType.slice(1).toLowerCase()
 }

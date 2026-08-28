@@ -17,6 +17,7 @@ import Scoring from './components/teampages/Scoring'
 import WeekScores from './components/teampages/WeekScores'
 import Schedule from './components/teampages/Schedule'
 import Standings from './components/teampages/Standings'
+import Rankings from './components/teampages/Rankings'
 
 function App() {
     return (
@@ -27,14 +28,16 @@ function App() {
                 <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                     <Route path="/" element={<Home />} />
                     <Route path="/units" element={<Units />} />
-                    <Route path="/league/:leagueId/team" element={<MyTeam />} />
+                    <Route path="/units/rankings" element={<Rankings />} />
                     <Route path="/create-league" element={<CreateLeague />} />
                     <Route path="/join-league" element={<JoinLeague />} />
+                    <Route path="/scoring" element={<Scoring />}/>
+
+                    <Route path="/league/:leagueId" element={<League />} />
+                    <Route path="/league/:leagueId/team" element={<MyTeam />} />
                     <Route path="/league/:leagueId/draft" element={<Draft />} />
                     <Route path="/league/:leagueId/free-agents" element={<FreeAgents />}/>
                     <Route path="/league/:leagueId/team/:memberId" element={<Rosters />}/>
-                    <Route path="/scoring" element={<Scoring />}/>
-                    <Route path="/league/:leagueId" element={<League />} />
                     <Route path="/league/:leagueId/week-scores/:week" element={<WeekScores />}/>
                     <Route path="/league/:leagueId/schedule" element={<Schedule />}/>
                     <Route path="/league/:leagueId/standings" element={<Standings />}/>
