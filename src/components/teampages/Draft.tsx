@@ -818,9 +818,7 @@ export default function Draft() {
                                     setSelectedConference(conference)
                                 }
                             >
-                                {conference === 'ALL'
-                                    ? 'All Conferences'
-                                    : conference}
+                                {conference === 'ALL' ? 'All Conferences' : conference}
                             </FilterButton>
                         ))}
                     </FilterGroup>
@@ -838,10 +836,7 @@ export default function Draft() {
 
                     return (
                         <DraftUnitCard key={unit.id}>
-                            <TeamLogo
-                                src={getTeamLogo(unit.teamName)}
-                                alt={unit.teamName}
-                            />
+                            <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
 
                             <DraftUnitInfo>
                                 <DraftUnitName>
@@ -860,22 +855,13 @@ export default function Draft() {
                             </DraftUnitInfo>
 
                             <DraftButton
-                                disabled={
-                                    drafted ||
-                                    !myTurn ||
-                                    !eligible
-                                }
-                                onClick={() =>
-                                    draftUnit(unit)
-                                }
+                                disabled={drafted || !myTurn || !eligible}
+                                onClick={() => draftUnit(unit)}
                             >
                                 {drafted
-                                    ? 'Drafted'
-                                    : !eligible
-                                        ? 'Roster Full'
-                                        : myTurn
-                                            ? 'Draft'
-                                            : 'Waiting'}
+                                    ? 'Drafted' : !eligible
+                                    ? 'Roster Full' : myTurn
+                                    ? 'Draft' : 'Waiting'}
                             </DraftButton>
                         </DraftUnitCard>
                     )
@@ -886,8 +872,6 @@ export default function Draft() {
 }
 
 function formatUnitType(unitType: string): string {
-    return unitType === 'SPECIAL_TEAMS'
-        ? 'Special Teams'
-        : unitType.charAt(0) +
-        unitType.slice(1).toLowerCase()
+    return unitType === 'SPECIAL_TEAMS' ? 'Special Teams'
+        : unitType.charAt(0) + unitType.slice(1).toLowerCase()
 }

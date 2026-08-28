@@ -67,8 +67,9 @@ export function defenseScore(stats: TeamStats): number {
     const safeties = stats.safeties ?? 0
     const yardsAllowed = stats.total_yards_allowed ?? 0
     const pointsAllowed = stats.points_allowed ?? 0
+    const sacks = stats.sacks ?? 0
 
-    return (30 + pointsAllowedScore(pointsAllowed) + yardsAllowedScore(yardsAllowed) + interceptions * 3 + fumbleRecoveries * 3 + touchdowns * 5 + safeties * 4)
+    return (25 + pointsAllowedScore(pointsAllowed) + yardsAllowedScore(yardsAllowed) + interceptions * 3 + fumbleRecoveries * 3 + touchdowns * 5 + safeties * 4 + sacks * 2)
 }
 
 function fieldGoalScore(distance: number): number {

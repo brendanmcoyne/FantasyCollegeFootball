@@ -203,16 +203,12 @@ export default function League() {
         setError('')
 
         if (members.length < 2) {
-            setError(
-                'The league must have at least 2 teams before starting the draft.'
-            )
+            setError('The league must have at least 2 teams before starting the draft.')
             return
         }
 
         if (members.length % 2 !== 0) {
-            setError(
-                'The league must have an even number of teams before starting the draft.'
-            )
+            setError('The league must have an even number of teams before starting the draft.')
             return
         }
 
@@ -256,11 +252,7 @@ export default function League() {
 
         const { error: updateError } = await supabase
             .from('leagues')
-            .update({
-                draft_status: 'IN_PROGRESS',
-                current_pick_number: 1,
-                current_turn_number: 1,
-            })
+            .update({draft_status: 'IN_PROGRESS', current_pick_number: 1, current_turn_number: 1})
             .eq('id', league.id)
 
         if (updateError) {
@@ -268,11 +260,7 @@ export default function League() {
             return
         }
 
-        setLeague({
-            ...league,
-            draft_status: 'IN_PROGRESS',
-            current_pick_number: 1,
-        })
+        setLeague({...league, draft_status: 'IN_PROGRESS', current_pick_number: 1})
     }
 
     async function handleGenerateSchedule() {

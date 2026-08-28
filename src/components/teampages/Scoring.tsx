@@ -164,7 +164,7 @@ export default function Scoring() {
             <SectionTitle>Defense</SectionTitle>
 
             <p>
-                Each defense starts the week with 30 points. Points are deducted based on points and total yards allowed.
+                Each defense starts the week with 25 points. Points are deducted based on points and total yards allowed.
             </p>
 
             <StyledTable>
@@ -177,7 +177,7 @@ export default function Scoring() {
                 <tbody>
                 <tr>
                     <td>Starting Score</td>
-                    <td>30</td>
+                    <td>25</td>
                 </tr>
                 <tr>
                     <td>Interception</td>
@@ -194,6 +194,10 @@ export default function Scoring() {
                 <tr>
                     <td>Safety</td>
                     <td>+4</td>
+                </tr>
+                <tr>
+                    <td>Sack</td>
+                    <td>+2</td>
                 </tr>
                 </tbody>
             </StyledTable>

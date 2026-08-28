@@ -205,9 +205,7 @@ export default function FreeAgents() {
 
                 const teamMap = new Map<number, CollegeTeam>()
 
-                teams.forEach((team) => {
-                    teamMap.set(team.id, team)
-                })
+                teams.forEach((team) => {teamMap.set(team.id, team)})
 
                 const weeklyStats = await getWeeklyStats(CURRENT_WEEK)
 
@@ -228,16 +226,10 @@ export default function FreeAgents() {
                             normalizeTeamName(unit.teamName)
                         )
 
-                        const gameStart =
-                            weeklyTeam?.gameStart ?? null
+                        const gameStart = weeklyTeam?.gameStart ?? null
 
                         return {
-                            ...unit,
-                            gameStart,
-                            locked: isGameLocked(
-                                gameStart,
-                                now
-                            ),
+                            ...unit, gameStart, locked: isGameLocked(gameStart, now),
                         }
                     })
 
@@ -255,10 +247,7 @@ export default function FreeAgents() {
 
                 setMembers(memberData ?? [])
 
-                const {
-                    data: membership,
-                    error: membershipError,
-                } = await supabase
+                const {data: membership, error: membershipError} = await supabase
                     .from('league_members')
                     .select('id, team_name')
                     .eq('league_id', leagueId)
@@ -271,14 +260,9 @@ export default function FreeAgents() {
 
                 setMember(membership)
 
-                const {
-                    data: owned,
-                    error: ownedError,
-                } = await supabase
+                const {data: owned, error: ownedError} = await supabase
                     .from('roster_units')
-                    .select(
-                        'id, college_team_id, unit_type, league_member_id, roster_slot'
-                    )
+                    .select('id, college_team_id, unit_type, league_member_id, roster_slot')
                     .eq('league_id', leagueId)
 
                 if (ownedError) {
@@ -287,14 +271,9 @@ export default function FreeAgents() {
 
                 setOwnedUnits(owned ?? [])
 
-                const {
-                    data: transactionData,
-                    error: transactionError,
-                } = await supabase
+                const {data: transactionData, error: transactionError} = await supabase
                     .from('free_agent_transactions')
-                    .select(
-                        'id, league_member_id, added_college_team_id, added_unit_type, dropped_college_team_id, dropped_unit_type, created_at'
-                    )
+                    .select('id, league_member_id, added_college_team_id, added_unit_type, dropped_college_team_id, dropped_unit_type, created_at')
                     .eq('league_id', leagueId)
                     .order('created_at', { ascending: false })
 
@@ -313,9 +292,8 @@ export default function FreeAgents() {
                         )
                         .map((unit) => {
                             const teamName =
-                                teamMap.get(
-                                    unit.college_team_id
-                                )?.name ?? 'Unknown Team'
+                                teamMap.get(unit.college_team_id)?.name
+                                ?? 'Unknown Team'
 
                             const weeklyTeam =
                                 weeklyMap.get(
@@ -337,10 +315,7 @@ export default function FreeAgents() {
                                         | 'STARTER'
                                         | 'BENCH',
                                 gameStart,
-                                locked: isGameLocked(
-                                    gameStart,
-                                    now
-                                ),
+                                locked: isGameLocked(gameStart, now),
                             }
                         })
 
@@ -369,20 +344,14 @@ export default function FreeAgents() {
             setUnits((current) =>
                 current.map((unit) => ({
                     ...unit,
-                    locked: isGameLocked(
-                        unit.gameStart,
-                        now
-                    ),
+                    locked: isGameLocked(unit.gameStart, now),
                 }))
             )
 
             setMyRoster((current) =>
                 current.map((unit) => ({
                     ...unit,
-                    locked: isGameLocked(
-                        unit.gameStart,
-                        now
-                    ),
+                    locked: isGameLocked(unit.gameStart, now),
                 }))
             )
         }, 30000)
@@ -416,31 +385,20 @@ export default function FreeAgents() {
 
             const matchesConference =
                 selectedConference === 'ALL' ||
-                unit.conference ===
-                selectedConference
+                unit.conference === selectedConference
 
-            return (
-                matchesType &&
-                matchesConference
-            )
+            return (matchesType && matchesConference)
         })
 
-    async function makeMove(
-        dropUnit: MyRosterUnit
-    ) {
-        if (
-            !leagueId ||
-            !member ||
-            !selectedFreeAgent
-        ) {
+    async function makeMove(dropUnit: MyRosterUnit) {
+        if (!leagueId || !member || !selectedFreeAgent) {
             return
         }
 
         const freeAgent =
             units.find(
                 (unit) =>
-                    unit.id ===
-                    selectedFreeAgent.id
+                    unit.id === selectedFreeAgent.id
             )
 
         const rosterUnit =
@@ -455,35 +413,20 @@ export default function FreeAgents() {
 
         const now = new Date()
 
-        if (
-            isGameLocked(
-                freeAgent.gameStart,
-                now
-            )
-        ) {
-            setError(
-                'You cannot add that unit because its game has already started.'
-            )
+        if (isGameLocked(freeAgent.gameStart, now)) {
+            setError('You cannot add that unit because its game has already started.')
             return
         }
 
-        if (
-            isGameLocked(
-                rosterUnit.gameStart,
-                now
-            )
-        ) {
-            setError(
-                'You cannot drop that unit because its game has already started.'
-            )
+        if (isGameLocked(rosterUnit.gameStart, now)) {
+            setError('You cannot drop that unit because its game has already started.')
             return
         }
 
         setError('')
 
         const { error: moveError } =
-            await supabase.rpc(
-                'make_free_agent_move',
+            await supabase.rpc('make_free_agent_move',
                 {
                     target_league_id:
                     leagueId,
@@ -540,9 +483,7 @@ export default function FreeAgents() {
                                 key={type}
                                 $active={selectedType === type}
                                 onClick={() =>
-                                    setSelectedType(
-                                        type as UnitType | 'ALL'
-                                    )
+                                    setSelectedType(type as UnitType | 'ALL')
                                 }
                             >
                                 {formatUnitType(type)}
@@ -564,16 +505,10 @@ export default function FreeAgents() {
                         ].map((conference) => (
                             <FilterButton
                                 key={conference}
-                                $active={
-                                    selectedConference === conference
-                                }
-                                onClick={() =>
-                                    setSelectedConference(conference)
-                                }
+                                $active={selectedConference === conference}
+                                onClick={() => setSelectedConference(conference)}
                             >
-                                {conference === 'ALL'
-                                    ? 'All Conferences'
-                                    : conference}
+                                {conference === 'ALL' ? 'All Conferences' : conference}
                             </FilterButton>
                         ))}
                     </FilterGroup>
@@ -627,9 +562,7 @@ export default function FreeAgents() {
                     <h2>
                         Add{' '}
                         {selectedFreeAgent.teamName}{' '}
-                        {formatUnitType(
-                            selectedFreeAgent.unitType
-                        )}
+                        {formatUnitType(selectedFreeAgent.unitType)}
                     </h2>
 
                     <p>Choose a unit to drop:</p>
@@ -648,8 +581,7 @@ export default function FreeAgents() {
                                 </UnitName>
 
                                 <UnitMeta>
-                                    {unit.gameStart &&
-                                        formatGameStart(unit.gameStart)}
+                                    {unit.gameStart && formatGameStart(unit.gameStart)}
                                 </UnitMeta>
                             </UnitInfo>
 

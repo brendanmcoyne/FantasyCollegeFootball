@@ -455,17 +455,14 @@ export default function WeekScores() {
                                 </MatchupTeamName>
 
                                 <BigScore>
-                                    {weekStarted
-                                        ? team1.starterTotal.toFixed(1)
-                                        : '-'}
+                                    {weekStarted ? team1.starterTotal.toFixed(1) : '-'}
                                 </BigScore>
                             </MatchupTeamHeader>
 
                             {[...team1.starters]
                                 .sort(
                                     (a, b) =>
-                                        UNIT_ORDER.indexOf(a.unitType) -
-                                        UNIT_ORDER.indexOf(b.unitType)
+                                        UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType)
                                 )
                                 .map((unit) => (
                                 <ScoreUnit key={unit.rosterId}>
@@ -497,17 +494,14 @@ export default function WeekScores() {
                                 </MatchupTeamName>
 
                                 <BigScore>
-                                    {weekStarted
-                                        ? team2.starterTotal.toFixed(1)
-                                        : '-'}
+                                    {weekStarted ? team2.starterTotal.toFixed(1) : '-'}
                                 </BigScore>
                             </MatchupTeamHeader>
 
                             {[...team2.starters]
                                 .sort(
                                     (a, b) =>
-                                        UNIT_ORDER.indexOf(a.unitType) -
-                                        UNIT_ORDER.indexOf(b.unitType)
+                                        UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType)
                                 )
                                 .map((unit) => (
                                 <ScoreUnit key={unit.rosterId}>

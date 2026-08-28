@@ -10,6 +10,7 @@ import { getTeamOpponent } from '../../utils/teamschedule'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 
 import {STARTERS, BENCH, type RosterUnitType,} from '../../rosters'
+import { getUnitStats } from '../../utils/unitStats'
 
 import type { CollegeTeam } from '../../types/football'
 import type { WeeklyTeamData } from '../../api/weeklyStats'
@@ -71,6 +72,95 @@ const UnitDetails = styled.div`
     font-size: 0.9rem;
 `;
 
+const TeamNameButton = styled.button`
+    border: none;
+    background: none;
+    padding: 0;
+    color: #111827;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+
+    &:hover {
+        text-decoration: underline;
+    }
+`
+
+const StatsCard = styled.div`
+    margin-top: 20px;
+    padding: 20px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+`
+
+const ModalBackdrop = styled.div`
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+`
+
+const ModalCard = styled.div`
+    width: min(520px, 100%);
+    max-height: 80vh;
+    overflow-y: auto;
+
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+`
+
+const ModalHeader = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+`
+
+const ModalTitle = styled.div`
+    flex: 1;
+
+    h2 {
+        margin: 0;
+    }
+
+    p {
+        margin: 4px 0 0;
+        color: #6b7280;
+    }
+`
+
+const CloseButton = styled.button`
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+
+    background: #f3f4f6;
+    color: #374151;
+
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+        background: #e5e7eb;
+    }
+`
+
+const StatsList = styled.div`
+    display: grid;
+    gap: 8px;
+    color: #4b5563;
+`
+
 export default function MyTeam() {
     const { leagueId } = useParams()
     const { user } = useAuth()
@@ -83,6 +173,9 @@ export default function MyTeam() {
 
     const [selectedBenchUnit, setSelectedBenchUnit] = useState<RosterUnit | null>(null)
     const navigate = useNavigate()
+
+    const [teams, setTeams] = useState<CollegeTeam[]>([])
+    const [selectedStatsUnit, setSelectedStatsUnit] = useState<RosterUnit | null>(null)
 
     useEffect(() => {
         async function loadRoster() {
@@ -119,6 +212,8 @@ export default function MyTeam() {
                 }
 
                 const teams = await getTeams()
+                setTeams(teams)
+
                 const teamMap = new Map<number, CollegeTeam>()
 
                 teams.forEach((team) => {teamMap.set(team.id, team)})
@@ -299,7 +394,12 @@ export default function MyTeam() {
 
                                     <UnitInfo>
                                         <UnitName>
-                                            {unit.teamName} {formatUnitType(unit.unitType)}
+                                            <TeamNameButton onClick={() => setSelectedStatsUnit(unit)}>
+                                                {unit.teamName}
+                                            </TeamNameButton>
+
+                                            {' '}
+                                            {formatUnitType(unit.unitType)}
                                         </UnitName>
 
                                         <UnitDetails>
@@ -438,7 +538,12 @@ export default function MyTeam() {
 
                                 <UnitInfo>
                                     <UnitName>
-                                        {unit.teamName} {formatUnitType(unit.unitType)}
+                                        <TeamNameButton onClick={() => setSelectedStatsUnit(unit)}>
+                                            {unit.teamName}
+                                        </TeamNameButton>
+
+                                        {' '}
+                                        {formatUnitType(unit.unitType)}
                                     </UnitName>
 
                                     <UnitDetails>
@@ -540,6 +645,60 @@ export default function MyTeam() {
                     </button>
                 </div>
             )}
+            {selectedStatsUnit && (() => {
+                const collegeTeam = teams.find(
+                    (team) =>
+                        team.id === selectedStatsUnit.collegeTeamId
+                )
+
+                return (
+                    <ModalBackdrop
+                        onClick={() => setSelectedStatsUnit(null)}
+                    >
+                        <ModalCard
+                            onClick={(event) => event.stopPropagation()}
+                        >
+                            <ModalHeader>
+                                <TeamLogo
+                                    src={getTeamLogo(
+                                        selectedStatsUnit.teamName
+                                    )}
+                                    alt={selectedStatsUnit.teamName}
+                                />
+
+                                <ModalTitle>
+                                    <h2>
+                                        {selectedStatsUnit.teamName}
+                                    </h2>
+
+                                    <p>
+                                        2025{' '}
+                                        {formatUnitType(
+                                            selectedStatsUnit.unitType
+                                        )}{' '}
+                                        Stats
+                                    </p>
+                                </ModalTitle>
+
+                                <CloseButton
+                                    onClick={() =>
+                                        setSelectedStatsUnit(null)
+                                    }
+                                >
+                                    Close
+                                </CloseButton>
+                            </ModalHeader>
+
+                            <StatsList>
+                                {getUnitStats(
+                                    selectedStatsUnit.unitType,
+                                    collegeTeam
+                                )}
+                            </StatsList>
+                        </ModalCard>
+                    </ModalBackdrop>
+                )
+            })()}
         </div>
     )
 }
