@@ -4,14 +4,15 @@ import { useNavigate, Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getTeams } from '../../api/cfbApi'
 import { getWeeklyStats } from '../../api/weeklyStats'
-import { calculateUnitScore } from '../../utils/scoring'
+import { calculateUnitScore, pointsAllowedScore, yardsAllowedScore } from '../../utils/scoring'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 import styled from 'styled-components'
 
-import type { CollegeTeam } from '../../types/football'
+import type { CollegeTeam, TeamStats } from '../../types/football'
 import type { ScoringUnitType } from '../../utils/scoring'
 import type { WeeklyTeamData } from '../../api/weeklyStats'
-import {BackButton} from "../../styles/commonstyles";
+import { BackButton } from "../../styles/commonstyles";
+import { getScoreBreakdown } from "../../utils/ScoringBreakdown"
 
 interface RosterRow {
     id: string
@@ -26,6 +27,8 @@ interface ScoredUnit {
     teamName: string
     unitType: ScoringUnitType
     score: number
+    stats: TeamStats | null
+    locked: boolean
 }
 
 interface FantasyTeamScore {
@@ -104,52 +107,6 @@ const SectionCard = styled.section`
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 `
 
-const MatchupRow = styled.div`
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    gap: 16px;
-    align-items: center;
-    padding: 12px 0;
-    border-top: 1px solid #e5e7eb;
-`
-
-const TeamLeft = styled.div`
-    text-align: right;
-    font-weight: 700;
-`
-
-const TeamRight = styled.div`
-    text-align: left;
-    font-weight: 700;
-`
-
-const MatchupScore = styled.div`
-    font-weight: 700;
-    color: #374151;
-    min-width: 110px;
-    text-align: center;
-`
-
-const TeamScoreCard = styled.div`
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 14px;
-`
-
-const UnitRow = styled.div`
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 7px 0;
-    border-bottom: 1px solid #e5e7eb;
-
-    &:last-child {
-        border-bottom: none;
-    }
-`
-
 const MatchupCard = styled.div`
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -158,11 +115,11 @@ const MatchupCard = styled.div`
     border-radius: 12px;
     overflow: hidden;
     margin-top: 14px;
-`
+`;
 
 const MatchupTeam = styled.div`
     padding: 18px;
-`
+`;
 
 const MatchupTeamHeader = styled.div`
     display: flex;
@@ -172,23 +129,61 @@ const MatchupTeamHeader = styled.div`
     margin-bottom: 14px;
     padding-bottom: 12px;
     border-bottom: 1px solid #e5e7eb;
-`
+`;
 
 const MatchupTeamName = styled.h3`
     margin: 0;
-`
+`;
 
 const BigScore = styled.div`
     font-size: 1.6rem;
     font-weight: 700;
-`
+`;
 
-const ScoreUnit = styled.div`
+const ScoreUnit = styled.div<{ $clickable?: boolean }>`
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    padding: 6px 0;
-`
+    padding: 8px 6px;
+    border-radius: 6px;
+    cursor: ${({ $clickable }) => $clickable ? 'pointer' : 'default'};
+
+    &:hover {
+        background: ${({ $clickable }) => $clickable ? '#f3f4f6' : 'transparent'};
+    }
+`;
+
+const ModalBackdrop = styled.div`
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+`;
+
+const ModalCard = styled.div`
+    width: min(520px, 100%);
+    max-height: 80vh;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+`;
+
+const CloseButton = styled.button`
+    margin-top: 18px;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    background: #1f2937;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+`;
 
 export default function WeekScores() {
     const { leagueId, week: weekParam } = useParams()
@@ -196,6 +191,7 @@ export default function WeekScores() {
 
     const [scores, setScores] = useState<FantasyTeamScore[]>([])
     const [matchups, setMatchups] = useState<LeagueMatchup[]>([])
+    const [selectedUnit, setSelectedUnit] = useState<ScoredUnit | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const navigate = useNavigate()
@@ -259,6 +255,8 @@ export default function WeekScores() {
                             teamName: 'Unknown Team',
                             unitType: row.unit_type,
                             score: 0,
+                            stats: null,
+                            locked: false,
                         }
                     }
 
@@ -275,14 +273,11 @@ export default function WeekScores() {
                         teamName: collegeTeam.name,
                         unitType: row.unit_type,
                         score:
-                            weeklyTeam &&
-                            gameStarted &&
-                            weekStarted
-                                ? calculateUnitScore(
-                                    row.unit_type,
-                                    weeklyTeam.stats
-                                )
-                                : 0,
+                            weeklyTeam && gameStarted &&
+                            weekStarted ? calculateUnitScore(row.unit_type, weeklyTeam.stats) : 0,
+
+                        stats: weeklyTeam?.stats ?? null,
+                        locked: Boolean(gameStarted),
                     }
                 }
 
@@ -461,11 +456,15 @@ export default function WeekScores() {
 
                             {[...team1.starters]
                                 .sort(
-                                    (a, b) =>
-                                        UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType)
-                                )
+                                    (a, b) => UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType))
                                 .map((unit) => (
-                                <ScoreUnit key={unit.rosterId}>
+                                    <ScoreUnit key={unit.rosterId} $clickable={unit.locked}
+                                        onClick={() => {
+                                            if (unit.locked) {
+                                                setSelectedUnit(unit)
+                                            }
+                                        }}
+                                    >
                                 <span>
                                     {unit.teamName}{' '}
                                     {formatUnitType(unit.unitType)}
@@ -530,6 +529,36 @@ export default function WeekScores() {
             </SectionCard>
             <hr />
 
+            {selectedUnit && selectedUnit.stats && (
+                <ModalBackdrop
+                    onClick={() => setSelectedUnit(null)}
+                >
+                    <ModalCard
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <h2>
+                            {selectedUnit.teamName}{' '}
+                            {formatUnitType(selectedUnit.unitType)}
+                        </h2>
+
+                        <h3>
+                            Fantasy Score: {selectedUnit.score.toFixed(1)}
+                        </h3>
+
+                        {getScoreBreakdown(
+                            selectedUnit.unitType,
+                            selectedUnit.stats
+                        )}
+
+                        <CloseButton
+                            onClick={() => setSelectedUnit(null)}
+                        >
+                            Close
+                        </CloseButton>
+                    </ModalCard>
+                </ModalBackdrop>
+            )}
+
         </ScoresPage>
     )
 }
@@ -537,3 +566,4 @@ export default function WeekScores() {
 function formatUnitType(unitType: ScoringUnitType): string {
     return unitType === 'SPECIAL_TEAMS' ? 'Special Teams' : unitType.charAt(0) + unitType.slice(1).toLowerCase()
 }
+

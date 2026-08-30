@@ -10,17 +10,18 @@ import { getTeamOpponent } from '../../utils/teamschedule'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 
 import {STARTERS, BENCH, type RosterUnitType,} from '../../rosters'
-import { getUnitStats } from '../../utils/unitStats'
 
 import type { CollegeTeam } from '../../types/football'
 import type { WeeklyTeamData } from '../../api/weeklyStats'
 
 import styled from 'styled-components'
 
-import {BackButton} from '../../styles/commonstyles'
+import { BackButton } from '../../styles/commonstyles'
 import { getTeamLogo, TeamLogo } from '../../styles/logos'
 
-import {getStatRank, formatRank} from '../../utils/statRanking'
+import { getStatRank, formatRank } from '../../utils/statRanking'
+import { calculateUnitScore } from '../../utils/scoring'
+import { getScoreBreakdown } from "../../utils/ScoringBreakdown"
 
 interface LeagueMember {
     id: string
@@ -36,6 +37,8 @@ interface RosterUnit {
     acquiredVia: 'DRAFT' | 'FREE_AGENCY'
     gameStart: Date | null
     locked: boolean
+    score: number
+    weeklyStats: WeeklyTeamData['stats'] | null
 }
 
 interface RosterSectionProps {
@@ -123,14 +126,14 @@ const ModalCard = styled.div`
     padding: 24px;
 
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-`
+`;
 
 const ModalHeader = styled.div`
     display: flex;
     align-items: center;
     gap: 14px;
     margin-bottom: 18px;
-`
+`;
 
 const ModalTitle = styled.div`
     flex: 1;
@@ -143,7 +146,7 @@ const ModalTitle = styled.div`
         margin: 4px 0 0;
         color: #6b7280;
     }
-`
+`;
 
 const CloseButton = styled.button`
     border: none;
@@ -159,13 +162,24 @@ const CloseButton = styled.button`
     &:hover {
         background: #e5e7eb;
     }
-`
+`;
 
-const StatsList = styled.div`
-    display: grid;
-    gap: 8px;
-    color: #4b5563;
-`
+const UnitScore = styled.button`
+    min-width: 55px;
+    text-align: right;
+    font-weight: 700;
+    color: #111827;
+
+    border: none;
+    background: none;
+    padding: 0;
+
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+    }
+`;
 
 export default function MyTeam() {
     const { leagueId } = useParams()
@@ -182,6 +196,7 @@ export default function MyTeam() {
 
     const [teams, setTeams] = useState<CollegeTeam[]>([])
     const [selectedStatsUnit, setSelectedStatsUnit] = useState<RosterUnit | null>(null)
+    const [selectedScoreUnit, setSelectedScoreUnit] = useState<RosterUnit | null>(null)
 
     useEffect(() => {
         async function loadRoster() {
@@ -243,6 +258,13 @@ export default function MyTeam() {
                             const weeklyTeam = weeklyMap.get(normalizeTeamName(collegeTeamName))
                             const gameStart = weeklyTeam?.gameStart ?? null
 
+                            const gameStarted =
+                                gameStart !== null && now.getTime() >= gameStart.getTime()
+
+                            const score =
+                                weeklyTeam && gameStarted
+                                    ? calculateUnitScore(unit.unit_type as RosterUnitType, weeklyTeam.stats) : 0
+
                             return {
                                 id: unit.id,
                                 collegeTeamId: unit.college_team_id,
@@ -254,6 +276,8 @@ export default function MyTeam() {
                                 gameStart,
 
                                 locked: isGameLocked(gameStart, now),
+                                score,
+                                weeklyStats: weeklyTeam?.stats ?? null,
                             }
                         }
                     )
@@ -462,6 +486,13 @@ export default function MyTeam() {
                                             )}
                                         </UnitDetails>
                                     </UnitInfo>
+                                    <UnitScore onClick={() => {
+                                        if (unit.locked) {
+                                            setSelectedScoreUnit(unit)
+                                        }}}
+                                    >
+                                        {unit.score.toFixed(1)}
+                                    </UnitScore>
                                 </UnitRow>
                             )
                         })}
@@ -636,25 +667,24 @@ export default function MyTeam() {
                                     </UnitDetails>
                                 </UnitInfo>
 
+                                <UnitScore onClick={() => {
+                                    if (unit.locked) {
+                                        setSelectedScoreUnit(unit)
+                                    }}}
+                                >
+                                    {unit.score.toFixed(1)}
+                                </UnitScore>
+
                                 {unit.locked ? (
                                     <button disabled>
                                         Locked
                                     </button>
                                 ) : canMoveDirectlyToStarter(unit) ? (
-                                    <button
-                                        onClick={() =>
-                                            moveToStarter(unit)
-                                        }
-                                    >
+                                    <button onClick={() => moveToStarter(unit)}>
                                         Move to Starter
                                     </button>
                                 ) : (
-                                    <button
-                                        onClick={() => {
-                                            setError('')
-                                            setSelectedBenchUnit(unit)
-                                        }}
-                                    >
+                                    <button onClick={() => {setError(''), setSelectedBenchUnit(unit)}}>
                                         Swap with Starter
                                     </button>
                                 )}
@@ -680,10 +710,7 @@ export default function MyTeam() {
                         starters.filter((starter) => starter.unitType === selectedBenchUnit.unitType)
                             .map((starter) => (
                                 <UnitRow key={starter.id}>
-                                    <TeamLogo
-                                        src={getTeamLogo(starter.teamName)}
-                                        alt={starter.teamName}
-                                    />
+                                    <TeamLogo src={getTeamLogo(starter.teamName)} alt={starter.teamName}/>
 
                                     <UnitInfo>
                                         <UnitName>
@@ -705,11 +732,7 @@ export default function MyTeam() {
                                             Locked
                                         </button>
                                     ) : (
-                                        <button
-                                            onClick={() =>
-                                                swapUnits(selectedBenchUnit, starter)
-                                            }
-                                        >
+                                        <button onClick={() => swapUnits(selectedBenchUnit, starter)}>
                                             Swap
                                         </button>
                                     )}
@@ -729,17 +752,11 @@ export default function MyTeam() {
                 )
 
                 return (
-                    <ModalBackdrop
-                        onClick={() => setSelectedStatsUnit(null)}
-                    >
-                        <ModalCard
-                            onClick={(event) => event.stopPropagation()}
-                        >
+                    <ModalBackdrop onClick={() => setSelectedStatsUnit(null)}>
+                        <ModalCard onClick={(event) => event.stopPropagation()}>
                             <ModalHeader>
                                 <TeamLogo
-                                    src={getTeamLogo(
-                                        selectedStatsUnit.teamName
-                                    )}
+                                    src={getTeamLogo(selectedStatsUnit.teamName)}
                                     alt={selectedStatsUnit.teamName}
                                 />
 
@@ -750,32 +767,26 @@ export default function MyTeam() {
 
                                     <p>
                                         2025{' '}
-                                        {formatUnitType(
-                                            selectedStatsUnit.unitType
-                                        )}{' '}
+                                        {formatUnitType(selectedStatsUnit.unitType)}
+                                        {' '}
                                         Stats
                                     </p>
                                 </ModalTitle>
 
-                                <CloseButton
-                                    onClick={() =>
-                                        setSelectedStatsUnit(null)
-                                    }
-                                >
+                                <CloseButton onClick={() => setSelectedStatsUnit(null)}>
                                     Close
                                 </CloseButton>
                             </ModalHeader>
 
-                            <StatsList>
-                                {getUnitStats(
-                                    selectedStatsUnit.unitType,
-                                    collegeTeam
-                                )}
-                            </StatsList>
                             {selectedStatsUnit.unitType === 'PASSING' && collegeTeam && (
                                 <>
                                     <div>
-                                        Passing Yards Rank:{' '}
+                                        Passing Yards:{' '}
+                                        <strong>
+                                            {(collegeTeam.stats.passing_yards ?? 0)
+                                                .toLocaleString()}
+                                        </strong>
+                                        {' • '}
                                         <strong>
                                             {formatRank(
                                                 getStatRank(
@@ -789,7 +800,11 @@ export default function MyTeam() {
                                     </div>
 
                                     <div>
-                                        Passing TD Rank:{' '}
+                                        Passing Touchdowns:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.passing_touchdowns ?? 0}
+                                        </strong>
+                                        {' • '}
                                         <strong>
                                             {formatRank(
                                                 getStatRank(
@@ -807,28 +822,106 @@ export default function MyTeam() {
                             {selectedStatsUnit.unitType === 'RUSHING' && collegeTeam && (
                                 <>
                                     <div>
-                                        Rushing Yards Rank:{' '}
+                                        Rushing Yards:{' '}
+                                        <strong>
+                                            {(collegeTeam.stats.rushing_yards ?? 0).toLocaleString()}
+                                        </strong>
+                                        {' • '}
                                         <strong>
                                             {formatRank(
                                                 getStatRank(
                                                     teams,
                                                     collegeTeam.id,
-                                                    (team) =>
-                                                        team.stats.rushing_yards ?? 0
+                                                    (team) => team.stats.rushing_yards ?? 0
                                                 )
                                             )}
                                         </strong>
                                     </div>
 
                                     <div>
-                                        Rushing TD Rank:{' '}
+                                        Rushing Touchdowns:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.rushing_touchdowns ?? 0}
+                                        </strong>
+                                        {' • '}
                                         <strong>
                                             {formatRank(
                                                 getStatRank(
                                                     teams,
                                                     collegeTeam.id,
-                                                    (team) =>
-                                                        team.stats.rushing_touchdowns ?? 0
+                                                    (team) => team.stats.rushing_touchdowns ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        Rushing Yards Per Game:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.rushing_yards_per_game ?? 0}
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) => team.stats.rushing_yards_per_game ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
+                                </>
+                            )}
+
+                            {selectedStatsUnit.unitType === 'RECEIVING' && collegeTeam && (
+                                <>
+                                    <div>
+                                        Receiving Yards:{' '}
+                                        <strong>
+                                            {(collegeTeam.stats.passing_yards ?? 0).toLocaleString()}
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) => team.stats.passing_yards ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        Receiving Touchdowns:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.passing_touchdowns ?? 0}
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) => team.stats.passing_touchdowns ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        Receiving Yards Per Game:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.passing_yards_per_game ?? 0}
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) => team.stats.passing_yards_per_game ?? 0
                                                 )
                                             )}
                                         </strong>
@@ -839,21 +932,11 @@ export default function MyTeam() {
                             {selectedStatsUnit.unitType === 'DEFENSE' && collegeTeam && (
                                 <>
                                     <div>
-                                        Takeaways Rank:{' '}
+                                        Points Allowed:{' '}
                                         <strong>
-                                            {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
-                                                    (team) =>
-                                                        team.stats.takeaways ?? 0
-                                                )
-                                            )}
+                                            {collegeTeam.stats.points_allowed ?? 0}
                                         </strong>
-                                    </div>
-
-                                    <div>
-                                        Points Allowed Rank:{' '}
+                                        {' • '}
                                         <strong>
                                             {formatRank(
                                                 getStatRank(
@@ -867,7 +950,12 @@ export default function MyTeam() {
                                     </div>
 
                                     <div>
-                                        Yards Allowed Rank:{' '}
+                                        Yards Allowed:{' '}
+                                        <strong>
+                                            {(collegeTeam.stats.total_yards_allowed ?? 0)
+                                                .toLocaleString()}
+                                        </strong>
+                                        {' • '}
                                         <strong>
                                             {formatRank(
                                                 getStatRank(
@@ -879,28 +967,162 @@ export default function MyTeam() {
                                             )}
                                         </strong>
                                     </div>
+
+                                    <div>
+                                        Takeaways:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.takeaways ?? 0}
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) =>
+                                                        team.stats.takeaways ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
                                 </>
                             )}
 
                             {selectedStatsUnit.unitType === 'SPECIAL_TEAMS' && collegeTeam && (
-                                <div>
-                                    Field Goals Made Rank:{' '}
-                                    <strong>
-                                        {formatRank(
-                                            getStatRank(
-                                                teams,
-                                                collegeTeam.id,
-                                                (team) =>
-                                                    team.stats.field_goals_made ?? 0
-                                            )
+                                <>
+                                    <div>
+                                        Field Goals Made:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.field_goals_made ?? 0}
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) => team.stats.field_goals_made ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        Field Goals Attempted:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.field_goals_attempted ?? 0}
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) => team.stats.field_goals_attempted ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        Field Goal Percentage:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.field_goal_percentage ?? 0}%
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) => team.stats.field_goal_percentage ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        Extra Points Made:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.extra_points_made ?? 0}
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) => team.stats.extra_points_made ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        Extra Point Percentage:{' '}
+                                        <strong>
+                                            {collegeTeam.stats.extra_point_percentage ?? 0}%
+                                        </strong>
+                                        {' • '}
+                                        <strong>
+                                            {formatRank(
+                                                getStatRank(
+                                                    teams,
+                                                    collegeTeam.id,
+                                                    (team) => team.stats.extra_point_percentage ?? 0
+                                                )
+                                            )}
+                                        </strong>
+                                    </div>
+                                </>
+                            )}
+                            {selectedScoreUnit && selectedScoreUnit.weeklyStats && (
+                                <ModalBackdrop
+                                    onClick={() => setSelectedScoreUnit(null)}
+                                >
+                                    <ModalCard
+                                        onClick={(event) => event.stopPropagation()}
+                                    >
+                                        <ModalHeader>
+                                            <TeamLogo
+                                                src={getTeamLogo(selectedScoreUnit.teamName)}
+                                                alt={selectedScoreUnit.teamName}
+                                            />
+
+                                            <ModalTitle>
+                                                <h2>
+                                                    {selectedScoreUnit.teamName}
+                                                </h2>
+
+                                                <p>
+                                                    {formatUnitType(selectedScoreUnit.unitType)} Score Breakdown
+                                                </p>
+                                            </ModalTitle>
+
+                                            <CloseButton
+                                                onClick={() => setSelectedScoreUnit(null)}
+                                            >
+                                                Close
+                                            </CloseButton>
+                                        </ModalHeader>
+
+                                        <h3>
+                                            Fantasy Score: {selectedScoreUnit.score.toFixed(1)}
+                                        </h3>
+
+                                        {getScoreBreakdown(
+                                            selectedScoreUnit.unitType,
+                                            selectedScoreUnit.weeklyStats
                                         )}
-                                    </strong>
-                                </div>
+                                    </ModalCard>
+                                </ModalBackdrop>
                             )}
                         </ModalCard>
                     </ModalBackdrop>
                 )
             })()}
+
+
         </div>
     )
 }

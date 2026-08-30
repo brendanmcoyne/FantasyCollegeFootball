@@ -36,7 +36,7 @@ export function receivingScore(stats: TeamStats): number {
     return ((yards * yardsvalue) + (touchdowns * tdvalue) + (fumblesLost * turnovervalue))
 }
 
-function pointsAllowedScore(pointsAllowed: number): number {
+export function pointsAllowedScore(pointsAllowed: number): number {
     if (pointsAllowed === 0) return 0
     if (pointsAllowed <= 6) return -2
     if (pointsAllowed <= 13) return -5
@@ -48,7 +48,7 @@ function pointsAllowedScore(pointsAllowed: number): number {
     return -25
 }
 
-function yardsAllowedScore(yardsAllowed: number): number {
+export function yardsAllowedScore(yardsAllowed: number): number {
     if (yardsAllowed < 100) return 0
     if (yardsAllowed < 200) return -1
     if (yardsAllowed < 300) return -2
