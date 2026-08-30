@@ -237,7 +237,8 @@ export default function Scoring() {
                 </tr>
                 </thead>
                 <tbody>
-                <tr><td>0–199</td><td>0</td></tr>
+                <tr><td>0–99</td><td>0</td></tr>
+                <tr><td>100–199</td><td>-1</td></tr>
                 <tr><td>200–299</td><td>-2</td></tr>
                 <tr><td>300–349</td><td>-4</td></tr>
                 <tr><td>350–399</td><td>-6</td></tr>

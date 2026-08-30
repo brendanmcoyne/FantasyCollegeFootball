@@ -49,7 +49,8 @@ function pointsAllowedScore(pointsAllowed: number): number {
 }
 
 function yardsAllowedScore(yardsAllowed: number): number {
-    if (yardsAllowed < 200) return 0
+    if (yardsAllowed < 100) return 0
+    if (yardsAllowed < 200) return -1
     if (yardsAllowed < 300) return -2
     if (yardsAllowed < 350) return -4
     if (yardsAllowed < 400) return -6
