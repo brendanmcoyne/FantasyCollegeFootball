@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
@@ -235,6 +235,12 @@ export default function MyTeam() {
     const [selectedStatsUnit, setSelectedStatsUnit] = useState<RosterUnit | null>(null)
     const [selectedScoreUnit, setSelectedScoreUnit] = useState<RosterUnit | null>(null)
 
+    const [searchParams, setSearchParams] = useSearchParams()
+
+    const viewedWeek = Number(searchParams.get('week')) || CURRENT_WEEK
+
+    const viewingPastWeek = viewedWeek < CURRENT_WEEK
+
     useEffect(() => {
         async function loadRoster() {
             if (!leagueId || !user) {
@@ -259,11 +265,33 @@ export default function MyTeam() {
 
                 setTeamName(leagueMember.team_name)
 
-                const {data: rosterData, error: rosterError} = await supabase
-                    .from('roster_units')
-                    .select('id, college_team_id, unit_type, roster_slot, acquired_via')
-                    .eq('league_id', leagueId)
-                    .eq('league_member_id', leagueMember.id)
+                let rosterData
+                let rosterError
+
+                if (viewingPastWeek) {
+                    const result = await supabase
+                        .from('weekly_rosters')
+                        .select(
+                            'id, college_team_id, unit_type, roster_slot'
+                        )
+                        .eq('league_id', leagueId)
+                        .eq('league_member_id', leagueMember.id)
+                        .eq('week', viewedWeek)
+
+                    rosterData = result.data
+                    rosterError = result.error
+                } else {
+                    const result = await supabase
+                        .from('roster_units')
+                        .select(
+                            'id, college_team_id, unit_type, roster_slot, acquired_via'
+                        )
+                        .eq('league_id', leagueId)
+                        .eq('league_member_id', leagueMember.id)
+
+                    rosterData = result.data
+                    rosterError = result.error
+                }
 
                 if (rosterError) {
                     throw rosterError
@@ -276,7 +304,7 @@ export default function MyTeam() {
 
                 teams.forEach((team) => {teamMap.set(team.id, team)})
 
-                const weeklyStats = await getWeeklyStats(CURRENT_WEEK)
+                const weeklyStats = await getWeeklyStats(viewedWeek)
                 const weeklyMap = new Map<string, WeeklyTeamData>()
 
                 weeklyStats.forEach(
@@ -308,20 +336,23 @@ export default function MyTeam() {
                                 teamName: collegeTeamName,
                                 unitType: unit.unit_type as RosterUnitType,
                                 rosterSlot: unit.roster_slot as | 'STARTER' | 'BENCH',
-                                acquiredVia: unit.acquired_via as | 'DRAFT' | 'FREE_AGENCY',
+                                acquiredVia:
+                                    'acquired_via' in unit && unit.acquired_via
+                                        ? unit.acquired_via as 'DRAFT' | 'FREE_AGENCY'
+                                        : 'DRAFT',
 
                                 gameStart,
 
-                                locked: isGameLocked(gameStart, now),
+                                locked: viewingPastWeek || isGameLocked(gameStart, now),
                                 score,
                                 weeklyStats: weeklyTeam?.stats ?? null,
                             }
                         }
                     )
 
-                for (const unit of rosterUnits) {
-                    if (unit.locked) {
-                        await snapshotLockedUnit(
+                if (!viewingPastWeek) {
+                    for (const unit of rosterUnits) {
+                        await ensureWeeklyRosterUnit(
                             leagueMember.id,
                             unit
                         )
@@ -343,7 +374,7 @@ export default function MyTeam() {
         }
 
         loadRoster()
-    }, [leagueId, user])
+    }, [leagueId, user, viewedWeek])
 
 
     useEffect(() => {
@@ -433,6 +464,38 @@ export default function MyTeam() {
             return
         }
 
+        const { error: weeklyBenchError } = await supabase
+            .from('weekly_rosters')
+            .update({
+                roster_slot: 'STARTER',
+            })
+            .eq('league_id', leagueId)
+            .eq('league_member_id', member.id)
+            .eq('week', CURRENT_WEEK)
+            .eq('college_team_id', currentBenchUnit.collegeTeamId)
+            .eq('unit_type', currentBenchUnit.unitType)
+
+        if (weeklyBenchError) {
+            setError(weeklyBenchError.message)
+            return
+        }
+
+        const { error: weeklyStarterError } = await supabase
+            .from('weekly_rosters')
+            .update({
+                roster_slot: 'BENCH',
+            })
+            .eq('league_id', leagueId)
+            .eq('league_member_id', member.id)
+            .eq('week', CURRENT_WEEK)
+            .eq('college_team_id', currentStarterUnit.collegeTeamId)
+            .eq('unit_type', currentStarterUnit.unitType)
+
+        if (weeklyStarterError) {
+            setError(weeklyStarterError.message)
+            return
+        }
+
         setRoster(
             (currentRoster) =>
                 currentRoster.map(
@@ -465,7 +528,7 @@ export default function MyTeam() {
                         {units.map((unit) => {
                             const opponentName = getTeamOpponent(
                                 unit.teamName,
-                                CURRENT_WEEK
+                                viewedWeek
                             )
 
                             const opponentTeam = teams.find(
@@ -612,6 +675,22 @@ export default function MyTeam() {
             return
         }
 
+        const { error: weeklyRosterError } = await supabase
+            .from('weekly_rosters')
+            .update({
+                roster_slot: 'STARTER',
+            })
+            .eq('league_id', leagueId)
+            .eq('league_member_id', member.id)
+            .eq('week', CURRENT_WEEK)
+            .eq('college_team_id', currentUnit.collegeTeamId)
+            .eq('unit_type', currentUnit.unitType)
+
+        if (weeklyRosterError) {
+            setError(weeklyRosterError.message)
+            return
+        }
+
         setRoster(
             (currentRoster) =>
                 currentRoster.map((rosterUnit) =>
@@ -620,7 +699,7 @@ export default function MyTeam() {
         )
     }
 
-    async function snapshotLockedUnit(
+    async function ensureWeeklyRosterUnit(
         leagueMemberId: string,
         unit: {
             collegeTeamId: number
@@ -629,7 +708,7 @@ export default function MyTeam() {
             gameStart: Date | null
         }
     ) {
-        if (!leagueId || !unit.gameStart) {
+        if (!leagueId) {
             return
         }
 
@@ -642,7 +721,9 @@ export default function MyTeam() {
                 college_team_id: unit.collegeTeamId,
                 unit_type: unit.unitType,
                 roster_slot: unit.rosterSlot,
-                locked_at: unit.gameStart.toISOString(),
+                locked_at:
+                    unit.gameStart?.toISOString() ??
+                    new Date().toISOString(),
             })
 
         if (error && error.code !== '23505') {
@@ -652,13 +733,46 @@ export default function MyTeam() {
 
     return (
         <div>
-            <BackButton onClick={() => navigate(-1)}>
+            <BackButton onClick={() => navigate(`/league/${leagueId}`)}>
                 ← Back
             </BackButton>
 
             <h1>{teamName}</h1>
 
-            <p>Week {CURRENT_WEEK}</p>
+            <p>Week {viewedWeek}</p>
+
+            {CURRENT_WEEK > 1 && (
+                <div>
+                    {Array.from(
+                        { length: CURRENT_WEEK },
+                        (_, index) => {
+                            const weekNumber = index + 1
+
+                            return (
+                                <button
+                                    key={weekNumber}
+                                    onClick={() => {
+                                        setSelectedBenchUnit(null)
+                                        setSelectedScoreUnit(null)
+                                        setSelectedStatsUnit(null)
+
+                                        if (weekNumber === CURRENT_WEEK) {
+                                            setSearchParams({})
+                                        } else {
+                                            setSearchParams({
+                                                week: String(weekNumber),
+                                            })
+                                        }
+                                    }}
+                                    disabled={weekNumber === viewedWeek}
+                                >
+                                    Week {weekNumber}
+                                </button>
+                            )
+                        }
+                    )}
+                </div>
+            )}
 
             <h2>Starters</h2>
 
@@ -677,7 +791,7 @@ export default function MyTeam() {
                     {bench.map((unit) => {
                         const opponentName = getTeamOpponent(
                             unit.teamName,
-                            CURRENT_WEEK
+                            viewedWeek
                         )
 
                         const opponentTeam = teams.find(
@@ -695,11 +809,7 @@ export default function MyTeam() {
 
                                 <UnitInfo>
                                     <UnitName>
-                                        <TeamNameButton
-                                            onClick={() =>
-                                                setSelectedStatsUnit(unit)
-                                            }
-                                        >
+                                        <TeamNameButton onClick={() => setSelectedStatsUnit(unit)}>
                                             {unit.teamName}
                                         </TeamNameButton>
 
@@ -752,18 +862,23 @@ export default function MyTeam() {
                                     {unit.score.toFixed(1)}
                                 </UnitScore>
 
-                                {unit.locked ? (
-                                    <button disabled>
-                                        Locked
-                                    </button>
-                                ) : canMoveDirectlyToStarter(unit) ? (
-                                    <RosterActionButton onClick={() => moveToStarter(unit)}>
-                                        Move to Starter
-                                    </RosterActionButton>
-                                ) : (
-                                    <RosterActionButton onClick={() => {setError(''), setSelectedBenchUnit(unit)}}>
-                                        Swap with Starter
-                                    </RosterActionButton>
+                                {!viewingPastWeek && !unit.locked && (
+                                    canMoveDirectlyToStarter(unit) ? (
+                                        <RosterActionButton
+                                            onClick={() => moveToStarter(unit)}
+                                        >
+                                            Move to Starter
+                                        </RosterActionButton>
+                                    ) : (
+                                        <RosterActionButton
+                                            onClick={() => {
+                                                setError('')
+                                                setSelectedBenchUnit(unit)
+                                            }}
+                                        >
+                                            Swap with Starter
+                                        </RosterActionButton>
+                                    )
                                 )}
                             </UnitRow>
                         )
@@ -805,13 +920,13 @@ export default function MyTeam() {
                                     </UnitInfo>
 
                                     {starter.locked ? (
-                                        <button disabled>
+                                        <RosterActionButton disabled>
                                             Locked
-                                        </button>
+                                        </RosterActionButton>
                                     ) : (
-                                        <button onClick={() => swapUnits(selectedBenchUnit, starter)}>
+                                        <RosterActionButton onClick={() => swapUnits(selectedBenchUnit, starter)}>
                                             Swap
-                                        </button>
+                                        </RosterActionButton>
                                     )}
                                 </UnitRow>
                                 )

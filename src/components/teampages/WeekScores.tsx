@@ -225,6 +225,47 @@ const CloseButton = styled.button`
     cursor: pointer;
 `;
 
+const FutureMatchupCard = styled.div`
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+
+    padding: 18px 20px;
+    margin-top: 12px;
+
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+
+    @media (max-width: 700px) {
+        grid-template-columns: 1fr auto 1fr;
+        gap: 8px;
+        padding: 14px 12px;
+    }
+`
+
+const FutureTeam = styled.div`
+    font-weight: 700;
+    color: #111827;
+    min-width: 0;
+    overflow-wrap: anywhere;
+`
+
+const FutureTeamLeft = styled(FutureTeam)`
+    text-align: right;
+`
+
+const FutureTeamRight = styled(FutureTeam)`
+    text-align: left;
+`
+
+const VsText = styled.div`
+    font-weight: 700;
+    color: #6b7280;
+    text-align: center;
+`
+
 export default function WeekScores() {
     const { leagueId, week: weekParam } = useParams()
     const week = Number(weekParam)
@@ -263,19 +304,24 @@ export default function WeekScores() {
 
                 if (membersError) throw membersError
 
-                const { data: rosterRows, error: rosterError } = await supabase
-                    .from('roster_units')
-                    .select('id, league_member_id, college_team_id, unit_type, roster_slot')
-                    .eq('league_id', leagueId)
+                if (week === CURRENT_WEEK) {
+                    const { error: initializeError } = await supabase.rpc(
+                        'initialize_weekly_rosters',
+                        {
+                            target_league_id: leagueId,
+                            target_week: week,
+                        }
+                    )
 
-                if (rosterError) throw rosterError
+                    if (initializeError) {
+                        throw initializeError
+                    }
+                }
 
                 const { data: weeklyRosterRows, error: weeklyRosterError } =
                     await supabase
                         .from('weekly_rosters')
-                        .select(
-                            'id, league_member_id, college_team_id, unit_type, roster_slot'
-                        )
+                        .select('id, league_member_id, college_team_id, unit_type, roster_slot')
                         .eq('league_id', leagueId)
                         .eq('week', week)
 
@@ -283,36 +329,14 @@ export default function WeekScores() {
                     throw weeklyRosterError
                 }
 
-                const weeklySnapshotMap = new Map<string, RosterRow>()
-
-                const frozenRosterRows = weeklyRosterRows ?? []
-
-                frozenRosterRows.forEach((row) => {
-                    const key =
-                        `${row.league_member_id}-${row.college_team_id}-${row.unit_type}`
-
-                    weeklySnapshotMap.set(key, {
+                const effectiveRosterRows: RosterRow[] =
+                    (weeklyRosterRows ?? []).map((row) => ({
                         id: row.id,
                         league_member_id: row.league_member_id,
                         college_team_id: row.college_team_id,
                         unit_type: row.unit_type as ScoringUnitType,
                         roster_slot: row.roster_slot as 'STARTER' | 'BENCH',
-                    })
-                })
-
-                const effectiveRosterRows: RosterRow[] = []
-                const currentRosterRows = rosterRows ?? []
-
-                currentRosterRows.forEach((row: RosterRow) => {
-                    const key =
-                        `${row.league_member_id}-${row.college_team_id}-${row.unit_type}`
-
-                    const frozenRow = weeklySnapshotMap.get(key)
-
-                    effectiveRosterRows.push(
-                        frozenRow ?? row
-                    )
-                })
+                    }))
 
                 const teamMap = new Map<number, CollegeTeam>(
                     collegeTeams.map((team) => [team.id, team])
@@ -497,7 +521,19 @@ export default function WeekScores() {
 
                 if (!weekStarted) {
                     return (
-                        <h3 key={matchup.id}>{team1.teamName} vs {team2.teamName}</h3>
+                        <FutureMatchupCard key={matchup.id}>
+                            <FutureTeamLeft>
+                                {team1.teamName}
+                            </FutureTeamLeft>
+
+                            <VsText>
+                                vs
+                            </VsText>
+
+                            <FutureTeamRight>
+                                {team2.teamName}
+                            </FutureTeamRight>
+                        </FutureMatchupCard>
                     )
                 }
 

@@ -10,9 +10,15 @@ export const Page = styled.main`
     }
 `;
 
-export const Content = styled.div`
+export const MainContent = styled.main`
     width: min(1200px, 100%);
     margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+
+    @media (max-width: 700px) {
+        padding: 8px 4px;
+    }
 `;
 
 export const BackButton = styled.button`

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
 import styled from 'styled-components'
+import {BackButton} from "../../styles/commonstyles";
 
 function generateJoinCode() {
     const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -137,6 +138,9 @@ export default function CreateLeague() {
     return (
         <CreatePage>
             <FormCard>
+                <BackButton onClick={() => navigate(-1)}>
+                    ← Back
+                </BackButton>
                 <h1>Create League</h1>
 
                 <FormGroup>

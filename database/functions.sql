@@ -392,3 +392,48 @@ set roster_slot = 'STARTER'
 where id = target_roster_unit_id;
 end;
 $$;
+
+create or replace function public.initialize_weekly_rosters(
+    target_league_id uuid,
+    target_week integer
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if not public.is_league_member(target_league_id) then
+        raise exception 'You are not a member of this league';
+end if;
+
+insert into public.weekly_rosters (
+    league_id,
+    league_member_id,
+    week,
+    college_team_id,
+    unit_type,
+    roster_slot,
+    locked_at
+)
+select
+    ru.league_id,
+    ru.league_member_id,
+    target_week,
+    ru.college_team_id,
+    ru.unit_type,
+    ru.roster_slot,
+    now()
+from public.roster_units ru
+where ru.league_id = target_league_id
+
+    on conflict (
+        league_id,
+        league_member_id,
+        week,
+        college_team_id,
+        unit_type
+    )
+    do nothing;
+end;
+$$;

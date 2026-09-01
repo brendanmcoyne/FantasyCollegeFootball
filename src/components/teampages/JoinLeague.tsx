@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
 import styled from 'styled-components'
+import {BackButton} from "../../styles/commonstyles";
 
 const JoinPage = styled.div`
     display: flex;
@@ -130,7 +131,11 @@ export default function JoinLeague() {
 
     return (
         <JoinPage>
+
             <FormCard>
+                <BackButton onClick={() => navigate(-1)}>
+                    ← Back
+                </BackButton>
                 <h1>Join League</h1>
 
                 <FormGroup>
