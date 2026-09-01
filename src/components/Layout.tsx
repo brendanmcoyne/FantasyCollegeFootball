@@ -10,7 +10,7 @@ const MainContent = styled.main`
     box-sizing: border-box;
 
     @media (max-width: 700px) {
-        padding: 16px 12px;
+        padding: 8px 4px;
     }
 `;
 

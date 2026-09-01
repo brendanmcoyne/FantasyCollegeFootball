@@ -4,6 +4,10 @@ export const Page = styled.main`
     min-height: 100vh;
     background: #f3f4f6;
     padding: 32px;
+
+    @media (max-width: 700px) {
+        padding: 8px;
+    }
 `;
 
 export const Content = styled.div`

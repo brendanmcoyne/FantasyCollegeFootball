@@ -76,12 +76,28 @@ const FiltersCard = styled.div`
     padding: 18px;
     display: grid;
     gap: 18px;
+
+    @media (max-width: 700px) {
+        padding: 16px;
+        gap: 20px;
+    }
+
+    h3 {
+        margin-top: 0;
+        margin-bottom: 12px;
+    }
 `;
 
 const FilterGroup = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+
+    @media (max-width: 700px) {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
 `;
 
 const FilterButton = styled.button<{ $active?: boolean }>`
@@ -90,6 +106,7 @@ const FilterButton = styled.button<{ $active?: boolean }>`
     padding: 8px 12px;
     font-weight: 600;
     cursor: pointer;
+    
     background: ${({ $active }) =>
     $active ? '#1f2937' : '#ffffff'};
     color: ${({ $active }) =>
@@ -97,7 +114,14 @@ const FilterButton = styled.button<{ $active?: boolean }>`
 
     &:hover {
         background: ${({ $active }) =>
-    $active ? '#111827' : '#f3f4f6'};
+            $active ? '#111827' : '#f3f4f6'};
+    }
+
+    @media (max-width: 700px) {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 8px;
+        text-align: center;
     }
 `;
 

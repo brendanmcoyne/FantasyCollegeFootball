@@ -243,9 +243,10 @@ const UnitStats = styled.div`
 
 const DraftPickRow = styled.div`
     display: grid;
-    grid-template-columns: 55px 56px minmax(0, 1fr) minmax(120px, auto);
+    grid-template-columns: 55px 56px minmax(0, 1fr) minmax(160px, 220px);
     align-items: center;
     gap: 14px;
+
     padding: 14px;
     background: #ffffff;
     border: 1px solid #d1d5db;
@@ -503,11 +504,11 @@ export default function Draft() {
                                     <PickType>
                                         {formatUnitType(pick.unit_type)}
                                     </PickType>
-
-                                    <DraftOwner>
-                                        {drafter?.team_name ?? 'Unknown Team'}
-                                    </DraftOwner>
                                 </PickInfo>
+
+                                <DraftOwner>
+                                    {drafter?.team_name ?? 'Unknown Team'}
+                                </DraftOwner>
                             </DraftPickRow>
                         )
                     })}
