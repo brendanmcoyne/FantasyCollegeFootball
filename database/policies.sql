@@ -126,3 +126,28 @@ for select
                       using (
                       public.is_league_member(league_id)
                       );
+
+alter table public.weekly_rosters
+    enable row level security;
+
+create policy "League members can read weekly rosters"
+on public.weekly_rosters
+for select
+               to authenticated
+               using (
+               public.is_league_member(league_id)
+               );
+
+create policy "Users can create weekly roster snapshots"
+on public.weekly_rosters
+for insert
+to authenticated
+with check (
+    exists (
+        select 1
+        from public.league_members
+        where league_members.id = weekly_rosters.league_member_id
+          and league_members.league_id = weekly_rosters.league_id
+          and league_members.user_id = auth.uid()
+    )
+);

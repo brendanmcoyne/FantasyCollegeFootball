@@ -225,12 +225,57 @@ export default function WeekScores() {
 
                 const { data: rosterRows, error: rosterError } = await supabase
                     .from('roster_units')
-                    .select(
-                        'id, league_member_id, college_team_id, unit_type, roster_slot'
-                    )
+                    .select('id, league_member_id, college_team_id, unit_type, roster_slot')
                     .eq('league_id', leagueId)
 
                 if (rosterError) throw rosterError
+
+                const { data: weeklyRosterRows, error: weeklyRosterError } =
+                    await supabase
+                        .from('weekly_rosters')
+                        .select(
+                            'id, league_member_id, college_team_id, unit_type, roster_slot'
+                        )
+                        .eq('league_id', leagueId)
+                        .eq('week', week)
+
+                if (weeklyRosterError) {
+                    throw weeklyRosterError
+                }
+
+                const weeklySnapshotMap = new Map<string, RosterRow>()
+
+                const frozenRosterRows = weeklyRosterRows ?? []
+
+                frozenRosterRows.forEach((row) => {
+                    const key =
+                        `${row.league_member_id}-${row.college_team_id}-${row.unit_type}`
+
+                    weeklySnapshotMap.set(key, {
+                        id: row.id,
+                        league_member_id: row.league_member_id,
+                        college_team_id: row.college_team_id,
+                        unit_type: row.unit_type as ScoringUnitType,
+                        roster_slot: row.roster_slot as 'STARTER' | 'BENCH',
+                    })
+                })
+
+                const effectiveRosterRows: RosterRow[] = []
+
+                if (week < CURRENT_WEEK) {
+                    effectiveRosterRows.push(...(Array.from(weeklySnapshotMap.values()))
+)
+                } else {
+                    const currentRosterRows = rosterRows ?? []
+
+                    currentRosterRows.forEach((row: RosterRow) => {
+                        const key = `${row.league_member_id}-${row.college_team_id}-${row.unit_type}`
+
+                        const frozenRow = weeklySnapshotMap.get(key)
+
+                        effectiveRosterRows.push(frozenRow ?? row)
+                    })
+                }
 
                 const teamMap = new Map<number, CollegeTeam>(
                     collegeTeams.map((team) => [team.id, team])
@@ -283,23 +328,17 @@ export default function WeekScores() {
 
                 const fantasyScores: FantasyTeamScore[] =
                     (members ?? []).map((member) => {
-                        const roster = (rosterRows ?? []).filter(
+                        const roster = effectiveRosterRows.filter(
                             (row: RosterRow) =>
                                 row.league_member_id === member.id
                         )
 
                         const starters = roster
-                            .filter(
-                                (row: RosterRow) =>
-                                    row.roster_slot === 'STARTER'
-                            )
+                            .filter((row: RosterRow) => row.roster_slot === 'STARTER')
                             .map(scoreUnit)
 
                         const bench = roster
-                            .filter(
-                                (row: RosterRow) =>
-                                    row.roster_slot === 'BENCH'
-                            )
+                            .filter((row: RosterRow) => row.roster_slot === 'BENCH')
                             .map(scoreUnit)
 
                         return {
@@ -307,14 +346,8 @@ export default function WeekScores() {
                             teamName: member.team_name,
                             starters,
                             bench,
-                            starterTotal: starters.reduce(
-                                (total, unit) => total + unit.score,
-                                0
-                            ),
-                            benchTotal: bench.reduce(
-                                (total, unit) => total + unit.score,
-                                0
-                            ),
+                            starterTotal: starters.reduce((total, unit) => total + unit.score, 0),
+                            benchTotal: bench.reduce((total, unit) => total + unit.score, 0),
                         }
                     })
 
@@ -333,28 +366,23 @@ export default function WeekScores() {
                 setMatchups(currentMatchups)
 
                 for (const matchup of currentMatchups) {
-                    const team1 = fantasyScores.find(
-                        (team) => team.memberId === matchup.team1_id
-                    )
-
-                    const team2 = fantasyScores.find(
-                        (team) => team.memberId === matchup.team2_id
-                    )
+                    const team1 = fantasyScores.find((team) => team.memberId === matchup.team1_id)
+                    const team2 = fantasyScores.find((team) => team.memberId === matchup.team2_id)
 
                     if (!team1 || !team2) continue
 
                     const { error: updateError } = await supabase
                         .from('league_matchups')
                         .update(
-                            weekComplete
+                            weekStarted
                                 ? {
                                     team1_score: team1.starterTotal,
                                     team2_score: team2.starterTotal,
-                                    winner_id:
-                                        team1.starterTotal >=
-                                        team2.starterTotal
+                                    winner_id: weekComplete
+                                        ? team1.starterTotal >= team2.starterTotal
                                             ? matchup.team1_id
-                                            : matchup.team2_id,
+                                            : matchup.team2_id
+                                        : null,
                                 }
                                 : {
                                     team1_score: null,
@@ -425,13 +453,8 @@ export default function WeekScores() {
             <h2>Matchups</h2>
 
             {matchups.map((matchup) => {
-                const team1 = scores.find(
-                    (team) => team.memberId === matchup.team1_id
-                )
-
-                const team2 = scores.find(
-                    (team) => team.memberId === matchup.team2_id
-                )
+                const team1 = scores.find((team) => team.memberId === matchup.team1_id)
+                const team2 = scores.find((team) => team.memberId === matchup.team2_id)
 
                 if (!team1 || !team2) return null
 
@@ -530,12 +553,8 @@ export default function WeekScores() {
             <hr />
 
             {selectedUnit && selectedUnit.stats && (
-                <ModalBackdrop
-                    onClick={() => setSelectedUnit(null)}
-                >
-                    <ModalCard
-                        onClick={(event) => event.stopPropagation()}
-                    >
+                <ModalBackdrop onClick={() => setSelectedUnit(null)}>
+                    <ModalCard onClick={(event) => event.stopPropagation()}>
                         <h2>
                             {selectedUnit.teamName}{' '}
                             {formatUnitType(selectedUnit.unitType)}
@@ -545,14 +564,9 @@ export default function WeekScores() {
                             Fantasy Score: {selectedUnit.score.toFixed(1)}
                         </h3>
 
-                        {getScoreBreakdown(
-                            selectedUnit.unitType,
-                            selectedUnit.stats
-                        )}
+                        {getScoreBreakdown(selectedUnit.unitType, selectedUnit.stats)}
 
-                        <CloseButton
-                            onClick={() => setSelectedUnit(null)}
-                        >
+                        <CloseButton onClick={() => setSelectedUnit(null)}>
                             Close
                         </CloseButton>
                     </ModalCard>

@@ -167,6 +167,7 @@ const CloseButton = styled.button`
 const UnitScore = styled.button`
     min-width: 55px;
     text-align: right;
+    font: inherit;
     font-weight: 700;
     color: #111827;
 
@@ -282,6 +283,15 @@ export default function MyTeam() {
                         }
                     )
 
+                for (const unit of rosterUnits) {
+                    if (unit.locked) {
+                        await snapshotLockedUnit(
+                            leagueMember.id,
+                            unit
+                        )
+                    }
+                }
+
                 setRoster(rosterUnits)
             } catch (err) {
                 if (err instanceof Error) {
@@ -298,6 +308,7 @@ export default function MyTeam() {
 
         loadRoster()
     }, [leagueId, user])
+
 
     useEffect(() => {
         const interval = window.setInterval(() => {const now = new Date()
@@ -571,6 +582,36 @@ export default function MyTeam() {
                     rosterUnit.id === currentUnit.id ? {...rosterUnit, rosterSlot: 'STARTER'} : rosterUnit
                 )
         )
+    }
+
+    async function snapshotLockedUnit(
+        leagueMemberId: string,
+        unit: {
+            collegeTeamId: number
+            unitType: RosterUnitType
+            rosterSlot: 'STARTER' | 'BENCH'
+            gameStart: Date | null
+        }
+    ) {
+        if (!leagueId || !unit.gameStart) {
+            return
+        }
+
+        const { error } = await supabase
+            .from('weekly_rosters')
+            .insert({
+                league_id: leagueId,
+                league_member_id: leagueMemberId,
+                week: CURRENT_WEEK,
+                college_team_id: unit.collegeTeamId,
+                unit_type: unit.unitType,
+                roster_slot: unit.rosterSlot,
+                locked_at: unit.gameStart.toISOString(),
+            })
+
+        if (error && error.code !== '23505') {
+            console.error(error)
+        }
     }
 
     return (
@@ -1076,53 +1117,52 @@ export default function MyTeam() {
                                     </div>
                                 </>
                             )}
-                            {selectedScoreUnit && selectedScoreUnit.weeklyStats && (
-                                <ModalBackdrop
-                                    onClick={() => setSelectedScoreUnit(null)}
-                                >
-                                    <ModalCard
-                                        onClick={(event) => event.stopPropagation()}
-                                    >
-                                        <ModalHeader>
-                                            <TeamLogo
-                                                src={getTeamLogo(selectedScoreUnit.teamName)}
-                                                alt={selectedScoreUnit.teamName}
-                                            />
 
-                                            <ModalTitle>
-                                                <h2>
-                                                    {selectedScoreUnit.teamName}
-                                                </h2>
-
-                                                <p>
-                                                    {formatUnitType(selectedScoreUnit.unitType)} Score Breakdown
-                                                </p>
-                                            </ModalTitle>
-
-                                            <CloseButton
-                                                onClick={() => setSelectedScoreUnit(null)}
-                                            >
-                                                Close
-                                            </CloseButton>
-                                        </ModalHeader>
-
-                                        <h3>
-                                            Fantasy Score: {selectedScoreUnit.score.toFixed(1)}
-                                        </h3>
-
-                                        {getScoreBreakdown(
-                                            selectedScoreUnit.unitType,
-                                            selectedScoreUnit.weeklyStats
-                                        )}
-                                    </ModalCard>
-                                </ModalBackdrop>
-                            )}
                         </ModalCard>
                     </ModalBackdrop>
                 )
             })()}
+            {selectedScoreUnit && selectedScoreUnit.weeklyStats && (
+                <ModalBackdrop
+                    onClick={() => setSelectedScoreUnit(null)}
+                >
+                    <ModalCard
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <ModalHeader>
+                            <TeamLogo
+                                src={getTeamLogo(selectedScoreUnit.teamName)}
+                                alt={selectedScoreUnit.teamName}
+                            />
 
+                            <ModalTitle>
+                                <h2>
+                                    {selectedScoreUnit.teamName}
+                                </h2>
 
+                                <p>
+                                    {formatUnitType(selectedScoreUnit.unitType)} Score Breakdown
+                                </p>
+                            </ModalTitle>
+
+                            <CloseButton
+                                onClick={() => setSelectedScoreUnit(null)}
+                            >
+                                Close
+                            </CloseButton>
+                        </ModalHeader>
+
+                        <h3>
+                            Fantasy Score: {selectedScoreUnit.score.toFixed(1)}
+                        </h3>
+
+                        {getScoreBreakdown(
+                            selectedScoreUnit.unitType,
+                            selectedScoreUnit.weeklyStats
+                        )}
+                    </ModalCard>
+                </ModalBackdrop>
+            )}
         </div>
     )
 }

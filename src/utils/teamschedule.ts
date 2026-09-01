@@ -1,6 +1,7 @@
 export type Schedule = {
     team: string;
     conference: string;
+    week0?: string;
     week1?: string;
     week2?: string;
     week3?: string;
@@ -35,6 +36,7 @@ export const schedules: Schedule[] = [
     {
         team: "Florida State",
         conference: "ACC",
+        week0: "CUSA",
         week1: "SMU",
         week2: "BYE",
         week3: "Alabama",
@@ -195,6 +197,7 @@ export const schedules: Schedule[] = [
     {
         team: "Stanford",
         conference: "ACC",
+        week0: "MW",
         week1: "Miami",
         week2: "BYE",
         week3: "Duke",
@@ -707,6 +710,7 @@ export const schedules: Schedule[] = [
     {
         team: "USC",
         conference: "Big Ten",
+        week0: "MW",
         week1: "PAC12",
         week2: "Sun Belt",
         week3: "Rutgers",

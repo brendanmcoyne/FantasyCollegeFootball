@@ -176,7 +176,55 @@ on public.free_agent_transactions;
 create policy "League members can view free agency history"
 on public.free_agent_transactions
 for select
-                    to authenticated
-                    using (
-                    public.is_league_member(league_id)
-                    );
+to authenticated
+using (
+    public.is_league_member(league_id)
+);
+
+create table public.weekly_rosters (
+    id uuid primary key default gen_random_uuid(),
+
+    league_id uuid not null
+        references public.leagues(id)
+            on delete cascade,
+
+    league_member_id uuid not null
+        references public.league_members(id)
+            on delete cascade,
+
+    week integer not null
+        check (week between 1 and 12),
+
+    college_team_id integer not null,
+
+    unit_type text not null
+        check (
+            unit_type in (
+                'PASSING',
+                'RUSHING',
+                'RECEIVING',
+                'DEFENSE',
+                'SPECIAL_TEAMS'
+            )
+        ),
+
+    roster_slot text not null
+        check (
+            roster_slot in (
+                'STARTER',
+                'BENCH'
+            )
+        ),
+
+    locked_at timestamptz not null,
+
+    created_at timestamptz not null default now(),
+
+    unique (
+        league_id,
+        league_member_id,
+        week,
+        college_team_id,
+        unit_type
+    )
+);
