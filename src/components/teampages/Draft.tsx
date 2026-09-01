@@ -43,7 +43,7 @@ interface DraftOrder {
 const ResultsPage = styled.div`
     display: grid;
     gap: 20px;
-`
+`;
 
 const ResultsHeader = styled.div`
     background: #ffffff;
@@ -51,54 +51,37 @@ const ResultsHeader = styled.div`
     border-radius: 14px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`
+`;
 
 const ResultsList = styled.div`
     display: grid;
     gap: 10px;
-`
-
-const PickRow = styled.div`
-    display: grid;
-    grid-template-columns: 70px 48px 1fr auto;
-    align-items: center;
-    gap: 14px;
-    background: #ffffff;
-    border: 1px solid #d1d5db;
-    border-radius: 12px;
-    padding: 12px 14px;
-`
+`;
 
 const PickNumber = styled.div`
     font-weight: 700;
     color: #6b7280;
-`
+`;
 
 const PickInfo = styled.div`
     min-width: 0;
-`
+`;
 
 const PickTeam = styled.div`
     font-weight: 700;
     color: #111827;
-`
+`;
 
 const PickType = styled.div`
     margin-top: 3px;
     color: #6b7280;
     font-size: 0.9rem;
-`
-
-const Drafter = styled.div`
-    font-weight: 700;
-    color: #374151;
-    text-align: right;
-`
+`;
 
 const DraftPage = styled.div`
     display: grid;
     gap: 20px;
-`
+`;
 
 const DraftHeader = styled.div`
     background: #ffffff;
@@ -106,14 +89,14 @@ const DraftHeader = styled.div`
     border-radius: 14px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`
+`;
 
 const DraftInfo = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     margin-top: 14px;
-`
+`;
 
 const InfoBadge = styled.div`
     background: #f3f4f6;
@@ -122,7 +105,7 @@ const InfoBadge = styled.div`
     padding: 8px 12px;
     font-weight: 600;
     color: #374151;
-`
+`;
 
 const TurnStatus = styled.div<{ $myTurn: boolean }>`
     margin-top: 14px;
@@ -133,20 +116,20 @@ const TurnStatus = styled.div<{ $myTurn: boolean }>`
     $myTurn ? '#dcfce7' : '#f3f4f6'};
     color: ${({ $myTurn }) =>
     $myTurn ? '#166534' : '#6b7280'};
-`
+`;
 
 const RosterCard = styled.div`
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 14px;
     padding: 18px;
-`
+`;
 
 const RosterCounts = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-`
+`;
 
 const RosterCount = styled.div`
     background: #f9fafb;
@@ -155,16 +138,13 @@ const RosterCount = styled.div`
     padding: 8px 12px;
     color: #374151;
     font-weight: 600;
-`
+`;
 
 const DraftGrid = styled.div`
     display: grid;
-    grid-template-columns: repeat(
-        auto-fill,
-        minmax(250px, 1fr)
-    );
     gap: 14px;
-`
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+`;
 
 const DraftUnitCard = styled.div`
     display: flex;
@@ -174,23 +154,23 @@ const DraftUnitCard = styled.div`
     border: 1px solid #d1d5db;
     border-radius: 12px;
     padding: 14px;
-`
+`;
 
 const DraftUnitInfo = styled.div`
     flex: 1;
     min-width: 0;
-`
+`;
 
 const DraftUnitName = styled.div`
     font-weight: 700;
     color: #111827;
-`
+`;
 
 const DraftUnitType = styled.div`
     margin-top: 3px;
     color: #6b7280;
     font-size: 0.9rem;
-`
+`;
 
 const DraftButton = styled.button`
     border: none;
@@ -210,7 +190,7 @@ const DraftButton = styled.button`
         color: #6b7280;
         cursor: not-allowed;
     }
-`
+`;
 
 const ErrorMessage = styled.div`
     padding: 10px 14px;
@@ -219,7 +199,7 @@ const ErrorMessage = styled.div`
     border-radius: 8px;
     color: #991b1b;
     font-weight: 600;
-`
+`;
 
 const FiltersCard = styled.div`
     background: #ffffff;
@@ -228,13 +208,13 @@ const FiltersCard = styled.div`
     padding: 18px;
     display: grid;
     gap: 18px;
-`
+`;
 
 const FilterGroup = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-`
+`;
 
 const FilterButton = styled.button<{ $active?: boolean }>`
     border: 1px solid #d1d5db;
@@ -251,7 +231,7 @@ const FilterButton = styled.button<{ $active?: boolean }>`
         background: ${({ $active }) =>
     $active ? '#111827' : '#f3f4f6'};
     }
-`
+`;
 
 const UnitStats = styled.div`
     margin-top: 8px;
@@ -263,32 +243,36 @@ const UnitStats = styled.div`
 
 const DraftPickRow = styled.div`
     display: grid;
-    grid-template-columns: 55px 70px 1fr 220px;
+    grid-template-columns: 55px 56px minmax(0, 1fr) minmax(120px, auto);
     align-items: center;
-    gap: 16px;
-    padding: 16px;
+    gap: 14px;
+    padding: 14px;
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 12px;
 
     @media (max-width: 700px) {
-        grid-template-columns: 40px 56px minmax(0, 1fr);
+        grid-template-columns: 40px 48px minmax(0, 1fr);
         gap: 10px;
+        padding: 12px;
     }
-`;
+`
 
 const DraftOwner = styled.div`
     font-weight: 700;
+    color: #374151;
     text-align: right;
+    min-width: 0;
+    overflow-wrap: anywhere;
 
     @media (max-width: 700px) {
         grid-column: 3;
         text-align: left;
         font-size: 0.85rem;
         color: #6b7280;
-        margin-top: 4px;
+        margin-top: -4px;
     }
-`;
+`
 
 export default function Draft() {
     const { leagueId } = useParams()
@@ -502,7 +486,7 @@ export default function Draft() {
                         )
 
                         return (
-                            <PickRow key={pick.id}>
+                            <DraftPickRow key={pick.id}>
                                 <PickNumber>
                                     #{pick.pick_number}
                                 </PickNumber>
@@ -519,12 +503,12 @@ export default function Draft() {
                                     <PickType>
                                         {formatUnitType(pick.unit_type)}
                                     </PickType>
-                                </PickInfo>
 
-                                <Drafter>
-                                    {drafter?.team_name ?? 'Unknown Team'}
-                                </Drafter>
-                            </PickRow>
+                                    <DraftOwner>
+                                        {drafter?.team_name ?? 'Unknown Team'}
+                                    </DraftOwner>
+                                </PickInfo>
+                            </DraftPickRow>
                         )
                     })}
                 </ResultsList>
