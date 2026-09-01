@@ -57,7 +57,10 @@ const UNIT_ORDER: ScoringUnitType[] = [
 const ScoresPage = styled.div`
     display: grid;
     gap: 24px;
-`
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+`;
 
 const HeaderCard = styled.div`
     background: #ffffff;

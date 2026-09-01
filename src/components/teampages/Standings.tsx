@@ -19,25 +19,27 @@ interface Standing {
 const StandingsPage = styled.div`
     display: grid;
     gap: 24px;
-`
+`;
 
 const StandingsCard = styled.div`
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 14px;
-    overflow: hidden;
+    overflow-x: auto;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`
+`;
 
 const StyledTable = styled.table`
     width: 100%;
     border-collapse: collapse;
+    min-width: 620px;
 
     th,
     td {
         padding: 14px 16px;
         text-align: left;
         border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
     }
 
     th {
@@ -53,25 +55,45 @@ const StyledTable = styled.table`
     tbody tr:last-child td {
         border-bottom: none;
     }
-`
+
+    @media (max-width: 700px) {
+        min-width: 520px;
+
+        th,
+        td {
+            padding: 10px 9px;
+            font-size: 0.9rem;
+        }
+    }
+`;
 
 const Rank = styled.td`
     font-weight: 700;
     width: 70px;
-`
+
+    @media (max-width: 700px) {
+        width: 40px;
+    }
+`;
 
 const Team = styled.td`
     font-weight: 700;
     color: #111827;
-`
+
+    @media (max-width: 700px) {
+        max-width: 150px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+`;
 
 const Record = styled.td`
     font-weight: 600;
-`
+`;
 
 const Points = styled.td`
     color: #4b5563;
-`
+`;
 
 export default function Standings() {
     const { leagueId } = useParams()
@@ -101,9 +123,7 @@ export default function Standings() {
                 const { data: matchups, error: matchupsError } =
                     await supabase
                         .from('league_matchups')
-                        .select(
-                            'team1_id, team2_id, team1_score, team2_score'
-                        )
+                        .select('team1_id, team2_id, team1_score, team2_score')
                         .eq('league_id', leagueId)
                         .lt('week', CURRENT_WEEK)
 
@@ -111,7 +131,9 @@ export default function Standings() {
 
                 const standingsMap = new Map<string, Standing>()
 
-                ;(members ?? []).forEach((member) => {
+                const memberRows = members ?? []
+
+                memberRows.forEach((member) => {
                     standingsMap.set(member.id, {
                         memberId: member.id,
                         teamName: member.team_name,
@@ -122,11 +144,10 @@ export default function Standings() {
                     })
                 })
 
-                ;(matchups ?? []).forEach((matchup) => {
-                    if (
-                        matchup.team1_score === null ||
-                        matchup.team2_score === null
-                    ) {
+                const matchupRows = matchups ?? []
+
+                matchupRows.forEach((matchup) => {
+                    if (matchup.team1_score === null || matchup.team2_score === null) {
                         return
                     }
 
@@ -153,17 +174,11 @@ export default function Standings() {
                 setStandings(
                     Array.from(standingsMap.values()).sort(
                         (a, b) =>
-                            b.wins - a.wins ||
-                            a.losses - b.losses ||
-                            b.pointsFor - a.pointsFor
+                            b.wins - a.wins || a.losses - b.losses || b.pointsFor - a.pointsFor
                     )
                 )
             } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : 'Failed to load standings.'
-                )
+                setError(err instanceof Error ? err.message : 'Failed to load standings.')
             } finally {
                 setLoading(false)
             }

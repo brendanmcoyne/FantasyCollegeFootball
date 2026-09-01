@@ -59,7 +59,7 @@ interface LeagueMember {
 const FreeAgentsPage = styled.div`
     display: grid;
     gap: 24px;
-`
+`;
 
 const HeaderCard = styled.div`
     background: #ffffff;
@@ -67,7 +67,7 @@ const HeaderCard = styled.div`
     border-radius: 14px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`
+`;
 
 const FiltersCard = styled.div`
     background: #ffffff;
@@ -76,13 +76,13 @@ const FiltersCard = styled.div`
     padding: 18px;
     display: grid;
     gap: 18px;
-`
+`;
 
 const FilterGroup = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-`
+`;
 
 const FilterButton = styled.button<{ $active?: boolean }>`
     border: 1px solid #d1d5db;
@@ -99,7 +99,7 @@ const FilterButton = styled.button<{ $active?: boolean }>`
         background: ${({ $active }) =>
     $active ? '#111827' : '#f3f4f6'};
     }
-`
+`;
 
 const FreeAgentGrid = styled.div`
     display: grid;
@@ -108,33 +108,45 @@ const FreeAgentGrid = styled.div`
         minmax(260px, 1fr)
     );
     gap: 14px;
-`
+`;
 
 const FreeAgentCard = styled.div`
     display: flex;
     align-items: center;
     gap: 14px;
+
+    min-height: 100px;
+    box-sizing: border-box;
+
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 12px;
     padding: 14px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-`
+
+    @media (max-width: 700px) {
+        height: 120px;
+        min-height: 120px;
+        padding: 12px;
+        gap: 10px;
+    }
+`;
 
 const UnitInfo = styled.div`
     flex: 1;
-`
+    min-width: 0;
+`;
 
 const UnitName = styled.div`
     font-weight: 700;
     color: #111827;
-`
+`;
 
 const UnitMeta = styled.div`
     margin-top: 4px;
     color: #6b7280;
     font-size: 0.9rem;
-`
+`;
 
 const ActionButton = styled.button`
     border: none;
@@ -149,14 +161,14 @@ const ActionButton = styled.button`
         background: #9ca3af;
         cursor: not-allowed;
     }
-`
+`;
 
 const HistoryCard = styled.div`
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 14px;
     padding: 20px;
-`
+`;
 
 const HistoryRow = styled.div`
     padding: 10px 0;
@@ -165,7 +177,7 @@ const HistoryRow = styled.div`
     &:last-child {
         border-bottom: none;
     }
-`
+`;
 
 const ModalBackdrop = styled.div`
     position: fixed;
@@ -178,7 +190,7 @@ const ModalBackdrop = styled.div`
 
     padding: 20px;
     z-index: 1000;
-`
+`;
 
 const ModalCard = styled.div`
     width: min(600px, 100%);
@@ -190,14 +202,14 @@ const ModalCard = styled.div`
     padding: 24px;
 
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-`
+`;
 
 const ModalHeader = styled.div`
     display: flex;
     align-items: center;
     gap: 14px;
     margin-bottom: 18px;
-`
+`;
 
 const ModalTitle = styled.div`
     flex: 1;
@@ -210,7 +222,7 @@ const ModalTitle = styled.div`
         margin: 4px 0 0;
         color: #6b7280;
     }
-`
+`;
 
 const CloseButton = styled.button`
     border: none;
@@ -226,7 +238,7 @@ const CloseButton = styled.button`
     &:hover {
         background: #e5e7eb;
     }
-`
+`;
 
 const UnitNameButton = styled.button`
     border: none;
@@ -243,13 +255,13 @@ const UnitNameButton = styled.button`
     &:hover {
         text-decoration: underline;
     }
-`
+`;
 
 const StatsList = styled.div`
     display: grid;
     gap: 8px;
     color: #4b5563;
-`
+`;
 
 export default function FreeAgents() {
     const { leagueId } = useParams()
