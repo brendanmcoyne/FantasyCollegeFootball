@@ -259,7 +259,36 @@ const UnitStats = styled.div`
     gap: 3px;
     color: #4b5563;
     font-size: 0.85rem;
-`
+`;
+
+const DraftPickRow = styled.div`
+    display: grid;
+    grid-template-columns: 55px 70px 1fr 220px;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+
+    @media (max-width: 700px) {
+        grid-template-columns: 40px 56px minmax(0, 1fr);
+        gap: 10px;
+    }
+`;
+
+const DraftOwner = styled.div`
+    font-weight: 700;
+    text-align: right;
+
+    @media (max-width: 700px) {
+        grid-column: 3;
+        text-align: left;
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+`;
 
 export default function Draft() {
     const { leagueId } = useParams()
@@ -387,9 +416,7 @@ export default function Draft() {
                     const { data: picks, error: picksError } =
                         await supabase
                             .from('draft_picks')
-                            .select(
-                                'id, league_member_id, college_team_id, unit_type, pick_number'
-                            )
+                            .select('id, league_member_id, college_team_id, unit_type, pick_number')
                             .eq('league_id', leagueId)
                             .order('pick_number', { ascending: true })
 
@@ -410,9 +437,7 @@ export default function Draft() {
                     const { data: updatedLeague, error: leagueError } =
                         await supabase
                             .from('leagues')
-                            .select(
-                                'id, draft_status, current_pick_number, current_turn_number'
-                            )
+                            .select('id, draft_status, current_pick_number, current_turn_number')
                             .eq('id', leagueId)
                             .single()
 
@@ -455,11 +480,7 @@ export default function Draft() {
         return (
             <ResultsPage>
                 <ResultsHeader>
-                    <BackButton
-                        onClick={() =>
-                            navigate(`/league/${leagueId}`)
-                        }
-                    >
+                    <BackButton onClick={() => navigate(`/league/${leagueId}`)}>
                         ← Back to League
                     </BackButton>
 
@@ -487,10 +508,7 @@ export default function Draft() {
                                 </PickNumber>
 
                                 {unit && (
-                                    <TeamLogo
-                                        src={getTeamLogo(unit.teamName)}
-                                        alt={unit.teamName}
-                                    />
+                                    <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
                                 )}
 
                                 <PickInfo>

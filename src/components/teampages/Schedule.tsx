@@ -31,6 +31,10 @@ const WeekCard = styled.section`
     border-radius: 14px;
     padding: 18px 22px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+    @media (max-width: 700px) {
+        padding: 16px 14px;
+    }
 `;
 
 const WeekHeader = styled(Link)`
@@ -58,6 +62,11 @@ const MatchupRow = styled.div`
     &:first-of-type {
         border-top: none;
     }
+
+    @media (max-width: 700px) {
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        gap: 8px;
+    }
 `;
 
 const TeamName = styled.div`
@@ -78,6 +87,11 @@ const Score = styled.div`
     color: #374151;
     min-width: 110px;
     text-align: center;
+
+    @media (max-width: 700px) {
+        min-width: 75px;
+        font-size: 0.9rem;
+    }
 `;
 
 export default function Schedule() {

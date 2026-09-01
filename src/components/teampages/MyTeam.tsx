@@ -60,10 +60,18 @@ const UnitRow = styled.div`
     background: #f9fafb;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
-`;
+
+    @media (max-width: 700px) {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+    }
+`
 
 const UnitInfo = styled.div`
     flex: 1;
+    min-width: 0;
 `;
 
 const UnitName = styled.div`
@@ -75,7 +83,11 @@ const UnitDetails = styled.div`
     margin-top: 3px;
     color: #6b7280;
     font-size: 0.9rem;
-`;
+
+    @media (max-width: 700px) {
+        line-height: 1.4;
+    }
+`
 
 const TeamNameButton = styled.button`
     border: none;
@@ -103,7 +115,7 @@ const OpponentButton = styled.button`
     &:hover {
         text-decoration: underline;
     }
-`
+`;
 
 const ModalBackdrop = styled.div`
     position: fixed;
@@ -114,18 +126,26 @@ const ModalBackdrop = styled.div`
     justify-content: center;
     padding: 20px;
     z-index: 1000;
-`
+
+    @media (max-width: 700px) {
+        padding: 12px;
+    }
+`;
 
 const ModalCard = styled.div`
-    width: min(520px, 100%);
+    width: min(600px, 100%);
     max-height: 80vh;
     overflow-y: auto;
-
     background: #ffffff;
     border-radius: 16px;
     padding: 24px;
-
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+
+    @media (max-width: 700px) {
+        padding: 16px;
+        max-height: 86vh;
+        border-radius: 14px;
+    }
 `;
 
 const ModalHeader = styled.div`
@@ -170,15 +190,31 @@ const UnitScore = styled.button`
     font: inherit;
     font-weight: 700;
     color: #111827;
-
     border: none;
     background: none;
     padding: 0;
-
     cursor: pointer;
 
     &:hover {
         text-decoration: underline;
+    }
+
+    @media (max-width: 700px) {
+        min-width: 42px;
+    }
+`
+
+const RosterActionButton = styled.button`
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-weight: 600;
+    cursor: pointer;
+
+    @media (max-width: 700px) {
+        grid-column: 2 / 4;
+        width: 100%;
+        margin-top: 4px;
     }
 `;
 
@@ -721,13 +757,13 @@ export default function MyTeam() {
                                         Locked
                                     </button>
                                 ) : canMoveDirectlyToStarter(unit) ? (
-                                    <button onClick={() => moveToStarter(unit)}>
+                                    <RosterActionButton onClick={() => moveToStarter(unit)}>
                                         Move to Starter
-                                    </button>
+                                    </RosterActionButton>
                                 ) : (
-                                    <button onClick={() => {setError(''), setSelectedBenchUnit(unit)}}>
+                                    <RosterActionButton onClick={() => {setError(''), setSelectedBenchUnit(unit)}}>
                                         Swap with Starter
-                                    </button>
+                                    </RosterActionButton>
                                 )}
                             </UnitRow>
                         )

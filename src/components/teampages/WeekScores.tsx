@@ -4,7 +4,7 @@ import { useNavigate, Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getTeams } from '../../api/cfbApi'
 import { getWeeklyStats } from '../../api/weeklyStats'
-import { calculateUnitScore, pointsAllowedScore, yardsAllowedScore } from '../../utils/scoring'
+import { calculateUnitScore } from '../../utils/scoring'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 import styled from 'styled-components'
 
@@ -65,13 +65,31 @@ const HeaderCard = styled.div`
     border-radius: 14px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+    h1 {
+        overflow-wrap: anywhere;
+    }
+    
+    @media (max-width: 700px) {
+        padding: 16px;
+
+        h1 {
+            font-size: 1.8rem;
+        }
+    }
 `
 
 const WeekLinks = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-`
+
+    @media (max-width: 700px) {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+`;
 
 const WeekLink = styled(Link)<{ $active?: boolean }>`
     padding: 8px 12px;
@@ -88,7 +106,12 @@ const WeekLink = styled(Link)<{ $active?: boolean }>`
         background: ${({ $active }) =>
     $active ? '#111827' : '#f3f4f6'};
     }
-`
+
+    @media (max-width: 700px) {
+        padding: 8px 6px;
+        font-size: 0.9rem;
+    }
+`;
 
 const Status = styled.span`
     display: inline-block;
@@ -97,7 +120,7 @@ const Status = styled.span`
     background: #e5e7eb;
     font-weight: 700;
     color: #374151;
-`
+`;
 
 const SectionCard = styled.section`
     background: #ffffff;
@@ -105,7 +128,7 @@ const SectionCard = styled.section`
     border-radius: 14px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`
+`;
 
 const MatchupCard = styled.div`
     display: grid;
@@ -115,11 +138,32 @@ const MatchupCard = styled.div`
     border-radius: 12px;
     overflow: hidden;
     margin-top: 14px;
+
+    @media (max-width: 700px) {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
 `;
 
 const MatchupTeam = styled.div`
     padding: 18px;
+
+    @media (max-width: 700px) {
+        padding: 14px;
+        min-width: 0;
+    }
 `;
+
+const MainContent = styled.main`
+    width: min(1200px, 100%);
+    margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+
+    @media (max-width: 700px) {
+        padding: 16px 12px;
+    }
+`
 
 const MatchupTeamHeader = styled.div`
     display: flex;
@@ -129,6 +173,10 @@ const MatchupTeamHeader = styled.div`
     margin-bottom: 14px;
     padding-bottom: 12px;
     border-bottom: 1px solid #e5e7eb;
+
+    @media (max-width: 700px) {
+        gap: 10px;
+    }
 `;
 
 const MatchupTeamName = styled.h3`
@@ -261,21 +309,18 @@ export default function WeekScores() {
                 })
 
                 const effectiveRosterRows: RosterRow[] = []
+                const currentRosterRows = rosterRows ?? []
 
-                if (week < CURRENT_WEEK) {
-                    effectiveRosterRows.push(...(Array.from(weeklySnapshotMap.values()))
-)
-                } else {
-                    const currentRosterRows = rosterRows ?? []
+                currentRosterRows.forEach((row: RosterRow) => {
+                    const key =
+                        `${row.league_member_id}-${row.college_team_id}-${row.unit_type}`
 
-                    currentRosterRows.forEach((row: RosterRow) => {
-                        const key = `${row.league_member_id}-${row.college_team_id}-${row.unit_type}`
+                    const frozenRow = weeklySnapshotMap.get(key)
 
-                        const frozenRow = weeklySnapshotMap.get(key)
-
-                        effectiveRosterRows.push(frozenRow ?? row)
-                    })
-                }
+                    effectiveRosterRows.push(
+                        frozenRow ?? row
+                    )
+                })
 
                 const teamMap = new Map<number, CollegeTeam>(
                     collegeTeams.map((team) => [team.id, team])
@@ -502,10 +547,24 @@ export default function WeekScores() {
                             <h4>Bench</h4>
 
                             {team1.bench.map((unit) => (
-                                <div key={unit.rosterId}>
-                                    {unit.teamName}{' '}
-                                    {formatUnitType(unit.unitType)}
-                                </div>
+                                <ScoreUnit
+                                    key={unit.rosterId}
+                                    $clickable={unit.locked}
+                                    onClick={() => {
+                                        if (unit.locked) {
+                                            setSelectedUnit(unit)
+                                        }
+                                    }}
+                                >
+                                    <span>
+                                        {unit.teamName}{' '}
+                                        {formatUnitType(unit.unitType)}
+                                    </span>
+
+                                    <strong>
+                                        {unit.score.toFixed(1)}
+                                    </strong>
+                                </ScoreUnit>
                             ))}
                         </MatchupTeam>
 
@@ -540,10 +599,24 @@ export default function WeekScores() {
                             <h4>Bench</h4>
 
                             {team2.bench.map((unit) => (
-                                <div key={unit.rosterId}>
-                                    {unit.teamName}{' '}
-                                    {formatUnitType(unit.unitType)}
-                                </div>
+                                <ScoreUnit
+                                    key={unit.rosterId}
+                                    $clickable={unit.locked}
+                                    onClick={() => {
+                                        if (unit.locked) {
+                                            setSelectedUnit(unit)
+                                        }
+                                    }}
+                                >
+                                    <span>
+                                        {unit.teamName}{' '}
+                                        {formatUnitType(unit.unitType)}
+                                    </span>
+
+                                    <strong>
+                                        {unit.score.toFixed(1)}
+                                    </strong>
+                                </ScoreUnit>
                             ))}
                         </MatchupTeam>
                     </MatchupCard>
