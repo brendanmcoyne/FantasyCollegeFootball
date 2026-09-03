@@ -451,48 +451,18 @@ export default function MyTeam() {
             return
         }
 
-        const {error: swapError,} = await supabase.rpc('swap_roster_units', {
+        const { error: swapError } = await supabase.rpc('swap_roster_units',
+            {
                 target_league_id: leagueId,
                 target_league_member_id: member.id,
                 bench_unit_id: currentBenchUnit.id,
                 starter_unit_id: currentStarterUnit.id,
+                target_week: CURRENT_WEEK,
             }
         )
 
         if (swapError) {
             setError(swapError.message)
-            return
-        }
-
-        const { error: weeklyBenchError } = await supabase
-            .from('weekly_rosters')
-            .update({
-                roster_slot: 'STARTER',
-            })
-            .eq('league_id', leagueId)
-            .eq('league_member_id', member.id)
-            .eq('week', CURRENT_WEEK)
-            .eq('college_team_id', currentBenchUnit.collegeTeamId)
-            .eq('unit_type', currentBenchUnit.unitType)
-
-        if (weeklyBenchError) {
-            setError(weeklyBenchError.message)
-            return
-        }
-
-        const { error: weeklyStarterError } = await supabase
-            .from('weekly_rosters')
-            .update({
-                roster_slot: 'BENCH',
-            })
-            .eq('league_id', leagueId)
-            .eq('league_member_id', member.id)
-            .eq('week', CURRENT_WEEK)
-            .eq('college_team_id', currentStarterUnit.collegeTeamId)
-            .eq('unit_type', currentStarterUnit.unitType)
-
-        if (weeklyStarterError) {
-            setError(weeklyStarterError.message)
             return
         }
 
@@ -662,32 +632,17 @@ export default function MyTeam() {
             return
         }
 
-        const {error: moveError,} = await supabase.rpc('move_roster_unit_to_starter',
+        const { error: moveError } = await supabase.rpc('move_roster_unit_to_starter',
             {
                 target_league_id: leagueId,
                 target_league_member_id: member.id,
                 target_roster_unit_id: currentUnit.id,
+                target_week: CURRENT_WEEK,
             }
         )
 
         if (moveError) {
             setError(moveError.message)
-            return
-        }
-
-        const { error: weeklyRosterError } = await supabase
-            .from('weekly_rosters')
-            .update({
-                roster_slot: 'STARTER',
-            })
-            .eq('league_id', leagueId)
-            .eq('league_member_id', member.id)
-            .eq('week', CURRENT_WEEK)
-            .eq('college_team_id', currentUnit.collegeTeamId)
-            .eq('unit_type', currentUnit.unitType)
-
-        if (weeklyRosterError) {
-            setError(weeklyRosterError.message)
             return
         }
 

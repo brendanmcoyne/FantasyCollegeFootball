@@ -532,15 +532,17 @@ export default function FreeAgents() {
 
         setError('')
 
-        const { error: moveError } = await supabase.rpc('make_free_agent_move',
-                {
-                    target_league_id: leagueId,
-                    target_league_member_id: member.id,
-                    drop_roster_unit_id: rosterUnit.id,
-                    add_college_team_id: freeAgent.teamId,
-                    add_unit_type: freeAgent.unitType,
-                }
-            )
+        const { error: moveError } = await supabase.rpc(
+            'make_free_agent_move',
+            {
+                target_league_id: leagueId,
+                target_league_member_id: member.id,
+                drop_roster_unit_id: rosterUnit.id,
+                add_college_team_id: freeAgent.teamId,
+                add_unit_type: freeAgent.unitType,
+                target_week: CURRENT_WEEK,
+            }
+        )
 
         if (moveError) {
             setError(moveError.message)
