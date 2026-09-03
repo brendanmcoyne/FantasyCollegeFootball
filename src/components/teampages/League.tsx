@@ -331,7 +331,13 @@ export default function League() {
 
                 <MemberList>
                     {members.map((member) => (
-                        <MemberLink key={member.id} to={`/league/${league.id}/team/${member.id}`}>
+                        <MemberLink
+                            key={member.id}
+                            to={member.user_id === user?.id
+                                ? `/league/${league.id}/team`
+                                : `/league/${league.id}/team/${member.id}`
+                            }
+                        >
                             {member.team_name}
                         </MemberLink>
                     ))}

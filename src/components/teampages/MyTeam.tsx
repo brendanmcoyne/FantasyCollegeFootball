@@ -841,8 +841,6 @@ export default function MyTeam() {
                 </UnitList>
             )}
 
-            <p>Bench: {bench.length} /{' '}{BENCH}</p>
-
             {selectedBenchUnit && (
                 <div>
                     <h3>
