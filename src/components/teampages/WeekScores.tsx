@@ -80,7 +80,7 @@ const HeaderCard = styled.div`
             font-size: 1.8rem;
         }
     }
-`
+`;
 
 const WeekLinks = styled.div`
     display: flex;
@@ -243,28 +243,28 @@ const FutureMatchupCard = styled.div`
         gap: 8px;
         padding: 14px 12px;
     }
-`
+`;
 
 const FutureTeam = styled.div`
     font-weight: 700;
     color: #111827;
     min-width: 0;
     overflow-wrap: anywhere;
-`
+`;
 
 const FutureTeamLeft = styled(FutureTeam)`
     text-align: right;
-`
+`;
 
 const FutureTeamRight = styled(FutureTeam)`
     text-align: left;
-`
+`;
 
 const VsText = styled.div`
     font-weight: 700;
     color: #6b7280;
     text-align: center;
-`
+`;
 
 export default function WeekScores() {
     const { leagueId, week: weekParam } = useParams()
@@ -338,9 +338,7 @@ export default function WeekScores() {
                         roster_slot: row.roster_slot as 'STARTER' | 'BENCH',
                     }))
 
-                const teamMap = new Map<number, CollegeTeam>(
-                    collegeTeams.map((team) => [team.id, team])
-                )
+                const teamMap = new Map<number, CollegeTeam>(collegeTeams.map((team) => [team.id, team]))
 
                 const weeklyMap = new Map<string, WeeklyTeamData>(
                     weeklyStats.map((team) => [
@@ -366,9 +364,7 @@ export default function WeekScores() {
                         }
                     }
 
-                    const weeklyTeam = weeklyMap.get(
-                        collegeTeam.name.trim().toLowerCase()
-                    )
+                    const weeklyTeam = weeklyMap.get(collegeTeam.name.trim().toLowerCase())
 
                     const gameStarted =
                         weeklyTeam?.gameStart &&
@@ -613,17 +609,25 @@ export default function WeekScores() {
                                         UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType)
                                 )
                                 .map((unit) => (
-                                <ScoreUnit key={unit.rosterId}>
-                                <span>
-                                    {unit.teamName}{' '}
-                                    {formatUnitType(unit.unitType)}
-                                </span>
+                                    <ScoreUnit
+                                        key={unit.rosterId}
+                                        $clickable={unit.locked}
+                                        onClick={() => {
+                                            if (unit.locked) {
+                                                setSelectedUnit(unit)
+                                            }
+                                        }}
+                                    >
+                                        <span>
+                                            {unit.teamName}{' '}
+                                            {formatUnitType(unit.unitType)}
+                                        </span>
 
-                                    <strong>
-                                        {unit.score.toFixed(1)}
-                                    </strong>
-                                </ScoreUnit>
-                            ))}
+                                        <strong>
+                                            {unit.score.toFixed(1)}
+                                        </strong>
+                                    </ScoreUnit>
+                                ))}
                             <h4>Bench</h4>
 
                             {team2.bench.map((unit) => (

@@ -117,17 +117,45 @@ export function getScoreBreakdown(unitType: ScoringUnitType, stats: TeamStats) {
                 </>
             )
 
-        case 'SPECIAL_TEAMS':
+        case 'SPECIAL_TEAMS': {
+            const extraPointsMade = stats.extra_points_made ?? 0
+            const extraPointsAttempted = stats.extra_points_attempted ?? 0
+            const extraPointsMissed = Math.max(0, extraPointsAttempted - extraPointsMade)
+            const fieldGoalsMade = stats.field_goals_made ?? 0
+            const fieldGoalsAttempted = stats.field_goals_attempted ?? 0
+            const fieldGoalsMissed = Math.max(0, fieldGoalsAttempted - fieldGoalsMade)
+            const fieldGoalDistances = stats.field_goal_distances_made ?? []
+            const fieldGoalPoints = fieldGoalDistances.reduce((total, distance) => total + Math.max(3, distance / 10), 0)
+
             return (
                 <>
                     <BreakdownRow>
-                        <span>Extra Points Made</span>
-                        <strong>{(stats.extra_points_made ?? 0) * 2}</strong>
+                        <span>Extra Points Made ({extraPointsMade} × 2)</span>
+                        <strong>{extraPointsMade * 2}</strong>
+                    </BreakdownRow>
+
+                    <BreakdownRow>
+                        <span>Extra Points Missed ({extraPointsMissed} × -2)</span>
+                        <strong>{extraPointsMissed * -2}</strong>
                     </BreakdownRow>
 
                     <BreakdownRow>
                         <span>Field Goals Made</span>
-                        <strong>{stats.field_goals_made ?? 0}</strong>
+                        <strong>{fieldGoalPoints.toFixed(1)}</strong>
+                    </BreakdownRow>
+
+                    {fieldGoalDistances.map(
+                        (distance, index) => (
+                            <BreakdownRow key={`${distance}-${index}`}>
+                                <span>{distance}-yard Field Goal</span>
+                                <strong>{Math.max(3, distance / 10).toFixed(1)}</strong>
+                            </BreakdownRow>
+                        )
+                    )}
+
+                    <BreakdownRow>
+                        <span>Field Goals Missed ({fieldGoalsMissed} × -1)</span>
+                        <strong>{fieldGoalsMissed * -1}</strong>
                     </BreakdownRow>
 
                     <BreakdownRow>
@@ -141,5 +169,6 @@ export function getScoreBreakdown(unitType: ScoringUnitType, stats: TeamStats) {
                     </BreakdownRow>
                 </>
             )
+        }
     }
 }

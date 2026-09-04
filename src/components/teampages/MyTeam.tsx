@@ -67,7 +67,7 @@ const UnitRow = styled.div`
         gap: 10px;
         align-items: center;
     }
-`
+`;
 
 const UnitInfo = styled.div`
     flex: 1;
@@ -87,7 +87,7 @@ const UnitDetails = styled.div`
     @media (max-width: 700px) {
         line-height: 1.4;
     }
-`
+`;
 
 const TeamNameButton = styled.button`
     border: none;
@@ -102,7 +102,7 @@ const TeamNameButton = styled.button`
     &:hover {
         text-decoration: underline;
     }
-`
+`;
 
 const OpponentButton = styled.button`
     border: none;
@@ -202,7 +202,7 @@ const UnitScore = styled.button`
     @media (max-width: 700px) {
         min-width: 42px;
     }
-`
+`;
 
 const RosterActionButton = styled.button`
     border: none;
@@ -224,7 +224,6 @@ export default function MyTeam() {
 
     const [teamName, setTeamName] = useState('')
     const [roster, setRoster] = useState<RosterUnit[]>([])
-
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
@@ -234,7 +233,6 @@ export default function MyTeam() {
     const [teams, setTeams] = useState<CollegeTeam[]>([])
     const [selectedStatsUnit, setSelectedStatsUnit] = useState<RosterUnit | null>(null)
     const [selectedScoreUnit, setSelectedScoreUnit] = useState<RosterUnit | null>(null)
-
     const [searchParams, setSearchParams] = useSearchParams()
 
     const viewedWeek = Number(searchParams.get('week')) || CURRENT_WEEK
@@ -271,9 +269,7 @@ export default function MyTeam() {
                 if (viewingPastWeek) {
                     const result = await supabase
                         .from('weekly_rosters')
-                        .select(
-                            'id, college_team_id, unit_type, roster_slot'
-                        )
+                        .select('id, college_team_id, unit_type, roster_slot')
                         .eq('league_id', leagueId)
                         .eq('league_member_id', leagueMember.id)
                         .eq('week', viewedWeek)
@@ -283,9 +279,7 @@ export default function MyTeam() {
                 } else {
                     const result = await supabase
                         .from('roster_units')
-                        .select(
-                            'id, college_team_id, unit_type, roster_slot, acquired_via'
-                        )
+                        .select('id, college_team_id, unit_type, roster_slot, acquired_via')
                         .eq('league_id', leagueId)
                         .eq('league_member_id', leagueMember.id)
 
@@ -352,10 +346,7 @@ export default function MyTeam() {
 
                 if (!viewingPastWeek) {
                     for (const unit of rosterUnits) {
-                        await ensureWeeklyRosterUnit(
-                            leagueMember.id,
-                            unit
-                        )
+                        await ensureWeeklyRosterUnit(leagueMember.id, unit)
                     }
                 }
 
@@ -364,9 +355,7 @@ export default function MyTeam() {
                 if (err instanceof Error) {
                     setError(err.message)
                 } else {
-                    setError(
-                        'Failed to load roster.'
-                    )
+                    setError('Failed to load roster.')
                 }
             } finally {
                 setLoading(false)
@@ -496,10 +485,7 @@ export default function MyTeam() {
                 ) : (
                     <UnitList>
                         {units.map((unit) => {
-                            const opponentName = getTeamOpponent(
-                                unit.teamName,
-                                viewedWeek
-                            )
+                            const opponentName = getTeamOpponent(unit.teamName, viewedWeek)
 
                             const opponentTeam = teams.find(
                                 (team) =>
@@ -509,18 +495,11 @@ export default function MyTeam() {
 
                             return (
                                 <UnitRow key={unit.id}>
-                                    <TeamLogo
-                                        src={getTeamLogo(unit.teamName)}
-                                        alt={unit.teamName}
-                                    />
+                                    <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
 
                                     <UnitInfo>
                                         <UnitName>
-                                            <TeamNameButton
-                                                onClick={() =>
-                                                    setSelectedStatsUnit(unit)
-                                                }
-                                            >
+                                            <TeamNameButton onClick={() => setSelectedStatsUnit(unit)}>
                                                 {unit.teamName}
                                             </TeamNameButton>
 
@@ -534,27 +513,20 @@ export default function MyTeam() {
                                             {opponentTeam ? (
                                                 <OpponentButton
                                                     onClick={() =>
-                                                        setSelectedStatsUnit({
-                                                            ...unit,
-                                                            collegeTeamId:
-                                                            opponentTeam.id,
-                                                            teamName:
-                                                            opponentTeam.name,
+                                                        setSelectedStatsUnit({...unit,
+                                                            collegeTeamId: opponentTeam.id,
+                                                            teamName: opponentTeam.name,
                                                         })
                                                     }
                                                 >
                                                     {opponentTeam.name}
                                                 </OpponentButton>
-                                            ) : (
-                                                opponentName ?? 'Unknown'
-                                            )}
+                                            ) : (opponentName ?? 'Unknown')}
 
                                             {unit.gameStart && (
                                                 <>
                                                     {' • '}
-                                                    {formatGameStart(
-                                                        unit.gameStart
-                                                    )}
+                                                    {formatGameStart(unit.gameStart)}
                                                 </>
                                             )}
 
@@ -593,10 +565,7 @@ export default function MyTeam() {
     }
 
     function canMoveDirectlyToStarter(unit: RosterUnit) {
-        const starterCount =
-            starters.filter(
-                (starter) =>
-                    starter.unitType === unit.unitType).length
+        const starterCount = starters.filter((starter) => starter.unitType === unit.unitType).length
 
         return (starterCount < STARTERS[unit.unitType])
     }
@@ -744,10 +713,7 @@ export default function MyTeam() {
             ) : (
                 <UnitList>
                     {bench.map((unit) => {
-                        const opponentName = getTeamOpponent(
-                            unit.teamName,
-                            viewedWeek
-                        )
+                        const opponentName = getTeamOpponent(unit.teamName, viewedWeek)
 
                         const opponentTeam = teams.find(
                             (team) =>
@@ -757,10 +723,7 @@ export default function MyTeam() {
 
                         return (
                             <UnitRow key={unit.id}>
-                                <TeamLogo
-                                    src={getTeamLogo(unit.teamName)}
-                                    alt={unit.teamName}
-                                />
+                                <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
 
                                 <UnitInfo>
                                     <UnitName>
@@ -778,12 +741,9 @@ export default function MyTeam() {
                                         {opponentTeam ? (
                                             <OpponentButton
                                                 onClick={() =>
-                                                    setSelectedStatsUnit({
-                                                        ...unit,
-                                                        collegeTeamId:
-                                                        opponentTeam.id,
-                                                        teamName:
-                                                        opponentTeam.name,
+                                                    setSelectedStatsUnit({...unit,
+                                                        collegeTeamId: opponentTeam.id,
+                                                        teamName: opponentTeam.name,
                                                     })
                                                 }
                                             >
@@ -819,15 +779,12 @@ export default function MyTeam() {
 
                                 {!viewingPastWeek && !unit.locked && (
                                     canMoveDirectlyToStarter(unit) ? (
-                                        <RosterActionButton
-                                            onClick={() => moveToStarter(unit)}
-                                        >
+                                        <RosterActionButton onClick={() => moveToStarter(unit)}>
                                             Move to Starter
                                         </RosterActionButton>
                                     ) : (
                                         <RosterActionButton
-                                            onClick={() => {
-                                                setError('')
+                                            onClick={() => {setError('')
                                                 setSelectedBenchUnit(unit)
                                             }}
                                         >
@@ -842,54 +799,57 @@ export default function MyTeam() {
             )}
 
             {selectedBenchUnit && (
-                <div>
-                    <h3>
-                        Replace a{' '}
-                        {formatUnitType(selectedBenchUnit.unitType)}{' '}
-                        Starter
-                    </h3>
+                <ModalBackdrop onClick={() => setSelectedBenchUnit(null)}>
+                    <ModalCard onClick={(event) => event.stopPropagation()}>
+                        <ModalHeader>
+                            <TeamLogo src={getTeamLogo(selectedBenchUnit.teamName)} alt={selectedBenchUnit.teamName}/>
 
-                    {selectedBenchUnit.locked ? (
-                        <p>This unit is locked, the game has already started.</p>
-                    ) : (
-                        starters.filter((starter) => starter.unitType === selectedBenchUnit.unitType)
-                            .map((starter) => (
-                                <UnitRow key={starter.id}>
-                                    <TeamLogo src={getTeamLogo(starter.teamName)} alt={starter.teamName}/>
+                            <ModalTitle>
+                                <h2>
+                                    Swap {selectedBenchUnit.teamName}{' '}
+                                    {formatUnitType(selectedBenchUnit.unitType)}
+                                </h2>
 
-                                    <UnitInfo>
-                                        <UnitName>
-                                            {starter.teamName}{' '}
-                                            {formatUnitType(starter.unitType)}
-                                        </UnitName>
+                                <p>Choose a starter to replace</p>
+                            </ModalTitle>
 
-                                        <UnitDetails>
-                                            {starter.gameStart && (
-                                                <>
-                                                    {formatGameStart(starter.gameStart)}
-                                                </>
+                            <CloseButton onClick={() => setSelectedBenchUnit(null)}>
+                                Close
+                            </CloseButton>
+                        </ModalHeader>
+
+                        {selectedBenchUnit.locked ? (
+                            <p>This unit is locked, the game has already started.</p>
+                        ) : (
+                            <UnitList>
+                                {starters
+                                    .filter((starter) => starter.unitType === selectedBenchUnit.unitType)
+                                    .map((starter) => (
+                                        <UnitRow key={starter.id}>
+                                            <TeamLogo src={getTeamLogo(starter.teamName)} alt={starter.teamName}/>
+
+                                            <UnitInfo>
+                                                <UnitName>
+                                                    {starter.teamName}{' '}
+                                                    {formatUnitType(starter.unitType)}
+                                                </UnitName>
+
+                                                <UnitDetails>
+                                                    {starter.gameStart && formatGameStart(starter.gameStart)}
+                                                </UnitDetails>
+                                            </UnitInfo>
+
+                                            {!starter.locked && (
+                                                <RosterActionButton onClick={() => swapUnits(selectedBenchUnit, starter)}>
+                                                    Swap
+                                                </RosterActionButton>
                                             )}
-                                        </UnitDetails>
-                                    </UnitInfo>
-
-                                    {starter.locked ? (
-                                        <RosterActionButton disabled>
-                                            Locked
-                                        </RosterActionButton>
-                                    ) : (
-                                        <RosterActionButton onClick={() => swapUnits(selectedBenchUnit, starter)}>
-                                            Swap
-                                        </RosterActionButton>
-                                    )}
-                                </UnitRow>
-                                )
-                            )
-                    )}
-
-                    <button onClick={() => setSelectedBenchUnit(null)}>
-                        Cancel
-                    </button>
-                </div>
+                                        </UnitRow>
+                                    ))}
+                            </UnitList>
+                        )}
+                    </ModalCard>
+                </ModalBackdrop>
             )}
             {selectedStatsUnit && (() => {
                 const collegeTeam = teams.find((team) =>
@@ -900,15 +860,10 @@ export default function MyTeam() {
                     <ModalBackdrop onClick={() => setSelectedStatsUnit(null)}>
                         <ModalCard onClick={(event) => event.stopPropagation()}>
                             <ModalHeader>
-                                <TeamLogo
-                                    src={getTeamLogo(selectedStatsUnit.teamName)}
-                                    alt={selectedStatsUnit.teamName}
-                                />
+                                <TeamLogo src={getTeamLogo(selectedStatsUnit.teamName)} alt={selectedStatsUnit.teamName}/>
 
                                 <ModalTitle>
-                                    <h2>
-                                        {selectedStatsUnit.teamName}
-                                    </h2>
+                                    <h2>{selectedStatsUnit.teamName}</h2>
 
                                     <p>
                                         2025{' '}
@@ -928,17 +883,13 @@ export default function MyTeam() {
                                     <div>
                                         Passing Yards:{' '}
                                         <strong>
-                                            {(collegeTeam.stats.passing_yards ?? 0)
-                                                .toLocaleString()}
+                                            {(collegeTeam.stats.passing_yards ?? 0).toLocaleString()}
                                         </strong>
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
-                                                    (team) =>
-                                                        team.stats.passing_yards ?? 0
+                                                getStatRank(teams, collegeTeam.id,
+                                                    (team) => team.stats.passing_yards ?? 0
                                                 )
                                             )}
                                         </strong>
@@ -952,11 +903,8 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
-                                                    (team) =>
-                                                        team.stats.passing_touchdowns ?? 0
+                                                getStatRank(teams, collegeTeam.id,
+                                                    (team) => team.stats.passing_touchdowns ?? 0
                                                 )
                                             )}
                                         </strong>
@@ -974,9 +922,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.rushing_yards ?? 0
                                                 )
                                             )}
@@ -991,9 +937,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.rushing_touchdowns ?? 0
                                                 )
                                             )}
@@ -1008,9 +952,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.rushing_yards_per_game ?? 0
                                                 )
                                             )}
@@ -1029,9 +971,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.passing_yards ?? 0
                                                 )
                                             )}
@@ -1046,9 +986,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.passing_touchdowns ?? 0
                                                 )
                                             )}
@@ -1063,9 +1001,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.passing_yards_per_game ?? 0
                                                 )
                                             )}
@@ -1084,11 +1020,8 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
-                                                    (team) =>
-                                                        -(team.stats.points_allowed ?? 0)
+                                                getStatRank(teams, collegeTeam.id,
+                                                    (team) => -(team.stats.points_allowed ?? 0)
                                                 )
                                             )}
                                         </strong>
@@ -1097,17 +1030,13 @@ export default function MyTeam() {
                                     <div>
                                         Yards Allowed:{' '}
                                         <strong>
-                                            {(collegeTeam.stats.total_yards_allowed ?? 0)
-                                                .toLocaleString()}
+                                            {(collegeTeam.stats.total_yards_allowed ?? 0).toLocaleString()}
                                         </strong>
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
-                                                    (team) =>
-                                                        -(team.stats.total_yards_allowed ?? 0)
+                                                getStatRank(teams, collegeTeam.id,
+                                                    (team) => -(team.stats.total_yards_allowed ?? 0)
                                                 )
                                             )}
                                         </strong>
@@ -1121,11 +1050,8 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
-                                                    (team) =>
-                                                        team.stats.takeaways ?? 0
+                                                getStatRank(teams, collegeTeam.id,
+                                                    (team) => team.stats.takeaways ?? 0
                                                 )
                                             )}
                                         </strong>
@@ -1143,9 +1069,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.field_goals_made ?? 0
                                                 )
                                             )}
@@ -1160,9 +1084,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.field_goals_attempted ?? 0
                                                 )
                                             )}
@@ -1177,9 +1099,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.field_goal_percentage ?? 0
                                                 )
                                             )}
@@ -1194,9 +1114,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.extra_points_made ?? 0
                                                 )
                                             )}
@@ -1211,9 +1129,7 @@ export default function MyTeam() {
                                         {' • '}
                                         <strong>
                                             {formatRank(
-                                                getStatRank(
-                                                    teams,
-                                                    collegeTeam.id,
+                                                getStatRank(teams, collegeTeam.id,
                                                     (team) => team.stats.extra_point_percentage ?? 0
                                                 )
                                             )}
@@ -1227,43 +1143,24 @@ export default function MyTeam() {
                 )
             })()}
             {selectedScoreUnit && selectedScoreUnit.weeklyStats && (
-                <ModalBackdrop
-                    onClick={() => setSelectedScoreUnit(null)}
-                >
-                    <ModalCard
-                        onClick={(event) => event.stopPropagation()}
-                    >
+                <ModalBackdrop onClick={() => setSelectedScoreUnit(null)}>
+                    <ModalCard onClick={(event) => event.stopPropagation()}>
                         <ModalHeader>
-                            <TeamLogo
-                                src={getTeamLogo(selectedScoreUnit.teamName)}
-                                alt={selectedScoreUnit.teamName}
-                            />
+                            <TeamLogo src={getTeamLogo(selectedScoreUnit.teamName)} alt={selectedScoreUnit.teamName}/>
 
                             <ModalTitle>
-                                <h2>
-                                    {selectedScoreUnit.teamName}
-                                </h2>
-
-                                <p>
-                                    {formatUnitType(selectedScoreUnit.unitType)} Score Breakdown
-                                </p>
+                                <h2>{selectedScoreUnit.teamName}</h2>
+                                <p>{formatUnitType(selectedScoreUnit.unitType)} Score Breakdown</p>
                             </ModalTitle>
 
-                            <CloseButton
-                                onClick={() => setSelectedScoreUnit(null)}
-                            >
+                            <CloseButton onClick={() => setSelectedScoreUnit(null)}>
                                 Close
                             </CloseButton>
                         </ModalHeader>
 
-                        <h3>
-                            Fantasy Score: {selectedScoreUnit.score.toFixed(1)}
-                        </h3>
+                        <h3>Fantasy Score: {selectedScoreUnit.score.toFixed(1)}</h3>
 
-                        {getScoreBreakdown(
-                            selectedScoreUnit.unitType,
-                            selectedScoreUnit.weeklyStats
-                        )}
+                        {getScoreBreakdown(selectedScoreUnit.unitType, selectedScoreUnit.weeklyStats)}
                     </ModalCard>
                 </ModalBackdrop>
             )}
