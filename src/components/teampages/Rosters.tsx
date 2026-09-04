@@ -218,6 +218,11 @@ const CloseButton = styled.button`
     }
 `;
 
+const ByeText = styled.span`
+    color: #dc2626;
+    font-weight: 700;
+`;
+
 export default function Rosters() {
     const {leagueId, memberId,} = useParams()
     const [teamName, setTeamName] = useState('')
@@ -299,10 +304,7 @@ export default function Rosters() {
                             const weeklyTeam = weeklyMap.get(normalizeTeamName(collegeTeamName))
                             const gameStart = weeklyTeam?.gameStart ?? null
 
-                            const gameStarted =
-                                gameStart !== null &&
-                                now.getTime() >=
-                                gameStart.getTime()
+                            const gameStarted = gameStart !== null && now.getTime() >= gameStart.getTime()
 
                             const score =
                                 weeklyTeam &&
@@ -378,33 +380,13 @@ export default function Rosters() {
         return <p>{error}</p>
     }
 
-    const starters =
-        roster.filter(
-            (unit) => unit.rosterSlot === 'STARTER')
-
-    const bench =
-        roster.filter(
-            (unit) => unit.rosterSlot === 'BENCH')
-
-    const passing =
-        starters.filter(
-            (unit) => unit.unitType === 'PASSING')
-
-    const rushing =
-        starters.filter(
-            (unit) => unit.unitType === 'RUSHING')
-
-    const receiving =
-        starters.filter(
-            (unit) => unit.unitType === 'RECEIVING')
-
-    const defense =
-        starters.filter(
-            (unit) => unit.unitType === 'DEFENSE')
-
-    const specialTeams =
-        starters.filter(
-            (unit) => unit.unitType === 'SPECIAL_TEAMS')
+    const starters = roster.filter((unit) => unit.rosterSlot === 'STARTER')
+    const bench = roster.filter((unit) => unit.rosterSlot === 'BENCH')
+    const passing = starters.filter((unit) => unit.unitType === 'PASSING')
+    const rushing = starters.filter((unit) => unit.unitType === 'RUSHING')
+    const receiving = starters.filter((unit) => unit.unitType === 'RECEIVING')
+    const defense = starters.filter((unit) => unit.unitType === 'DEFENSE')
+    const specialTeams = starters.filter((unit) => unit.unitType === 'SPECIAL_TEAMS')
 
     function renderUnit(unit: RosterUnit) {
         const opponentName = getTeamOpponent(unit.teamName, CURRENT_WEEK)
@@ -438,39 +420,41 @@ export default function Rosters() {
                     </UnitName>
 
                     <UnitDetails>
-                        vs{' '}
+                        {opponentName === 'BYE' ? (
+                            <ByeText>BYE</ByeText>
+                        ) : (
+                            <>
+                                vs{' '}
 
-                        {opponentTeam ? (
-                            <OpponentButton
-                                onClick={() =>
-                                    setSelectedStatsUnit(
-                                        {
-                                            collegeTeamId: opponentTeam.id,
-                                            teamName: opponentTeam.name,
-                                            unitType: unit.unitType,
+                                {opponentTeam ? (
+                                    <OpponentButton
+                                        onClick={() =>
+                                            setSelectedStatsUnit({
+                                                collegeTeamId: opponentTeam.id,
+                                                teamName: opponentTeam.name,
+                                                unitType: unit.unitType,
+                                            })
                                         }
-                                    )
-                                }
-                            >
-                                {opponentTeam.name}
-                            </OpponentButton>
-                        ) : (opponentName ?? 'Unknown')}
+                                    >
+                                        {opponentTeam.name}
+                                    </OpponentButton>
+                                ) : (
+                                    opponentName ?? 'Unknown'
+                                )}
 
-                        {unit.gameStart && (
-                            <>
-                                {' • '}
+                                {!unit.locked && unit.gameStart && (
+                                    <>
+                                        {' • '}
+                                        {formatGameStart(unit.gameStart)}
+                                    </>
+                                )}
 
-                                {formatGameStart(unit.gameStart)}
-                            </>
-                        )}
-
-                        {unit.locked && (
-                            <>
-                                {' • '}
-
-                                <strong>
-                                    Locked
-                                </strong>
+                                {unit.locked && (
+                                    <>
+                                        {' • '}
+                                        <strong>Locked</strong>
+                                    </>
+                                )}
                             </>
                         )}
                     </UnitDetails>

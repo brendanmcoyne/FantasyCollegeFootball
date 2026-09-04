@@ -9,7 +9,7 @@ import { getWeeklyStats } from '../../api/weeklyStats'
 import { getTeamOpponent } from '../../utils/teamschedule'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 
-import {STARTERS, BENCH, type RosterUnitType,} from '../../rosters'
+import {STARTERS, type RosterUnitType,} from '../../rosters'
 
 import type { CollegeTeam } from '../../types/football'
 import type { WeeklyTeamData } from '../../api/weeklyStats'
@@ -216,6 +216,11 @@ const RosterActionButton = styled.button`
         width: 100%;
         margin-top: 4px;
     }
+`;
+
+const ByeText = styled.span`
+    color: #dc2626;
+    font-weight: 700;
 `;
 
 export default function MyTeam() {
@@ -508,32 +513,40 @@ export default function MyTeam() {
                                         </UnitName>
 
                                         <UnitDetails>
-                                            vs{' '}
-
-                                            {opponentTeam ? (
-                                                <OpponentButton
-                                                    onClick={() =>
-                                                        setSelectedStatsUnit({...unit,
-                                                            collegeTeamId: opponentTeam.id,
-                                                            teamName: opponentTeam.name,
-                                                        })
-                                                    }
-                                                >
-                                                    {opponentTeam.name}
-                                                </OpponentButton>
-                                            ) : (opponentName ?? 'Unknown')}
-
-                                            {unit.gameStart && (
+                                            {opponentName === 'BYE' ? (
+                                                <ByeText>BYE</ByeText>
+                                            ) : (
                                                 <>
-                                                    {' • '}
-                                                    {formatGameStart(unit.gameStart)}
-                                                </>
-                                            )}
+                                                    vs{' '}
 
-                                            {unit.locked && (
-                                                <>
-                                                    {' • '}
-                                                    <strong>Locked</strong>
+                                                    {opponentTeam ? (
+                                                        <OpponentButton
+                                                            onClick={() =>
+                                                                setSelectedStatsUnit({...unit,
+                                                                    collegeTeamId: opponentTeam.id,
+                                                                    teamName: opponentTeam.name,
+                                                                })
+                                                            }
+                                                        >
+                                                            {opponentTeam.name}
+                                                        </OpponentButton>
+                                                    ) : (
+                                                        opponentName ?? 'Unknown'
+                                                    )}
+
+                                                    {!unit.locked && unit.gameStart && (
+                                                        <>
+                                                            {' • '}
+                                                            {formatGameStart(unit.gameStart)}
+                                                        </>
+                                                    )}
+
+                                                    {unit.locked && (
+                                                        <>
+                                                            {' • '}
+                                                            <strong>Locked</strong>
+                                                        </>
+                                                    )}
                                                 </>
                                             )}
                                         </UnitDetails>
