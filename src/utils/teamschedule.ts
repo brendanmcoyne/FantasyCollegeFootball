@@ -699,7 +699,7 @@ export const schedules: Schedule[] = [
         week3: "Colorado",
         week4: "Indiana",
         week5: "Penn State",
-        week6: "FCS",
+        week6: "MAC",
         week7: "Michigan State",
         week8: "Rutgers",
         week9: "Oregon",
@@ -743,7 +743,7 @@ export const schedules: Schedule[] = [
     {
         team: "Ohio State",
         conference: "Big Ten",
-        week1: "FCS",
+        week1: "MAC",
         week2: "Texas",
         week3: "MAC",
         week4: "Illinois",
