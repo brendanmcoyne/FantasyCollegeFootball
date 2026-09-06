@@ -1092,6 +1092,22 @@ export const schedules: Schedule[] = [
         week11: "Texas",
         week12: "Tennessee",
     },
+    {
+        team: "Arkansas",
+        conference: "SEC",
+        week1: "FCS",
+        week2: "Utah",
+        week3: "Georgia",
+        week4: "AAC",
+        week5: "Texas A&M",
+        week6: "Tennessee",
+        week7: "Vanderbilt",
+        week8: "BYE",
+        week9: "Missouri",
+        week10: "Auburn",
+        week11: "South Carolina",
+        week12: "Texas",
+    },
 ]
 
 export function getTeamSchedule(teamName: string): Schedule | undefined {
