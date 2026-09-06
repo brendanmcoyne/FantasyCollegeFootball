@@ -1,40 +1,19 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getTeams } from '../../api/cfbApi'
 import { getWeeklyStats } from '../../api/weeklyStats'
-
 import { getTeamOpponent } from '../../utils/teamschedule'
 import { calculateUnitScore } from '../../utils/scoring'
 import { getScoreBreakdown } from '../../utils/ScoringBreakdown'
-
 import { getStatRank, formatRank } from '../../utils/statRanking'
-
 import { CURRENT_WEEK } from '../../bigseasonfile'
-
 import styled from 'styled-components'
-
-import {
-    TeamLogo,
-    getTeamLogo,
-} from '../../styles/logos'
-
-import {
-    STARTERS,
-    BENCH,
-    type RosterUnitType,
-} from '../../rosters'
-
+import { TeamLogo, getTeamLogo } from '../../styles/logos'
+import { STARTERS, type RosterUnitType } from '../../rosters'
 import { BackButton } from '../../styles/commonstyles'
-
-import type {
-    CollegeTeam,
-} from '../../types/football'
-
-import type {
-    WeeklyTeamData,
-} from '../../api/weeklyStats'
+import type { CollegeTeam } from '../../types/football'
+import type { WeeklyTeamData } from '../../api/weeklyStats'
 
 interface LeagueMember {
     id: string
@@ -223,6 +202,38 @@ const ByeText = styled.span`
     font-weight: 700;
 `;
 
+const WeekNavigator = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 12px 0 20px;
+`;
+
+const WeekArrow = styled.button`
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: #f3f4f6;
+    }
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+`;
+
+const WeekLabel = styled.strong`
+    min-width: 70px;
+    text-align: center;
+    color: #111827;
+`;
+
 export default function Rosters() {
     const {leagueId, memberId,} = useParams()
     const [teamName, setTeamName] = useState('')
@@ -231,9 +242,14 @@ export default function Rosters() {
     const [selectedStatsUnit, setSelectedStatsUnit] = useState<{ collegeTeamId: number, teamName: string, unitType: RosterUnitType } | null>(null)
     const [selectedScoreUnit, setSelectedScoreUnit] = useState<RosterUnit | null>(null)
     const [loading, setLoading] = useState(true)
+    const [searchParams, setSearchParams] = useSearchParams()
     const [error, setError] = useState('')
 
     const navigate = useNavigate()
+
+    const viewedWeek = Number(searchParams.get('week')) || CURRENT_WEEK
+
+    const viewingPastWeek = viewedWeek < CURRENT_WEEK
 
     useEffect(() => {
         async function loadRoster() {
@@ -260,11 +276,29 @@ export default function Rosters() {
 
                 setTeamName(leagueMember.team_name)
 
-                const {data: rosterData, error: rosterError} = await supabase
-                    .from('roster_units')
-                    .select('id, college_team_id, unit_type, roster_slot, acquired_via')
-                    .eq('league_id', leagueId)
-                    .eq('league_member_id', memberId)
+                let rosterData
+                let rosterError
+
+                if (viewingPastWeek) {
+                    const result = await supabase
+                        .from('weekly_rosters')
+                        .select('id, college_team_id, unit_type, roster_slot')
+                        .eq('league_id', leagueId)
+                        .eq('league_member_id', memberId)
+                        .eq('week', viewedWeek)
+
+                    rosterData = result.data
+                    rosterError = result.error
+                } else {
+                    const result = await supabase
+                        .from('roster_units')
+                        .select('id, college_team_id, unit_type, roster_slot, acquired_via')
+                        .eq('league_id', leagueId)
+                        .eq('league_member_id', memberId)
+
+                    rosterData = result.data
+                    rosterError = result.error
+                }
 
                 if (rosterError) {
                     throw rosterError
@@ -272,7 +306,7 @@ export default function Rosters() {
 
                 const [collegeTeams, weeklyStats,] = await Promise.all([
                     getTeams(),
-                    getWeeklyStats(CURRENT_WEEK),
+                    getWeeklyStats(viewedWeek),
                 ])
 
                 setTeams(collegeTeams)
@@ -322,12 +356,12 @@ export default function Rosters() {
                                         | 'BENCH',
 
                                 acquiredVia:
-                                    unit.acquired_via as
-                                        | 'DRAFT'
-                                        | 'FREE_AGENCY',
+                                    'acquired_via' in unit && unit.acquired_via
+                                        ? unit.acquired_via as 'DRAFT' | 'FREE_AGENCY'
+                                        : 'DRAFT',
 
                                 gameStart,
-                                locked: isGameLocked(gameStart, now),
+                                locked: viewingPastWeek || isGameLocked(gameStart, now),
                                 score,
                                 weeklyStats: weeklyTeam?.stats ?? null
                             }
@@ -347,7 +381,7 @@ export default function Rosters() {
         }
 
         loadRoster()
-    }, [leagueId, memberId])
+    }, [leagueId, memberId, viewedWeek])
 
     useEffect(() => {
         const interval =
@@ -389,8 +423,7 @@ export default function Rosters() {
     const specialTeams = starters.filter((unit) => unit.unitType === 'SPECIAL_TEAMS')
 
     function renderUnit(unit: RosterUnit) {
-        const opponentName = getTeamOpponent(unit.teamName, CURRENT_WEEK)
-
+        const opponentName = getTeamOpponent(unit.teamName, viewedWeek)
         const opponentTeam =
             teams.find((team) => normalizeTeamName(team.name) === normalizeTeamName(opponentName ?? ''))
 
@@ -479,12 +512,27 @@ export default function Rosters() {
                 <h3>{title} ({units.length}/{max})</h3>
 
                 <UnitList>
-                    {units.map(
-                        (unit) => renderUnit(unit)
-                    )}
+                    {units.map((unit) => renderUnit(unit))}
                 </UnitList>
             </section>
         )
+    }
+
+    function changeWeek(week: number) {
+        if (week < 1 || week > CURRENT_WEEK) {
+            return
+        }
+
+        setSelectedScoreUnit(null)
+        setSelectedStatsUnit(null)
+
+        if (week === CURRENT_WEEK) {
+            setSearchParams({})
+        } else {
+            setSearchParams({
+                week: String(week),
+            })
+        }
     }
 
     return (
@@ -493,7 +541,19 @@ export default function Rosters() {
 
             <h1>{teamName}</h1>
 
-            <p>Week {CURRENT_WEEK}</p>
+            <WeekNavigator>
+                <WeekArrow onClick={() => changeWeek(viewedWeek - 1)} disabled={viewedWeek <= 1} aria-label="Previous week">
+                    ←
+                </WeekArrow>
+
+                <WeekLabel>
+                    Week {viewedWeek}
+                </WeekLabel>
+
+                <WeekArrow onClick={() => changeWeek(viewedWeek + 1)} disabled={viewedWeek >= CURRENT_WEEK} aria-label="Next week">
+                    →
+                </WeekArrow>
+            </WeekNavigator>
 
             <h2>Starters</h2>
 

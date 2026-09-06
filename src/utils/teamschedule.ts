@@ -839,7 +839,7 @@ export const schedules: Schedule[] = [
     {
         team: "Indiana",
         conference: "Big Ten",
-        week1: "FCS",
+        week1: "AAC",
         week2: "FCS",
         week3: "CUSA",
         week4: "Northwestern",

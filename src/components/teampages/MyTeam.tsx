@@ -223,6 +223,38 @@ const ByeText = styled.span`
     font-weight: 700;
 `;
 
+const WeekNavigator = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 12px 0 20px;
+`;
+
+const WeekArrow = styled.button`
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: #f3f4f6;
+    }
+
+    &:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+`;
+
+const WeekLabel = styled.strong`
+    min-width: 70px;
+    text-align: center;
+    color: #111827;
+`;
+
 export default function MyTeam() {
     const { leagueId } = useParams()
     const { user } = useAuth()
@@ -475,7 +507,7 @@ export default function MyTeam() {
                         return unit
                     }
                 )
-        )
+            )
 
         setSelectedBenchUnit(null)
     }
@@ -668,6 +700,24 @@ export default function MyTeam() {
         }
     }
 
+    function changeWeek(week: number) {
+        if (week < 1 || week > CURRENT_WEEK) {
+            return
+        }
+
+        setSelectedBenchUnit(null)
+        setSelectedScoreUnit(null)
+        setSelectedStatsUnit(null)
+
+        if (week === CURRENT_WEEK) {
+            setSearchParams({})
+        } else {
+            setSearchParams({
+                week: String(week),
+            })
+        }
+    }
+
     return (
         <div>
             <BackButton onClick={() => navigate(`/league/${leagueId}`)}>
@@ -676,40 +726,19 @@ export default function MyTeam() {
 
             <h1>{teamName}</h1>
 
-            <p>Week {viewedWeek}</p>
+            <WeekNavigator>
+                <WeekArrow onClick={() => changeWeek(viewedWeek - 1)} disabled={viewedWeek <= 1} aria-label="Previous week">
+                    ←
+                </WeekArrow>
 
-            {CURRENT_WEEK > 1 && (
-                <div>
-                    {Array.from(
-                        { length: CURRENT_WEEK },
-                        (_, index) => {
-                            const weekNumber = index + 1
+                <WeekLabel>
+                    Week {viewedWeek}
+                </WeekLabel>
 
-                            return (
-                                <button
-                                    key={weekNumber}
-                                    onClick={() => {
-                                        setSelectedBenchUnit(null)
-                                        setSelectedScoreUnit(null)
-                                        setSelectedStatsUnit(null)
-
-                                        if (weekNumber === CURRENT_WEEK) {
-                                            setSearchParams({})
-                                        } else {
-                                            setSearchParams({
-                                                week: String(weekNumber),
-                                            })
-                                        }
-                                    }}
-                                    disabled={weekNumber === viewedWeek}
-                                >
-                                    Week {weekNumber}
-                                </button>
-                            )
-                        }
-                    )}
-                </div>
-            )}
+                <WeekArrow onClick={() => changeWeek(viewedWeek + 1)} disabled={viewedWeek >= CURRENT_WEEK} aria-label="Next week">
+                    →
+                </WeekArrow>
+            </WeekNavigator>
 
             <h2>Starters</h2>
 

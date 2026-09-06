@@ -10,6 +10,14 @@ const BreakdownRow = styled.div`
     border-bottom: 1px solid #e5e7eb;
 `;
 
+const IndentedRow = styled(BreakdownRow)`
+    padding-left: 24px;
+
+    span {
+        font-size: 0.95em;
+    }
+`;
+
 export function getScoreBreakdown(unitType: ScoringUnitType, stats: TeamStats) {
     switch (unitType) {
         case 'PASSING':
@@ -125,7 +133,11 @@ export function getScoreBreakdown(unitType: ScoringUnitType, stats: TeamStats) {
             const fieldGoalsAttempted = stats.field_goals_attempted ?? 0
             const fieldGoalsMissed = Math.max(0, fieldGoalsAttempted - fieldGoalsMade)
             const fieldGoalDistances = stats.field_goal_distances_made ?? []
-            const fieldGoalPoints = fieldGoalDistances.reduce((total, distance) => total + Math.max(3, distance / 10), 0)
+            const shortFieldGoals = fieldGoalDistances.filter((distance) => distance <= 30)
+            const longFieldGoals = fieldGoalDistances.filter((distance) => distance > 30)
+            const shortFieldGoalPoints = shortFieldGoals.length * 3
+            const longFieldGoalPoints = longFieldGoals.reduce((total, distance) => total + distance / 10, 0)
+            const fieldGoalPoints = shortFieldGoalPoints + longFieldGoalPoints
 
             return (
                 <>
@@ -144,14 +156,19 @@ export function getScoreBreakdown(unitType: ScoringUnitType, stats: TeamStats) {
                         <strong>{fieldGoalPoints.toFixed(1)}</strong>
                     </BreakdownRow>
 
-                    {fieldGoalDistances.map(
-                        (distance, index) => (
-                            <BreakdownRow key={`${distance}-${index}`}>
-                                <span>{distance}-yard Field Goal</span>
-                                <strong>{Math.max(3, distance / 10).toFixed(1)}</strong>
-                            </BreakdownRow>
-                        )
+                    {shortFieldGoals.length > 0 && (
+                        <IndentedRow>
+                            <span>30 Yards and Under ({shortFieldGoals.length} × 3)</span>
+                            <strong>{shortFieldGoalPoints.toFixed(1)}</strong>
+                        </IndentedRow>
                     )}
+
+                    {longFieldGoals.map((distance, index) => (
+                        <IndentedRow key={`${distance}-${index}`}>
+                            <span>{distance}-yard Field Goal</span>
+                            <strong>{(distance / 10).toFixed(1)}</strong>
+                        </IndentedRow>
+                    ))}
 
                     <BreakdownRow>
                         <span>Field Goals Missed ({fieldGoalsMissed} × -1)</span>
