@@ -6,10 +6,10 @@ import { useAuth } from '../Auth'
 import { getTeams } from '../../api/cfbApi'
 import { getWeeklyStats } from '../../api/weeklyStats'
 
-import { getTeamOpponent } from '../../utils/teamschedule'
+import { getTeamGame } from '../../utils/teamschedule'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 
-import {STARTERS, type RosterUnitType,} from '../../rosters'
+import { STARTERS, type RosterUnitType } from '../../rosters'
 
 import type { CollegeTeam } from '../../types/football'
 import type { WeeklyTeamData } from '../../api/weeklyStats'
@@ -22,6 +22,11 @@ import { getTeamLogo, TeamLogo } from '../../styles/logos'
 import { getStatRank, formatRank } from '../../utils/statRanking'
 import { calculateUnitScore } from '../../utils/scoring'
 import { getScoreBreakdown } from "../../utils/ScoringBreakdown"
+import { getLeagueStandings } from '../../utils/standings'
+
+import { UnitList, UnitRow, UnitInfo, UnitName, UnitDetails, TeamNameButton, OpponentButton, UnitScore,
+    ModalBackdrop, ModalCard, ModalHeader, ModalTitle, CloseButton, ByeText, WeekNavigator, WeekArrow,
+    WeekLabel, TeamHeader, TeamRecord, RosterActionButton } from '../../utils/rosterstyles'
 
 interface LeagueMember {
     id: string
@@ -47,214 +52,6 @@ interface RosterSectionProps {
     max: number
 }
 
-const UnitList = styled.div`
-    display: grid;
-    gap: 10px;
-`;
-
-const UnitRow = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-
-    @media (max-width: 700px) {
-        display: grid;
-        grid-template-columns: 56px minmax(0, 1fr) auto;
-        gap: 10px;
-        align-items: center;
-    }
-`;
-
-const UnitInfo = styled.div`
-    flex: 1;
-    min-width: 0;
-`;
-
-const UnitName = styled.div`
-    font-weight: 700;
-    color: #111827;
-`;
-
-const UnitDetails = styled.div`
-    margin-top: 3px;
-    color: #6b7280;
-    font-size: 0.9rem;
-
-    @media (max-width: 700px) {
-        line-height: 1.4;
-    }
-`;
-
-const TeamNameButton = styled.button`
-    border: none;
-    background: none;
-    padding: 0;
-    color: #111827;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
-    text-align: left;
-
-    &:hover {
-        text-decoration: underline;
-    }
-`;
-
-const OpponentButton = styled.button`
-    border: none;
-    background: none;
-    padding: 0;
-    color: #2563eb;
-    font: inherit;
-    cursor: pointer;
-
-    &:hover {
-        text-decoration: underline;
-    }
-`;
-
-const ModalBackdrop = styled.div`
-    position: fixed;
-    inset: 0;
-    background: rgba(17, 24, 39, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    z-index: 1000;
-
-    @media (max-width: 700px) {
-        padding: 12px;
-    }
-`;
-
-const ModalCard = styled.div`
-    width: min(600px, 100%);
-    max-height: 80vh;
-    overflow-y: auto;
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-
-    @media (max-width: 700px) {
-        padding: 16px;
-        max-height: 86vh;
-        border-radius: 14px;
-    }
-`;
-
-const ModalHeader = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 18px;
-`;
-
-const ModalTitle = styled.div`
-    flex: 1;
-
-    h2 {
-        margin: 0;
-    }
-
-    p {
-        margin: 4px 0 0;
-        color: #6b7280;
-    }
-`;
-
-const CloseButton = styled.button`
-    border: none;
-    border-radius: 8px;
-    padding: 8px 12px;
-
-    background: #f3f4f6;
-    color: #374151;
-
-    font-weight: 700;
-    cursor: pointer;
-
-    &:hover {
-        background: #e5e7eb;
-    }
-`;
-
-const UnitScore = styled.button`
-    min-width: 55px;
-    text-align: right;
-    font: inherit;
-    font-weight: 700;
-    color: #111827;
-    border: none;
-    background: none;
-    padding: 0;
-    cursor: pointer;
-
-    &:hover {
-        text-decoration: underline;
-    }
-
-    @media (max-width: 700px) {
-        min-width: 42px;
-    }
-`;
-
-const RosterActionButton = styled.button`
-    border: none;
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-weight: 600;
-    cursor: pointer;
-
-    @media (max-width: 700px) {
-        grid-column: 2 / 4;
-        width: 100%;
-        margin-top: 4px;
-    }
-`;
-
-const ByeText = styled.span`
-    color: #dc2626;
-    font-weight: 700;
-`;
-
-const WeekNavigator = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin: 12px 0 20px;
-`;
-
-const WeekArrow = styled.button`
-    border: 1px solid #d1d5db;
-    background: #ffffff;
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-
-    &:hover:not(:disabled) {
-        background: #f3f4f6;
-    }
-
-    &:disabled {
-        opacity: 0.35;
-        cursor: default;
-    }
-`;
-
-const WeekLabel = styled.strong`
-    min-width: 70px;
-    text-align: center;
-    color: #111827;
-`;
-
 export default function MyTeam() {
     const { leagueId } = useParams()
     const { user } = useAuth()
@@ -274,8 +71,9 @@ export default function MyTeam() {
     const [searchParams, setSearchParams] = useSearchParams()
 
     const viewedWeek = Number(searchParams.get('week')) || CURRENT_WEEK
-
     const viewingPastWeek = viewedWeek < CURRENT_WEEK
+
+    const [record, setRecord] = useState({wins: 0, losses: 0, place: 0})
 
     useEffect(() => {
         async function loadRoster() {
@@ -300,6 +98,20 @@ export default function MyTeam() {
                 const leagueMember = member as LeagueMember
 
                 setTeamName(leagueMember.team_name)
+
+                const standings = await getLeagueStandings(leagueId)
+
+                const standingIndex = standings.findIndex((team) => team.memberId === leagueMember.id)
+
+                if (standingIndex !== -1) {
+                    const standing = standings[standingIndex]
+
+                    setRecord({
+                        wins: standing.wins,
+                        losses: standing.losses,
+                        place: standingIndex + 1,
+                    })
+                }
 
                 let rosterData
                 let rosterError
@@ -523,13 +335,17 @@ export default function MyTeam() {
                 ) : (
                     <UnitList>
                         {units.map((unit) => {
-                            const opponentName = getTeamOpponent(unit.teamName, viewedWeek)
+                            const game = getTeamGame(unit.teamName, viewedWeek)
+                            const opponentName = game?.[0]
 
-                            const opponentTeam = teams.find(
-                                (team) =>
-                                    normalizeTeamName(team.name) ===
-                                    normalizeTeamName(opponentName ?? '')
-                            )
+                            const gameResult = game?.[1]
+                            const gameScore = game?.[2]
+
+                            const hasFinalResult =
+                                unit.locked && gameResult !== undefined && gameScore !== undefined
+
+                            const opponentTeam = teams.find((team) =>
+                                normalizeTeamName(team.name) === normalizeTeamName(opponentName ?? ''))
 
                             return (
                                 <UnitRow key={unit.id}>
@@ -579,7 +395,14 @@ export default function MyTeam() {
                                                     {unit.locked && (
                                                         <>
                                                             {' • '}
-                                                            <strong>Locked</strong>
+
+                                                            {hasFinalResult ? (
+                                                                <strong>
+                                                                    ({gameResult}) {gameScore}
+                                                                </strong>
+                                                            ) : (
+                                                                <strong>Locked</strong>
+                                                            )}
                                                         </>
                                                     )}
                                                 </>
@@ -712,9 +535,7 @@ export default function MyTeam() {
                 college_team_id: unit.collegeTeamId,
                 unit_type: unit.unitType,
                 roster_slot: unit.rosterSlot,
-                locked_at:
-                    unit.gameStart?.toISOString() ??
-                    new Date().toISOString(),
+                locked_at: unit.gameStart?.toISOString() ?? new Date().toISOString(),
             })
 
         if (error && error.code !== '23505') {
@@ -746,7 +567,15 @@ export default function MyTeam() {
                 ← Back
             </BackButton>
 
-            <h1>{teamName}</h1>
+            <TeamHeader>
+                <h1>{teamName}</h1>
+
+                <TeamRecord>
+                    {record.wins}-{record.losses}
+                    {' • '}
+                    {formatPlace(record.place)} Place
+                </TeamRecord>
+            </TeamHeader>
 
             <WeekNavigator>
                 <WeekArrow onClick={() => changeWeek(viewedWeek - 1)} disabled={viewedWeek <= 1} aria-label="Previous week">
@@ -775,13 +604,17 @@ export default function MyTeam() {
             ) : (
                 <UnitList>
                     {bench.map((unit) => {
-                        const opponentName = getTeamOpponent(unit.teamName, viewedWeek)
+                        const game = getTeamGame(unit.teamName, viewedWeek)
+                        const opponentName = game?.[0]
+
+                        const gameResult = game?.[1]
+                        const gameScore = game?.[2]
+
+                        const hasFinalResult =
+                            unit.locked && gameResult !== undefined && gameScore !== undefined
 
                         const opponentTeam = teams.find(
-                            (team) =>
-                                normalizeTeamName(team.name) ===
-                                normalizeTeamName(opponentName ?? '')
-                        )
+                            (team) => normalizeTeamName(team.name) === normalizeTeamName(opponentName ?? ''))
 
                         return (
                             <UnitRow key={unit.id}>
@@ -803,8 +636,7 @@ export default function MyTeam() {
                                         {opponentTeam ? (
                                             <OpponentButton
                                                 onClick={() =>
-                                                    setSelectedStatsUnit({
-                                                        ...unit,
+                                                    setSelectedStatsUnit({...unit,
                                                         collegeTeamId: opponentTeam.id,
                                                         teamName: opponentTeam.name,
                                                         isOpponent: true,
@@ -817,7 +649,7 @@ export default function MyTeam() {
                                             opponentName ?? 'Unknown'
                                         )}
 
-                                        {unit.gameStart && (
+                                        {!unit.locked && unit.gameStart && (
                                             <>
                                                 {' • '}
                                                 {formatGameStart(unit.gameStart)}
@@ -827,7 +659,14 @@ export default function MyTeam() {
                                         {unit.locked && (
                                             <>
                                                 {' • '}
-                                                <strong>Locked</strong>
+
+                                                {hasFinalResult ? (
+                                                    <strong>
+                                                        ({gameResult}) {gameScore}
+                                                    </strong>
+                                                ) : (
+                                                    <strong>Locked</strong>
+                                                )}
                                             </>
                                         )}
                                     </UnitDetails>
@@ -1509,4 +1348,27 @@ function formatGameStart(gameStart: Date): string {
             minute: '2-digit',
         }
     )
+}
+
+function formatPlace(place: number): string {
+    if (place === 0) {
+        return '-'
+    }
+
+    const lastTwoDigits = place % 100
+
+    if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
+        return `${place}th`
+    }
+
+    switch (place % 10) {
+        case 1:
+            return `${place}st`
+        case 2:
+            return `${place}nd`
+        case 3:
+            return `${place}rd`
+        default:
+            return `${place}th`
+    }
 }
