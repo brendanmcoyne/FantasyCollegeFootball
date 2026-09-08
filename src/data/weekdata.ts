@@ -1,4 +1,5 @@
 export const WEEKLY_DATA_URLS: Record<number, string> = {
+    0: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=1170678953&single=true&output=csv',
     1: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=0&single=true&output=csv',
     2: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=303078757&single=true&output=csv',
     3: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=1544241&single=true&output=csv',
@@ -9,4 +10,6 @@ export const WEEKLY_DATA_URLS: Record<number, string> = {
     8: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=1705543024&single=true&output=csv',
     9: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=692649873&single=true&output=csv',
     10: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=1544478399&single=true&output=csv',
+    11: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=869730775&single=true&output=csv',
+    12: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=1080384290&single=true&output=csv',
 }

@@ -6,7 +6,6 @@ import { getWeeklyStats } from '../../api/weeklyStats'
 import { getTeamGame } from '../../utils/teamschedule'
 import { calculateUnitScore } from '../../utils/scoring'
 import { getScoreBreakdown } from '../../utils/ScoringBreakdown'
-import { getStatRank, formatRank } from '../../utils/statRanking'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 import { TeamLogo, getTeamLogo } from '../../styles/logos'
 import { STARTERS, type RosterUnitType } from '../../rosters'
@@ -14,6 +13,8 @@ import { BackButton } from '../../styles/commonstyles'
 import type { CollegeTeam } from '../../types/football'
 import type { WeeklyTeamData } from '../../api/weeklyStats'
 import { getLeagueStandings } from '../../utils/standings'
+import TeamDetailsModal from '../../components/teampages/TeamDetails'
+
 import { UnitList, UnitRow, UnitInfo, UnitName, UnitDetails, TeamNameButton, OpponentButton, UnitScore,
     ModalBackdrop, ModalCard, ModalHeader, ModalTitle, CloseButton, ByeText, WeekNavigator, WeekArrow,
     WeekLabel, TeamHeader, TeamRecord } from '../../utils/rosterstyles'
@@ -204,16 +205,12 @@ export default function Rosters() {
 
     useEffect(() => {
         const interval =
-            window.setInterval(() => {
-                const now = new Date()
-
+            window.setInterval(() => {const now = new Date()
                 setRoster(
                     (currentRoster) =>
                         currentRoster.map(
-                            (unit) => ({
-                                ...unit,
-                                locked: isGameLocked(unit.gameStart, now)
-                            })
+                            (unit) => ({...unit,
+                                locked: viewingPastWeek || isGameLocked(unit.gameStart, now)})
                         )
                 )
             }, 30000)
@@ -221,7 +218,7 @@ export default function Rosters() {
         return () => {
             window.clearInterval(interval)
         }
-    }, [])
+    }, [viewingPastWeek])
 
     if (loading) {
         return (
@@ -465,528 +462,16 @@ export default function Rosters() {
 
             <UnitList>{bench.map((unit) => renderUnit(unit))}</UnitList>
 
-            {selectedStatsUnit &&
-                (() => {
-                    const collegeTeam = teams.find((team) => team.id === selectedStatsUnit.collegeTeamId)
-
-                    return (
-                        <ModalBackdrop onClick={() => setSelectedStatsUnit(null)}>
-                            <ModalCard onClick={(event) => event.stopPropagation()}>
-                                <ModalHeader>
-                                    <TeamLogo src={getTeamLogo(selectedStatsUnit.teamName)} alt={selectedStatsUnit.teamName}/>
-
-                                    <ModalTitle>
-                                        <h2>{selectedStatsUnit.teamName}</h2>
-
-                                        <p>
-                                            2025{' '}
-                                            {selectedStatsUnit.isOpponent
-                                                ? getOpponentStatLabel(selectedStatsUnit.unitType)
-                                                : formatUnitType(selectedStatsUnit.unitType)}
-                                            {' '}
-                                            Stats
-                                        </p>
-                                    </ModalTitle>
-
-                                    <CloseButton onClick={() => setSelectedStatsUnit(null)}>
-                                        Close
-                                    </CloseButton>
-                                </ModalHeader>
-
-                                {selectedStatsUnit.unitType === 'PASSING' && collegeTeam && (
-                                    selectedStatsUnit.isOpponent ? (
-                                        <>
-                                            <div>
-                                                Passing Yards Allowed:{' '}
-                                                <strong>
-                                                    {(collegeTeam.stats.passing_yards_allowed ?? 0).toLocaleString()}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => -(team.stats.passing_yards_allowed ?? 0)
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Passing Yards Allowed Per Game:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.passing_yards_allowed_per_game ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => -(team.stats.passing_yards_allowed_per_game ?? 0)
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Takeaways:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.takeaways ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.takeaways ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div>
-                                                Passing Yards:{' '}
-                                                <strong>
-                                                    {(collegeTeam.stats.passing_yards ?? 0).toLocaleString()}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.passing_yards ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Passing Touchdowns:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.passing_touchdowns ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.passing_touchdowns ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        </>
-                                    )
-                                )}
-
-                                {selectedStatsUnit.unitType === 'RUSHING' && collegeTeam && (
-                                    selectedStatsUnit.isOpponent ? (
-                                        <>
-                                            <div>
-                                                Rushing Yards Allowed:{' '}
-                                                <strong>
-                                                    {(collegeTeam.stats.rushing_yards_allowed ?? 0).toLocaleString()}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => -(team.stats.rushing_yards_allowed ?? 0)
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Rushing Yards Allowed Per Game:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.rushing_yards_allowed_per_game ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => -(team.stats.rushing_yards_allowed_per_game ?? 0)
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Takeaways:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.takeaways ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.takeaways ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div>
-                                                Rushing Yards:{' '}
-                                                <strong>
-                                                    {(collegeTeam.stats.rushing_yards ?? 0).toLocaleString()}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.rushing_yards ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Rushing Touchdowns:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.rushing_touchdowns ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.rushing_touchdowns ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Rushing Yards Per Game:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.rushing_yards_per_game ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.rushing_yards_per_game ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        </>
-                                    )
-                                )}
-
-                                {selectedStatsUnit.unitType === 'RECEIVING' && collegeTeam && (
-                                    selectedStatsUnit.isOpponent ? (
-                                        <>
-                                            <div>
-                                                Passing Yards Allowed:{' '}
-                                                <strong>
-                                                    {(collegeTeam.stats.passing_yards_allowed ?? 0).toLocaleString()}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => -(team.stats.passing_yards_allowed ?? 0)
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Passing Yards Allowed Per Game:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.passing_yards_allowed_per_game ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => -(team.stats.passing_yards_allowed_per_game ?? 0)
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Takeaways:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.takeaways ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.takeaways ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div>
-                                                Receiving Yards:{' '}
-                                                <strong>
-                                                    {(collegeTeam.stats.passing_yards ?? 0).toLocaleString()}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.passing_yards ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Receiving Touchdowns:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.passing_touchdowns ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.passing_touchdowns ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Receiving Yards Per Game:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.passing_yards_per_game ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.passing_yards_per_game ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        </>
-                                    )
-                                )}
-
-                                {selectedStatsUnit.unitType === 'DEFENSE' && collegeTeam && (
-                                    selectedStatsUnit.isOpponent ? (
-                                        <>
-                                            <div>
-                                                Points Scored:{' '}
-                                                <strong>
-                                                    {(collegeTeam.stats.points_scored ?? 0).toLocaleString()}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.points_scored ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Points Per Game:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.points_per_game ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.points_per_game ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Passing Yards Per Game:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.passing_yards_per_game ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.passing_yards_per_game ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Rushing Yards Per Game:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.rushing_yards_per_game ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.rushing_yards_per_game ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Total Yards Per Game:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.total_yards_per_game ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.total_yards_per_game ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Turnovers:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.turnovers ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => -(team.stats.turnovers ?? 0)
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div>
-                                                Points Allowed:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.points_allowed ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => -(team.stats.points_allowed ?? 0)
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Yards Allowed:{' '}
-                                                <strong>
-                                                    {(collegeTeam.stats.total_yards_allowed ?? 0).toLocaleString()}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => -(team.stats.total_yards_allowed ?? 0)
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-
-                                            <div>
-                                                Takeaways:{' '}
-                                                <strong>
-                                                    {collegeTeam.stats.takeaways ?? 0}
-                                                </strong>
-                                                {' • '}
-                                                <strong>
-                                                    {formatRank(
-                                                        getStatRank(teams, collegeTeam.id,
-                                                            (team) => team.stats.takeaways ?? 0
-                                                        )
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        </>
-                                    )
-                                )}
-
-                                {selectedStatsUnit.unitType === 'SPECIAL_TEAMS' && collegeTeam && (
-                                    <>
-                                        <div>
-                                            Field Goals Made:{' '}
-                                            <strong>
-                                                {collegeTeam.stats.field_goals_made ?? 0}
-                                            </strong>
-                                            {' • '}
-                                            <strong>
-                                                {formatRank(
-                                                    getStatRank(teams, collegeTeam.id, (team) => team.stats.field_goals_made ?? 0)
-                                                )}
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            Field Goals Attempted:{' '}
-                                            <strong>
-                                                {collegeTeam.stats.field_goals_attempted ?? 0}
-                                            </strong>
-                                            {' • '}
-                                            <strong>
-                                                {formatRank(
-                                                    getStatRank(teams, collegeTeam.id, (team) => team.stats.field_goals_attempted ?? 0)
-                                                )}
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            Field Goal Percentage:{' '}
-                                            <strong>
-                                                {collegeTeam.stats.field_goal_percentage ?? 0}%
-                                            </strong>
-                                            {' • '}
-                                            <strong>
-                                                {formatRank(
-                                                    getStatRank(teams, collegeTeam.id, (team) => team.stats.field_goal_percentage ?? 0)
-                                                )}
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            Extra Points Made:{' '}
-                                            <strong>
-                                                {collegeTeam.stats.extra_points_made ?? 0}
-                                            </strong>
-                                            {' • '}
-                                            <strong>
-                                                {formatRank(
-                                                    getStatRank(teams, collegeTeam.id, (team) => team.stats.extra_points_made ?? 0)
-                                                )}
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            Extra Point Percentage:{' '}
-                                            <strong>
-                                                {collegeTeam.stats.extra_point_percentage ?? 0}%
-                                            </strong>
-                                            {' • '}
-                                            <strong>
-                                                {formatRank(
-                                                    getStatRank(teams, collegeTeam.id, (team) => team.stats.extra_point_percentage ?? 0)
-                                                )}
-                                            </strong>
-                                        </div>
-                                    </>
-                                )}
-                            </ModalCard>
-                        </ModalBackdrop>
-                    )
-                })()}
+            {selectedStatsUnit && (
+                <TeamDetailsModal
+                    teamName={selectedStatsUnit.teamName}
+                    teamId={selectedStatsUnit.collegeTeamId}
+                    unitType={selectedStatsUnit.unitType}
+                    isOpponent={selectedStatsUnit.isOpponent ?? false}
+                    teams={teams}
+                    onClose={() => setSelectedStatsUnit(null)}
+                />
+            )}
 
             {selectedScoreUnit &&
                 selectedScoreUnit.weeklyStats && (
@@ -1029,14 +514,10 @@ function formatPlace(place: number): string {
     }
 
     switch (place % 10) {
-        case 1:
-            return `${place}st`
-        case 2:
-            return `${place}nd`
-        case 3:
-            return `${place}rd`
-        default:
-            return `${place}th`
+        case 1: return `${place}st`
+        case 2: return `${place}nd`
+        case 3: return `${place}rd`
+        default: return `${place}th`
     }
 }
 

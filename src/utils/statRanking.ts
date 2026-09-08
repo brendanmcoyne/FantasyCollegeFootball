@@ -1,23 +1,29 @@
 import type { CollegeTeam } from '../types/football'
 
 export function getStatRank(teams: CollegeTeam[], teamId: number, getValue: (team: CollegeTeam) => number) {
-    const sorted = [...teams].sort(
-        (a, b) => getValue(b) - getValue(a)
-    )
-
-    const teamIndex = sorted.findIndex(
-        (team) => team.id === teamId
-    )
+    const sorted = [...teams].sort((a, b) => getValue(b) - getValue(a))
+    const teamIndex = sorted.findIndex((team) => team.id === teamId)
 
     if (teamIndex === -1) {
         return null
     }
 
     const value = getValue(sorted[teamIndex])
+    const firstWithValue = sorted.findIndex((team) => getValue(team) === value)
 
-    const firstWithValue = sorted.findIndex(
-        (team) => getValue(team) === value
-    )
+    return firstWithValue + 1
+}
+
+export function getStatRankByName<T>(teams: T[], teamName: string, getName: (team: T) => string, getValue: (team: T) => number) {
+    const sorted = [...teams].sort((a, b) => getValue(b) - getValue(a))
+    const teamIndex = sorted.findIndex((team) => getName(team) === teamName)
+
+    if (teamIndex === -1) {
+        return null
+    }
+
+    const value = getValue(sorted[teamIndex])
+    const firstWithValue = sorted.findIndex((team) => getValue(team) === value)
 
     return firstWithValue + 1
 }

@@ -10,6 +10,8 @@ import type { DraftUnit, UnitType } from '../../types/fantasy'
 import styled from 'styled-components'
 import { TeamLogo, getTeamLogo } from '../../styles/logos'
 
+import TeamDetailsModal from '../../components/teampages/TeamDetails'
+
 const UnitsPage = styled.div`
     display: grid;
     gap: 24px;
@@ -87,23 +89,24 @@ const UnitCard = styled.div`
 
 const UnitInfo = styled.div`
     min-width: 0;
-`
-
-const UnitName = styled.div`
-    font-weight: 700;
-    color: #111827;
-`
+`;
 
 const UnitMeta = styled.div`
     margin-top: 4px;
     color: #6b7280;
     font-size: 0.9rem;
-`
+`;
+
+const RankingsTabs = styled.div`
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+`;
 
 const RankingsButton = styled(Link)`
     display: inline-block;
     width: fit-content;
-    margin-top: 12px;
     padding: 10px 16px;
 
     background: #1f2937;
@@ -116,13 +119,31 @@ const RankingsButton = styled(Link)`
     &:hover {
         background: #111827;
     }
-`
+`;
+
+const UnitNameButton = styled.button`
+    border: none;
+    background: none;
+    padding: 0;
+
+    color: #111827;
+    font: inherit;
+    font-weight: 700;
+
+    cursor: pointer;
+    text-align: left;
+
+    &:hover {
+        text-decoration: underline;
+    }
+`;
 
 export default function Units() {
     const [teams, setTeams] = useState<CollegeTeam[]>([])
     const [units, setUnits] = useState<DraftUnit[]>([])
     const [selectedType, setSelectedType] = useState<UnitType | 'ALL'>('ALL')
     const [selectedConference, setSelectedConference] = useState<string>('ALL')
+    const [selectedStatsUnit, setSelectedStatsUnit] = useState<DraftUnit | null>(null)
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -176,9 +197,15 @@ export default function Units() {
 
                 <p>{teams.length} teams | {units.length} draftable units</p>
 
-                <RankingsButton to="/units/rankings">
-                    View 2025 Rankings
-                </RankingsButton>
+                <RankingsTabs>
+                    <RankingsButton to="/units/rankings/2025">
+                        View 2025 Rankings
+                    </RankingsButton>
+
+                    <RankingsButton to="/units/rankings/2026">
+                        View 2026 Rankings
+                    </RankingsButton>
+                </RankingsTabs>
             </HeaderCard>
 
             <FiltersCard>
@@ -238,16 +265,27 @@ export default function Units() {
                             <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
 
                             <UnitInfo>
-                                <UnitName>{unit.teamName}{' '}{formatUnitType(unit.unitType)}</UnitName>
+                                <UnitNameButton onClick={() => setSelectedStatsUnit(unit)}>
+                                    {unit.teamName}{' '}
+                                    {formatUnitType(unit.unitType)}
+                                </UnitNameButton>
 
                                 <UnitMeta>{unit.conference}</UnitMeta>
 
-                                <UnitStats>{getUnitStats(unit.unitType, team)}</UnitStats>
                             </UnitInfo>
                         </UnitCard>
                     )
                 })}
             </UnitGrid>
+            {selectedStatsUnit && (
+                <TeamDetailsModal
+                    teamName={selectedStatsUnit.teamName}
+                    teamId={selectedStatsUnit.teamId}
+                    unitType={selectedStatsUnit.unitType}
+                    teams={teams}
+                    onClose={() => setSelectedStatsUnit(null)}
+                />
+            )}
         </UnitsPage>
     )
 }

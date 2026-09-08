@@ -9,9 +9,7 @@ const unitTypes: UnitType[] = [
     'SPECIAL_TEAMS',
 ]
 
-export function createDraftUnits(
-    teams: CollegeTeam[]
-): DraftUnit[] {
+export function createDraftUnits(teams: CollegeTeam[]): DraftUnit[] {
     return teams.flatMap((team) =>
         unitTypes.map((unitType) => ({
             id: `${team.id}-${unitType}`,

@@ -11,19 +11,9 @@ export interface ScheduledMatchup {
 
 const REGULAR_SEASON_WEEKS = 10
 
-export function createRegularSeasonSchedule(
-    teams: ScheduleTeam[]
-): ScheduledMatchup[] {
-    if (teams.length < 2) {
-        throw new Error(
-            'A league must have at least 2 teams.'
-        )
-    }
-
-    if (teams.length % 2 !== 0) {
-        throw new Error(
-            'A league must have an even number of teams.'
-        )
+export function createRegularSeasonSchedule(teams: ScheduleTeam[]): ScheduledMatchup[] {
+    if (teams.length < 2 || teams.length % 2 !== 0) {
+        throw new Error('Invalid number of teams.')
     }
 
     const ids = teams.map((team) => team.id)
@@ -41,19 +31,12 @@ export function createRegularSeasonSchedule(
 
         for (let i = 0; i < teams.length / 2; i++) {
             const team1 = rotation[i]
-            const team2 =
-                rotation[rotation.length - 1 - i]
+            const team2 = rotation[rotation.length - 1 - i]
 
             matchups.push({
                 week,
-                team1Id:
-                    cycleNumber % 2 === 0
-                        ? team1
-                        : team2,
-                team2Id:
-                    cycleNumber % 2 === 0
-                        ? team2
-                        : team1,
+                team1Id: (cycleNumber % 2 === 0) ? team1 : team2,
+                team2Id: (cycleNumber % 2 === 0) ? team2 : team1,
             })
         }
 
@@ -61,11 +44,7 @@ export function createRegularSeasonSchedule(
         const rotating = rotation.slice(1)
 
         rotating.unshift(rotating.pop()!)
-
-        rotation = [
-            fixed,
-            ...rotating,
-        ]
+        rotation = [fixed, ...rotating]
     }
 
     return matchups

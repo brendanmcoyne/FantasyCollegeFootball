@@ -10,13 +10,14 @@ import { useAuth } from '../Auth'
 import type { DraftUnit, UnitType } from '../../types/fantasy'
 import type { CollegeTeam } from '../../types/football'
 import type { RosterUnitType } from '../../rosters'
+import TeamDetailsModal from '../../components/teampages/TeamDetails'
 
 import { CURRENT_WEEK } from '../../bigseasonfile'
-import {BackButton} from "../../styles/commonstyles";
+import { BackButton } from "../../styles/commonstyles";
 import { TeamLogo, getTeamLogo } from '../../styles/logos'
 import styled from 'styled-components'
 
-import { getUnitStats } from '../../utils/unitStats'
+import { ModalTitle, ModalHeader, ModalCard, ModalBackdrop, CloseButton, UnitInfo, UnitName } from '../../utils/rosterstyles'
 
 interface OwnedUnit {
     id: string
@@ -156,16 +157,6 @@ const FreeAgentCard = styled.div`
     }
 `;
 
-const UnitInfo = styled.div`
-    flex: 1;
-    min-width: 0;
-`;
-
-const UnitName = styled.div`
-    font-weight: 700;
-    color: #111827;
-`;
-
 const UnitMeta = styled.div`
     margin-top: 4px;
     color: #6b7280;
@@ -203,67 +194,6 @@ const HistoryRow = styled.div`
     }
 `;
 
-const ModalBackdrop = styled.div`
-    position: fixed;
-    inset: 0;
-    background: rgba(17, 24, 39, 0.55);
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 20px;
-    z-index: 1000;
-`;
-
-const ModalCard = styled.div`
-    width: min(600px, 100%);
-    max-height: 80vh;
-    overflow-y: auto;
-
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 24px;
-
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-`;
-
-const ModalHeader = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 18px;
-`;
-
-const ModalTitle = styled.div`
-    flex: 1;
-
-    h2 {
-        margin: 0;
-    }
-
-    p {
-        margin: 4px 0 0;
-        color: #6b7280;
-    }
-`;
-
-const CloseButton = styled.button`
-    border: none;
-    border-radius: 8px;
-    padding: 8px 12px;
-
-    background: #f3f4f6;
-    color: #374151;
-
-    font-weight: 700;
-    cursor: pointer;
-
-    &:hover {
-        background: #e5e7eb;
-    }
-`;
-
 const UnitNameButton = styled.button`
     border: none;
     background: none;
@@ -281,12 +211,6 @@ const UnitNameButton = styled.button`
     }
 `;
 
-const StatsList = styled.div`
-    display: grid;
-    gap: 8px;
-    color: #4b5563;
-`;
-
 export default function FreeAgents() {
     const { leagueId } = useParams()
     const { user } = useAuth()
@@ -301,15 +225,10 @@ export default function FreeAgents() {
 
     const [selectedType, setSelectedType] = useState<UnitType | 'ALL'>('ALL')
     const [selectedConference, setSelectedConference] = useState('ALL')
-    const [selectedFreeAgent, setSelectedFreeAgent] =
-        useState<FreeAgentUnit | null>(null)
+    const [selectedFreeAgent, setSelectedFreeAgent] = useState<FreeAgentUnit | null>(null)
 
     const [selectedStatsUnit, setSelectedStatsUnit] =
-        useState<{
-            collegeTeamId: number
-            teamName: string
-            unitType: RosterUnitType
-        } | null>(null)
+        useState<{ collegeTeamId: number, teamName: string, unitType: RosterUnitType } | null>(null)
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -332,13 +251,7 @@ export default function FreeAgents() {
                 teams.forEach((team) => {teamMap.set(team.id, team)})
 
                 const weeklyStats = await getWeeklyStats(CURRENT_WEEK)
-
-                const weeklyMap = new Map(
-                    weeklyStats.map((team) => [
-                        normalizeTeamName(team.team),
-                        team,
-                    ])
-                )
+                const weeklyMap = new Map(weeklyStats.map((team) => [normalizeTeamName(team.team), team]))
 
                 const now = new Date()
 
@@ -347,7 +260,6 @@ export default function FreeAgents() {
                 const unitsWithLocks: FreeAgentUnit[] =
                     draftUnits.map((unit) => {
                         const weeklyTeam = weeklyMap.get(normalizeTeamName(unit.teamName))
-
                         const gameStart = weeklyTeam?.gameStart ?? null
 
                         return {
@@ -407,17 +319,10 @@ export default function FreeAgents() {
 
                 const myUnits: MyRosterUnit[] =
                     (owned ?? [])
-                        .filter(
-                            (unit) =>
-                                unit.league_member_id === membership.id
-                        )
+                        .filter((unit) => unit.league_member_id === membership.id)
                         .map((unit) => {
-                            const teamName =
-                                teamMap.get(unit.college_team_id)?.name
-                                ?? 'Unknown Team'
-
-                            const weeklyTeam =
-                                weeklyMap.get(normalizeTeamName(teamName))
+                            const teamName = teamMap.get(unit.college_team_id)?.name ?? 'Unknown Team'
+                            const weeklyTeam = weeklyMap.get(normalizeTeamName(teamName))
 
                             const gameStart = weeklyTeam?.gameStart ?? null
 
@@ -426,12 +331,8 @@ export default function FreeAgents() {
                                 collegeTeamId:
                                 unit.college_team_id,
                                 teamName,
-                                unitType:
-                                    unit.unit_type as RosterUnitType,
-                                rosterSlot:
-                                    unit.roster_slot as
-                                        | 'STARTER'
-                                        | 'BENCH',
+                                unitType: unit.unit_type as RosterUnitType,
+                                rosterSlot: unit.roster_slot as | 'STARTER' | 'BENCH',
                                 gameStart,
                                 locked: isGameLocked(gameStart, now),
                             }
@@ -461,15 +362,13 @@ export default function FreeAgents() {
 
             setUnits((current) =>
                 current.map((unit) => ({
-                    ...unit,
-                    locked: isGameLocked(unit.gameStart, now),
+                    ...unit, locked: isGameLocked(unit.gameStart, now),
                 }))
             )
 
             setMyRoster((current) =>
                 current.map((unit) => ({
-                    ...unit,
-                    locked: isGameLocked(unit.gameStart, now),
+                    ...unit, locked: isGameLocked(unit.gameStart, now),
                 }))
             )
         }, 30000)
@@ -490,8 +389,7 @@ export default function FreeAgents() {
     const freeAgents = units.filter((unit) =>
         !ownedUnits.some(
             (owned) =>
-                owned.college_team_id === unit.teamId &&
-                owned.unit_type === unit.unitType
+                owned.college_team_id === unit.teamId && owned.unit_type === unit.unitType
         )
     )
 
@@ -532,8 +430,7 @@ export default function FreeAgents() {
 
         setError('')
 
-        const { error: moveError } = await supabase.rpc(
-            'make_free_agent_move',
+        const { error: moveError } = await supabase.rpc('make_free_agent_move',
             {
                 target_league_id: leagueId,
                 target_league_member_id: member.id,
@@ -574,9 +471,7 @@ export default function FreeAgents() {
                             <FilterButton
                                 key={type}
                                 $active={selectedType === type}
-                                onClick={() =>
-                                    setSelectedType(type as UnitType | 'ALL')
-                                }
+                                onClick={() => setSelectedType(type as UnitType | 'ALL')}
                             >
                                 {formatUnitType(type)}
                             </FilterButton>
@@ -652,42 +547,22 @@ export default function FreeAgents() {
             </FreeAgentGrid>
 
             {selectedFreeAgent && (
-                <ModalBackdrop
-                    onClick={() => setSelectedFreeAgent(null)}
-                >
-                    <ModalCard
-                        onClick={(event) => event.stopPropagation()}
-                    >
+                <ModalBackdrop onClick={() => setSelectedFreeAgent(null)}>
+                    <ModalCard onClick={(event) => event.stopPropagation()}>
                         <ModalHeader>
-                            <TeamLogo
-                                src={getTeamLogo(selectedFreeAgent.teamName)}
-                                alt={selectedFreeAgent.teamName}
-                            />
+                            <TeamLogo src={getTeamLogo(selectedFreeAgent.teamName)} alt={selectedFreeAgent.teamName}/>
 
                             <ModalTitle>
-                                <h2>
-                                    Add {selectedFreeAgent.teamName}
-                                </h2>
-
-                                <p>
-                                    {formatUnitType(
-                                        selectedFreeAgent.unitType
-                                    )}
-                                </p>
+                                <h2>Add {selectedFreeAgent.teamName}</h2>
+                                <p>{formatUnitType(selectedFreeAgent.unitType)}</p>
                             </ModalTitle>
 
-                            <CloseButton
-                                onClick={() =>
-                                    setSelectedFreeAgent(null)
-                                }
-                            >
+                            <CloseButton onClick={() => setSelectedFreeAgent(null)}>
                                 Close
                             </CloseButton>
                         </ModalHeader>
 
-                        <p>
-                            Choose a unit to drop:
-                        </p>
+                        <p>Choose a unit to drop:</p>
 
                         {error && (
                             <p
@@ -724,9 +599,7 @@ export default function FreeAgents() {
                                         </UnitNameButton>
 
                                         {' '}
-                                        {formatUnitType(
-                                            unit.unitType
-                                        )}
+                                        {formatUnitType(unit.unitType)}
                                     </UnitName>
 
                                     <UnitMeta>
@@ -775,45 +648,15 @@ export default function FreeAgents() {
                 })
             )}
             </HistoryCard>
-            {selectedStatsUnit && (() => {
-                const collegeTeam = teams.find(
-                    (team) =>
-                        team.id === selectedStatsUnit.collegeTeamId
-                )
-
-                return (
-                    <ModalBackdrop onClick={() => setSelectedStatsUnit(null)}>
-                        <ModalCard onClick={(event) => event.stopPropagation()}>
-                            <ModalHeader>
-                                <TeamLogo
-                                    src={getTeamLogo(selectedStatsUnit.teamName)}
-                                    alt={selectedStatsUnit.teamName}
-                                />
-
-                                <ModalTitle>
-                                    <h2>
-                                        {selectedStatsUnit.teamName}
-                                    </h2>
-
-                                    <p>
-                                        2025{' '}
-                                        {formatUnitType(selectedStatsUnit.unitType)}
-                                        {' '}Stats
-                                    </p>
-                                </ModalTitle>
-
-                                <CloseButton onClick={() => setSelectedStatsUnit(null)}>
-                                    Close
-                                </CloseButton>
-                            </ModalHeader>
-
-                            <StatsList>
-                                {getUnitStats(selectedStatsUnit.unitType, collegeTeam)}
-                            </StatsList>
-                        </ModalCard>
-                    </ModalBackdrop>
-                )
-            })()}
+            {selectedStatsUnit && (
+                <TeamDetailsModal
+                    teamName={selectedStatsUnit.teamName}
+                    teamId={selectedStatsUnit.collegeTeamId}
+                    unitType={selectedStatsUnit.unitType}
+                    teams={teams}
+                    onClose={() => setSelectedStatsUnit(null)}
+                />
+            )}
         </FreeAgentsPage>
     )
 }

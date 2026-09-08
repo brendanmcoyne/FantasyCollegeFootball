@@ -266,6 +266,10 @@ const VsText = styled.div`
     text-align: center;
 `;
 
+function formatUnitType(unitType: ScoringUnitType): string {
+    return unitType === 'SPECIAL_TEAMS' ? 'Special Teams' : unitType.charAt(0) + unitType.slice(1).toLowerCase()
+}
+
 export default function WeekScores() {
     const { leagueId, week: weekParam } = useParams()
     const week = Number(weekParam)
@@ -302,7 +306,9 @@ export default function WeekScores() {
                     .select('id, team_name')
                     .eq('league_id', leagueId)
 
-                if (membersError) throw membersError
+                if (membersError) {
+                    throw membersError
+                }
 
                 if (week === CURRENT_WEEK) {
                     const { error: initializeError } = await supabase.rpc(
@@ -366,18 +372,13 @@ export default function WeekScores() {
 
                     const weeklyTeam = weeklyMap.get(collegeTeam.name.trim().toLowerCase())
 
-                    const gameStarted =
-                        weeklyTeam?.gameStart &&
-                        now >= weeklyTeam.gameStart
+                    const gameStarted = weeklyTeam?.gameStart && now >= weeklyTeam.gameStart
 
                     return {
                         rosterId: row.id,
                         teamName: collegeTeam.name,
                         unitType: row.unit_type,
-                        score:
-                            weeklyTeam && gameStarted &&
-                            weekStarted ? calculateUnitScore(row.unit_type, weeklyTeam.stats) : 0,
-
+                        score: weeklyTeam && gameStarted && weekStarted ? calculateUnitScore(row.unit_type, weeklyTeam.stats) : 0,
                         stats: weeklyTeam?.stats ?? null,
                         locked: Boolean(gameStarted),
                     }
@@ -386,17 +387,13 @@ export default function WeekScores() {
                 const fantasyScores: FantasyTeamScore[] =
                     (members ?? []).map((member) => {
                         const roster = effectiveRosterRows.filter(
-                            (row: RosterRow) =>
-                                row.league_member_id === member.id
-                        )
+                            (row: RosterRow) => row.league_member_id === member.id)
 
                         const starters = roster
-                            .filter((row: RosterRow) => row.roster_slot === 'STARTER')
-                            .map(scoreUnit)
+                            .filter((row: RosterRow) => row.roster_slot === 'STARTER').map(scoreUnit)
 
                         const bench = roster
-                            .filter((row: RosterRow) => row.roster_slot === 'BENCH')
-                            .map(scoreUnit)
+                            .filter((row: RosterRow) => row.roster_slot === 'BENCH').map(scoreUnit)
 
                         return {
                             memberId: member.id,
@@ -415,10 +412,11 @@ export default function WeekScores() {
                         .eq('league_id', leagueId)
                         .eq('week', week)
 
-                if (matchupError) throw matchupError
+                if (matchupError) {
+                    throw matchupError
+                }
 
-                const currentMatchups =
-                    (weekMatchups ?? []) as LeagueMatchup[]
+                const currentMatchups = (weekMatchups ?? []) as LeagueMatchup[]
 
                 setMatchups(currentMatchups)
 
@@ -426,39 +424,34 @@ export default function WeekScores() {
                     const team1 = fantasyScores.find((team) => team.memberId === matchup.team1_id)
                     const team2 = fantasyScores.find((team) => team.memberId === matchup.team2_id)
 
-                    if (!team1 || !team2) continue
+                    if (!team1 || !team2) {
+                        continue
+                    }
 
                     const { error: updateError } = await supabase
                         .from('league_matchups')
-                        .update(
-                            weekStarted
-                                ? {
-                                    team1_score: team1.starterTotal,
-                                    team2_score: team2.starterTotal,
-                                    winner_id: weekComplete
-                                        ? team1.starterTotal >= team2.starterTotal
-                                            ? matchup.team1_id
-                                            : matchup.team2_id
-                                        : null,
-                                }
-                                : {
-                                    team1_score: null,
-                                    team2_score: null,
-                                    winner_id: null,
-                                }
+                        .update(weekStarted
+                            ? {
+                                team1_score: team1.starterTotal,
+                                team2_score: team2.starterTotal,
+                                winner_id: weekComplete ? team1.starterTotal >= team2.starterTotal
+                                    ? matchup.team1_id : matchup.team2_id : null,
+                            } : {
+                                team1_score: null,
+                                team2_score: null,
+                                winner_id: null,
+                            }
                         )
                         .eq('id', matchup.id)
 
-                    if (updateError) throw updateError
+                    if (updateError) {
+                        throw updateError
+                    }
                 }
 
                 setScores(fantasyScores)
             } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : 'Failed to load weekly scores.'
-                )
+                setError(err instanceof Error ? err.message : 'Failed to load weekly scores.')
             } finally {
                 setLoading(false)
             }
@@ -489,8 +482,7 @@ export default function WeekScores() {
                         const weekNumber = index + 1
 
                         return (
-                            <WeekLink
-                                key={weekNumber}
+                            <WeekLink key={weekNumber}
                                 to={`/league/${leagueId}/week-scores/${weekNumber}`}
                                 $active={weekNumber === week}
                             >
@@ -513,22 +505,16 @@ export default function WeekScores() {
                 const team1 = scores.find((team) => team.memberId === matchup.team1_id)
                 const team2 = scores.find((team) => team.memberId === matchup.team2_id)
 
-                if (!team1 || !team2) return null
+                if (!team1 || !team2) {
+                    return null
+                }
 
                 if (!weekStarted) {
                     return (
                         <FutureMatchupCard key={matchup.id}>
-                            <FutureTeamLeft>
-                                {team1.teamName}
-                            </FutureTeamLeft>
-
-                            <VsText>
-                                vs
-                            </VsText>
-
-                            <FutureTeamRight>
-                                {team2.teamName}
-                            </FutureTeamRight>
+                            <FutureTeamLeft>{team1.teamName}</FutureTeamLeft>
+                            <VsText>vs</VsText>
+                            <FutureTeamRight>{team2.teamName}</FutureTeamRight>
                         </FutureMatchupCard>
                     )
                 }
@@ -537,13 +523,8 @@ export default function WeekScores() {
                     <MatchupCard key={matchup.id}>
                         <MatchupTeam>
                             <MatchupTeamHeader>
-                                <MatchupTeamName>
-                                    {team1.teamName}
-                                </MatchupTeamName>
-
-                                <BigScore>
-                                    {weekStarted ? team1.starterTotal.toFixed(1) : '-'}
-                                </BigScore>
+                                <MatchupTeamName>{team1.teamName}</MatchupTeamName>
+                                <BigScore>{weekStarted ? team1.starterTotal.toFixed(1) : '-'}</BigScore>
                             </MatchupTeamHeader>
 
                             {[...team1.starters]
@@ -594,13 +575,8 @@ export default function WeekScores() {
 
                         <MatchupTeam>
                             <MatchupTeamHeader>
-                                <MatchupTeamName>
-                                    {team2.teamName}
-                                </MatchupTeamName>
-
-                                <BigScore>
-                                    {weekStarted ? team2.starterTotal.toFixed(1) : '-'}
-                                </BigScore>
+                                <MatchupTeamName>{team2.teamName}</MatchupTeamName>
+                                <BigScore>{weekStarted ? team2.starterTotal.toFixed(1) : '-'}</BigScore>
                             </MatchupTeamHeader>
 
                             {[...team2.starters]
@@ -665,9 +641,7 @@ export default function WeekScores() {
                             {formatUnitType(selectedUnit.unitType)}
                         </h2>
 
-                        <h3>
-                            Fantasy Score: {selectedUnit.score.toFixed(1)}
-                        </h3>
+                        <h3>Fantasy Score: {selectedUnit.score.toFixed(1)}</h3>
 
                         {getScoreBreakdown(selectedUnit.unitType, selectedUnit.stats)}
 
@@ -680,9 +654,5 @@ export default function WeekScores() {
 
         </ScoresPage>
     )
-}
-
-function formatUnitType(unitType: ScoringUnitType): string {
-    return unitType === 'SPECIAL_TEAMS' ? 'Special Teams' : unitType.charAt(0) + unitType.slice(1).toLowerCase()
 }
 
