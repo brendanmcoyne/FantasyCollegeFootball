@@ -144,7 +144,7 @@ export default function Schedule() {
             }
         }
 
-        loadSchedule()
+        void loadSchedule()
     }, [leagueId])
 
     function getTeamName(memberId: string): string {
@@ -192,19 +192,13 @@ export default function Schedule() {
 
                                         return (
                                             <MatchupRow key={matchup.id}>
-                                                <Team1>
-                                                    {team1Name}
-                                                </Team1>
+                                                <Team1>{team1Name}</Team1>
 
                                                 <Score>
-                                                    {hasScore
-                                                        ? `${matchup.team1_score?.toFixed(1)} - ${matchup.team2_score?.toFixed(1)}`
-                                                        : 'vs'}
+                                                    {hasScore ? `${matchup.team1_score?.toFixed(1)} - ${matchup.team2_score?.toFixed(1)}` : 'vs'}
                                                 </Score>
 
-                                                <Team2>
-                                                    {team2Name}
-                                                </Team2>
+                                                <Team2>{team2Name}</Team2>
                                             </MatchupRow>
                                         )
                                     }

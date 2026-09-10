@@ -117,7 +117,7 @@ export default function Standings() {
             }
         }
 
-        loadStandings()
+        void loadStandings()
     }, [leagueId])
 
     if (loading) {

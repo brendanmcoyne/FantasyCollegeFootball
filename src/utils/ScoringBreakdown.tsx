@@ -129,13 +129,16 @@ export function getScoreBreakdown(unitType: ScoringUnitType, stats: TeamStats) {
             const extraPointsMade = stats.extra_points_made ?? 0
             const extraPointsAttempted = stats.extra_points_attempted ?? 0
             const extraPointsMissed = Math.max(0, extraPointsAttempted - extraPointsMade)
+
             const fieldGoalsMade = stats.field_goals_made ?? 0
             const fieldGoalsAttempted = stats.field_goals_attempted ?? 0
             const fieldGoalsMissed = Math.max(0, fieldGoalsAttempted - fieldGoalsMade)
             const fieldGoalDistances = stats.field_goal_distances_made ?? []
+
             const shortFieldGoals = fieldGoalDistances.filter((distance) => distance <= 30)
-            const longFieldGoals = fieldGoalDistances.filter((distance) => distance > 30)
             const shortFieldGoalPoints = shortFieldGoals.length * 3
+
+            const longFieldGoals = fieldGoalDistances.filter((distance) => distance > 30)
             const longFieldGoalPoints = longFieldGoals.reduce((total, distance) => total + distance / 10, 0)
             const fieldGoalPoints = shortFieldGoalPoints + longFieldGoalPoints
 

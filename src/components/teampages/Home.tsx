@@ -13,7 +13,7 @@ interface League {
 const HomePage = styled.div`
     display: grid;
     gap: 24px;
-`
+`;
 
 const HeroCard = styled.div`
     background: #ffffff;
@@ -21,13 +21,13 @@ const HeroCard = styled.div`
     border-radius: 14px;
     padding: 24px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`
+`;
 
 const ActionGrid = styled.div`
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 14px;
-`
+`;
 
 const ActionLink = styled(Link)`
     display: block;
@@ -42,7 +42,7 @@ const ActionLink = styled(Link)`
     &:hover {
         background: #111827;
     }
-`
+`;
 
 const SectionCard = styled.div`
     background: #ffffff;
@@ -50,12 +50,12 @@ const SectionCard = styled.div`
     border-radius: 14px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`
+`;
 
 const LeagueList = styled.div`
     display: grid;
     gap: 10px;
-`
+`;
 
 const LeagueLink = styled(Link)`
     display: block;
@@ -70,11 +70,11 @@ const LeagueLink = styled(Link)`
     &:hover {
         background: #f3f4f6;
     }
-`
+`;
 
 const EmptyText = styled.p`
     color: #6b7280;
-`
+`;
 
 export default function Home() {
     const { user } = useAuth()
@@ -126,7 +126,7 @@ export default function Home() {
             setLoading(false)
         }
 
-        loadLeagues()
+        void loadLeagues()
     }, [user])
 
     return (
@@ -139,13 +139,8 @@ export default function Home() {
                 </p>
 
                 <ActionGrid>
-                    <ActionLink to="/create-league">
-                        Create League
-                    </ActionLink>
-
-                    <ActionLink to="/join-league">
-                        Join League
-                    </ActionLink>
+                    <ActionLink to="/create-league">Create League</ActionLink>
+                    <ActionLink to="/join-league">Join League</ActionLink>
                 </ActionGrid>
             </HeroCard>
 
@@ -164,10 +159,7 @@ export default function Home() {
 
                 <LeagueList>
                     {leagues.map((league) => (
-                        <LeagueLink
-                            key={league.id}
-                            to={`/league/${league.id}`}
-                        >
+                        <LeagueLink key={league.id} to={`/league/${league.id}`}>
                             {league.name}
                         </LeagueLink>
                     ))}

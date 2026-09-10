@@ -6,7 +6,7 @@ const LoginPage = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-`
+`;
 
 const LoginCard = styled.div`
     width: min(480px, 100%);
@@ -16,19 +16,19 @@ const LoginCard = styled.div`
     padding: 40px 32px;
     text-align: center;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-`
+`;
 
 const Title = styled.h1`
     margin: 0;
     color: #111827;
     font-size: 2.2rem;
-`
+`;
 
 const Subtitle = styled.p`
     margin: 12px 0 28px;
     color: #6b7280;
     line-height: 1.5;
-`
+`;
 
 const GoogleButton = styled.button`
     width: 100%;
@@ -64,7 +64,7 @@ const GoogleButton = styled.button`
     &:active {
         background: #f3f4f6;
     }
-`
+`;
 
 const GoogleIcon = styled.div`
     width: 22px;
@@ -76,13 +76,13 @@ const GoogleIcon = styled.div`
     font-weight: 800;
 
     color: #4285f4;
-`
+`;
 
 const FooterText = styled.p`
     margin: 22px 0 0;
     color: #9ca3af;
     font-size: 0.85rem;
-`
+`;
 
 export default function Login() {
     const { signInWithGoogle } = useAuth()

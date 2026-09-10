@@ -133,9 +133,7 @@ export default function League() {
 
             const { data: leagueData, error: leagueError } = await supabase
                 .from('leagues')
-                .select(
-                    'id, name, join_code, commissioner_id, draft_status, current_pick_number'
-                )
+                .select('id, name, join_code, commissioner_id, draft_status, current_pick_number')
                 .eq('id', leagueId)
                 .single()
 
@@ -159,10 +157,7 @@ export default function League() {
 
             const { count, error: matchupCountError } = await supabase
                 .from('league_matchups')
-                .select('id', {
-                    count: 'exact',
-                    head: true,
-                })
+                .select('id', {count: 'exact', head: true})
                 .eq('league_id', leagueId)
 
             if (matchupCountError) {
@@ -271,9 +266,7 @@ export default function League() {
         setError('')
 
         if (members.length < 2 || members.length % 2 !== 0) {
-            setError(
-                'The league must have an even number of teams.'
-            )
+            setError('The league must have an even number of teams.')
             return
         }
 
@@ -334,8 +327,7 @@ export default function League() {
                         <MemberLink
                             key={member.id}
                             to={member.user_id === user?.id
-                                ? `/league/${league.id}/team`
-                                : `/league/${league.id}/team/${member.id}`
+                                ? `/league/${league.id}/team` : `/league/${league.id}/team/${member.id}`
                             }
                         >
                             {member.team_name}
@@ -347,27 +339,15 @@ export default function League() {
             <ActionGrid>
                 {league.draft_status === 'COMPLETED' && (
                     <>
-                        <ActionLink to={`/league/${league.id}/team`}>
-                            My Team
-                        </ActionLink>
-
-                        <ActionLink to={`/league/${league.id}/free-agents`}>
-                            Free Agents
-                        </ActionLink>
-
-                        <ActionLink to={`/league/${league.id}/schedule`}>
-                            Schedule
-                        </ActionLink>
-
-                        <ActionLink to={`/league/${league.id}/standings`}>
-                            Standings
-                        </ActionLink>
+                        <ActionLink to={`/league/${league.id}/team`}>My Team</ActionLink>
+                        <ActionLink to={`/league/${league.id}/free-agents`}>Free Agents</ActionLink>
+                        <ActionLink to={`/league/${league.id}/schedule`}>Schedule</ActionLink>
+                        <ActionLink to={`/league/${league.id}/standings`}>Standings</ActionLink>
                     </>
                 )}
 
                 <ActionLink to={`/league/${league.id}/draft`}>
-                    {league.draft_status === 'COMPLETED'
-                        ? 'Draft Results' : 'Open Draft Room'}
+                    {league.draft_status === 'COMPLETED' ? 'Draft Results' : 'Open Draft Room'}
                 </ActionLink>
 
                 <ActionLink to={`/league/${league.id}/week-scores/${CURRENT_WEEK}`}>

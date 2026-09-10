@@ -27,12 +27,6 @@ const SectionTitle = styled.h2`;
     color: #111827;
 `;
 
-const Subheading = styled.h3`;
-    margin-top: 20px;
-    margin-bottom: 10px;
-    color: #374151;
-`;
-
 const StyledTable = styled.table`;
     width: 100%;
     border-collapse: collapse;
@@ -60,11 +54,6 @@ const StyledTable = styled.table`;
     }
 `;
 
-const Note = styled.p`;
-    color: #6b7280;
-    line-height: 1.6;
-`;
-
 export default function Scoring() {
     return (
         <ScoringPage>
@@ -72,8 +61,7 @@ export default function Scoring() {
                 <h1>Scoring Guidelines</h1>
 
                 <p>
-                    Fantasy points are earned by each college team's
-                    individual unit. Only units in your starting lineup
+                    Fantasy points are earned by each college team's individual unit. Only units in your starting lineup
                     count toward your weekly score.
                 </p>
             </IntroCard>

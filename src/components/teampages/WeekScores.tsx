@@ -457,8 +457,59 @@ export default function WeekScores() {
             }
         }
 
-        loadScores()
+        void loadScores()
     }, [leagueId, week, weekStarted, weekComplete])
+
+    function MatchupTeamDisplay({ team }: { team: FantasyTeamScore }) {
+        const sortedStarters = [...team.starters].sort(
+            (a, b) =>
+                UNIT_ORDER.indexOf(a.unitType) -
+                UNIT_ORDER.indexOf(b.unitType)
+        )
+
+        function renderUnit(unit: ScoredUnit) {
+            return (
+                <ScoreUnit
+                    key={unit.rosterId}
+                    $clickable={unit.locked}
+                    onClick={() => {
+                        if (unit.locked) {
+                            setSelectedUnit(unit)
+                        }
+                    }}
+                >
+                <span>
+                    {unit.teamName}{' '}
+                    {formatUnitType(unit.unitType)}
+                </span>
+
+                    <strong>
+                        {unit.score.toFixed(1)}
+                    </strong>
+                </ScoreUnit>
+            )
+        }
+
+        return (
+            <MatchupTeam>
+                <MatchupTeamHeader>
+                    <MatchupTeamName>
+                        {team.teamName}
+                    </MatchupTeamName>
+
+                    <BigScore>
+                        {team.starterTotal.toFixed(1)}
+                    </BigScore>
+                </MatchupTeamHeader>
+
+                {sortedStarters.map(renderUnit)}
+
+                <h4>Bench</h4>
+
+                {team.bench.map(renderUnit)}
+            </MatchupTeam>
+        )
+    }
 
     if (loading) {
         return <p>Loading Week {week} scores...</p>
@@ -521,112 +572,8 @@ export default function WeekScores() {
 
                 return (
                     <MatchupCard key={matchup.id}>
-                        <MatchupTeam>
-                            <MatchupTeamHeader>
-                                <MatchupTeamName>{team1.teamName}</MatchupTeamName>
-                                <BigScore>{weekStarted ? team1.starterTotal.toFixed(1) : '-'}</BigScore>
-                            </MatchupTeamHeader>
-
-                            {[...team1.starters]
-                                .sort(
-                                    (a, b) => UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType))
-                                .map((unit) => (
-                                    <ScoreUnit key={unit.rosterId} $clickable={unit.locked}
-                                        onClick={() => {
-                                            if (unit.locked) {
-                                                setSelectedUnit(unit)
-                                            }
-                                        }}
-                                    >
-                                <span>
-                                    {unit.teamName}{' '}
-                                    {formatUnitType(unit.unitType)}
-                                </span>
-
-                                    <strong>
-                                        {unit.score.toFixed(1)}
-                                    </strong>
-                                </ScoreUnit>
-                            ))}
-
-                            <h4>Bench</h4>
-
-                            {team1.bench.map((unit) => (
-                                <ScoreUnit
-                                    key={unit.rosterId}
-                                    $clickable={unit.locked}
-                                    onClick={() => {
-                                        if (unit.locked) {
-                                            setSelectedUnit(unit)
-                                        }
-                                    }}
-                                >
-                                    <span>
-                                        {unit.teamName}{' '}
-                                        {formatUnitType(unit.unitType)}
-                                    </span>
-
-                                    <strong>
-                                        {unit.score.toFixed(1)}
-                                    </strong>
-                                </ScoreUnit>
-                            ))}
-                        </MatchupTeam>
-
-                        <MatchupTeam>
-                            <MatchupTeamHeader>
-                                <MatchupTeamName>{team2.teamName}</MatchupTeamName>
-                                <BigScore>{weekStarted ? team2.starterTotal.toFixed(1) : '-'}</BigScore>
-                            </MatchupTeamHeader>
-
-                            {[...team2.starters]
-                                .sort(
-                                    (a, b) =>
-                                        UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType)
-                                )
-                                .map((unit) => (
-                                    <ScoreUnit
-                                        key={unit.rosterId}
-                                        $clickable={unit.locked}
-                                        onClick={() => {
-                                            if (unit.locked) {
-                                                setSelectedUnit(unit)
-                                            }
-                                        }}
-                                    >
-                                        <span>
-                                            {unit.teamName}{' '}
-                                            {formatUnitType(unit.unitType)}
-                                        </span>
-
-                                        <strong>
-                                            {unit.score.toFixed(1)}
-                                        </strong>
-                                    </ScoreUnit>
-                                ))}
-                            <h4>Bench</h4>
-
-                            {team2.bench.map((unit) => (
-                                <ScoreUnit
-                                    key={unit.rosterId}
-                                    $clickable={unit.locked}
-                                    onClick={() => {
-                                        if (unit.locked) {
-                                            setSelectedUnit(unit)
-                                        }
-                                    }}
-                                >
-                                    <span>
-                                        {unit.teamName}{' '}
-                                        {formatUnitType(unit.unitType)}
-                                    </span>
-
-                                    <strong>
-                                        {unit.score.toFixed(1)}
-                                    </strong>
-                                </ScoreUnit>
-                            ))}
-                        </MatchupTeam>
+                        <MatchupTeamDisplay team={team1} />
+                        <MatchupTeamDisplay team={team2} />
                     </MatchupCard>
                 )
             })}
@@ -655,4 +602,3 @@ export default function WeekScores() {
         </ScoresPage>
     )
 }
-

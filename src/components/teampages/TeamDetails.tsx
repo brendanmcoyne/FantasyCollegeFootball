@@ -121,7 +121,7 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
             }
         }
 
-        load2026Stats()
+        void load2026Stats()
     }, [activeTab, season2026Stats.length])
 
     return (
@@ -132,7 +132,6 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
 
                     <ModalTitle>
                         <h2>{teamName}</h2>
-
                         <p>{isOpponent ? getOpponentStatLabel(unitType) : formatUnitType(unitType)}</p>
                     </ModalTitle>
 
@@ -156,12 +155,7 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
                 {activeTab === '2025' && (
                     <StatsContent>
                         {collegeTeam ? (
-                            <Stats2025
-                                collegeTeam={collegeTeam}
-                                teams={teams}
-                                unitType={unitType}
-                                isOpponent={isOpponent}
-                            />
+                            <Stats2025 collegeTeam={collegeTeam} teams={teams} unitType={unitType} isOpponent={isOpponent}/>
                         ) : (
                             <p>2025 stats unavailable.</p>
                         )}
@@ -173,12 +167,7 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
                         {loading2026 ? (
                             <p>Loading 2026 stats...</p>
                         ) : team2026 ? (
-                            <Stats2026
-                                team={team2026}
-                                teams={season2026Stats}
-                                unitType={unitType}
-                                isOpponent={isOpponent}
-                            />
+                            <Stats2026 team={team2026} teams={season2026Stats} unitType={unitType} isOpponent={isOpponent}/>
                         ) : (
                             <p>2026 stats unavailable.</p>
                         )}
@@ -193,12 +182,7 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
     )
 }
 
-function Stats2025({ collegeTeam, teams, unitType, isOpponent }: {
-    collegeTeam: CollegeTeam
-    teams: CollegeTeam[]
-    unitType: RosterUnitType
-    isOpponent: boolean
-}) {
+function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: CollegeTeam, teams: CollegeTeam[], unitType: RosterUnitType, isOpponent: boolean }) {
     const stats = collegeTeam.stats
 
     if (unitType === 'PASSING') {
@@ -686,12 +670,8 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
 function ScheduleContent({teamName,}: { teamName: string }) {
     return (
         <ScheduleList>
-            {Array.from(
-                { length: 13 },
-                (_, week) => week
-            ).map((week) => {
-                const game =
-                    getTeamGame(teamName, week)
+            {Array.from({ length: 13 }, (_, week) => week).map((week) => {
+                const game = getTeamGame(teamName, week)
 
                 if (!game) {
                     return null

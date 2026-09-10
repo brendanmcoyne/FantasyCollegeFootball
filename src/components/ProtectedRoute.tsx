@@ -6,9 +6,7 @@ interface ProtectedRouteProps {
     children: ReactNode
 }
 
-export default function ProtectedRoute({
-                                           children,
-                                       }: ProtectedRouteProps) {
+export default function ProtectedRoute({children}: ProtectedRouteProps) {
     const { user, loading } = useAuth()
 
     if (loading) {

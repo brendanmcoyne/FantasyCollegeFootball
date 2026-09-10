@@ -1,10 +1,7 @@
 import type { CollegeTeam } from '../types/football'
 import type { UnitType } from '../types/fantasy'
 
-export function getUnitStats(
-    unitType: UnitType,
-    team?: CollegeTeam
-) {
+export function getUnitStats(unitType: UnitType, team?: CollegeTeam) {
     if (!team) {
         return null
     }

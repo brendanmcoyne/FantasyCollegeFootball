@@ -173,11 +173,3 @@ export async function get2026SeasonStats(): Promise<Season2026Stats[]> {
 
     return seasonStats
 }
-
-export async function get2026TeamStats(teamName: string): Promise<Season2026Stats | undefined> {
-    const seasonStats = await get2026SeasonStats()
-    const normalizedTeamName = normalizeTeamName(teamName)
-
-    return seasonStats.find(
-        (team) => normalizeTeamName(team.team) === normalizedTeamName)
-}

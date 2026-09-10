@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom';
 import { getTeams } from '../../api/cfbApi'
 import { createDraftUnits } from '../../utils/Units'
-import { getUnitStats } from '../../utils/unitStats'
 
 import type { CollegeTeam } from '../../types/football'
 import type { DraftUnit, UnitType } from '../../types/fantasy'
@@ -15,15 +14,7 @@ import TeamDetailsModal from '../../components/teampages/TeamDetails'
 const UnitsPage = styled.div`
     display: grid;
     gap: 24px;
-`
-
-const UnitStats = styled.div`
-    margin-top: 8px;
-    display: grid;
-    gap: 3px;
-    color: #4b5563;
-    font-size: 0.85rem;
-`
+`;
 
 const HeaderCard = styled.div`
     background: #ffffff;
@@ -31,7 +22,7 @@ const HeaderCard = styled.div`
     border-radius: 14px;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`
+`;
 
 const FiltersCard = styled.div`
     background: #ffffff;
@@ -40,13 +31,13 @@ const FiltersCard = styled.div`
     padding: 18px;
     display: grid;
     gap: 18px;
-`
+`;
 
 const FilterGroup = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-`
+`;
 
 const FilterButton = styled.button<{ $active?: boolean }>`
     border: 1px solid #d1d5db;
@@ -65,16 +56,13 @@ const FilterButton = styled.button<{ $active?: boolean }>`
         background: ${({ $active }) =>
     $active ? '#111827' : '#f3f4f6'};
     }
-`
+`;
 
 const UnitGrid = styled.div`
     display: grid;
-    grid-template-columns: repeat(
-        auto-fill,
-        minmax(220px, 1fr)
-    );
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 14px;
-`
+`;
 
 const UnitCard = styled.div`
     display: flex;
@@ -85,7 +73,7 @@ const UnitCard = styled.div`
     border-radius: 12px;
     padding: 14px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-`
+`;
 
 const UnitInfo = styled.div`
     min-width: 0;
@@ -166,7 +154,7 @@ export default function Units() {
             }
         }
 
-        loadTeams()
+        void loadTeams()
     }, [])
 
     if (loading) {
@@ -178,13 +166,8 @@ export default function Units() {
     }
 
     const filteredUnits = units.filter((unit) => {
-        const matchesType =
-            selectedType === 'ALL' ||
-            unit.unitType === selectedType
-
-        const matchesConference =
-            selectedConference === 'ALL' ||
-            unit.conference === selectedConference
+        const matchesType = selectedType === 'ALL' || unit.unitType === selectedType
+        const matchesConference = selectedConference === 'ALL' || unit.conference === selectedConference
 
         return matchesType && matchesConference
     })
@@ -198,13 +181,8 @@ export default function Units() {
                 <p>{teams.length} teams | {units.length} draftable units</p>
 
                 <RankingsTabs>
-                    <RankingsButton to="/units/rankings/2025">
-                        View 2025 Rankings
-                    </RankingsButton>
-
-                    <RankingsButton to="/units/rankings/2026">
-                        View 2026 Rankings
-                    </RankingsButton>
+                    <RankingsButton to="/units/rankings/2025">View 2025 Rankings</RankingsButton>
+                    <RankingsButton to="/units/rankings/2026">View 2026 Rankings</RankingsButton>
                 </RankingsTabs>
             </HeaderCard>
 
@@ -258,8 +236,6 @@ export default function Units() {
 
             <UnitGrid>
                 {filteredUnits.map((unit) => {
-                    const team = teams.find((team) => team.id === unit.teamId)
-
                     return (
                         <UnitCard key={unit.id}>
                             <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>

@@ -21,7 +21,7 @@ function generateJoinCode() {
 const CreatePage = styled.div`
     display: flex;
     justify-content: center;
-`
+`;
 
 const FormCard = styled.div`
     width: min(520px, 100%);
@@ -30,18 +30,18 @@ const FormCard = styled.div`
     border-radius: 14px;
     padding: 24px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-`
+`;
 
 const FormGroup = styled.div`
     display: grid;
     gap: 8px;
     margin-bottom: 18px;
-`
+`;
 
 const Label = styled.label`
     font-weight: 700;
     color: #374151;
-`
+`;
 
 const Input = styled.input`
     width: 100%;
@@ -55,7 +55,7 @@ const Input = styled.input`
     &:focus {
         border-color: #6b7280;
     }
-`
+`;
 
 const CreateButton = styled.button`
     width: 100%;
@@ -75,7 +75,7 @@ const CreateButton = styled.button`
         background: #9ca3af;
         cursor: not-allowed;
     }
-`
+`;
 
 const ErrorMessage = styled.p`
     color: #991b1b;
@@ -83,7 +83,7 @@ const ErrorMessage = styled.p`
     border: 1px solid #fecaca;
     border-radius: 8px;
     padding: 10px 12px;
-`
+`;
 
 export default function CreateLeague() {
     const { user } = useAuth()
@@ -144,45 +144,30 @@ export default function CreateLeague() {
                 <h1>Create League</h1>
 
                 <FormGroup>
-                    <Label>
-                        League Name
-                    </Label>
+                    <Label>League Name</Label>
 
                     <Input
                         type="text"
                         value={leagueName}
-                        onChange={(event) =>
-                            setLeagueName(event.target.value)
-                        }
+                        onChange={(event) => setLeagueName(event.target.value)}
                         placeholder="Enter Message"
                     />
                 </FormGroup>
 
                 <FormGroup>
-                    <Label>
-                        Your Team Name
-                    </Label>
+                    <Label>Your Team Name</Label>
 
                     <Input
                         type="text"
                         value={teamName}
-                        onChange={(event) =>
-                            setTeamName(event.target.value)
-                        }
+                        onChange={(event) => setTeamName(event.target.value)}
                         placeholder="Enter Message"
                     />
                 </FormGroup>
 
-                {error && (
-                    <ErrorMessage>
-                        {error}
-                    </ErrorMessage>
-                )}
+                {error && (<ErrorMessage>{error}</ErrorMessage>)}
 
-                <CreateButton
-                    onClick={handleCreateLeague}
-                    disabled={loading}
-                >
+                <CreateButton onClick={handleCreateLeague} disabled={loading}>
                     {loading ? 'Creating...' : 'Create League'}
                 </CreateButton>
             </FormCard>

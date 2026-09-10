@@ -22,6 +22,8 @@ import { calculateUnitScore } from '../../utils/scoring'
 import { getScoreBreakdown } from "../../utils/ScoringBreakdown"
 import { getLeagueStandings } from '../../utils/standings'
 
+import { normalizeTeamName, isGameLocked, formatGameStart, formatUnitType } from "../../utils/rosterUtils"
+
 import { UnitList, UnitRow, UnitInfo, UnitName, UnitDetails, TeamNameButton, OpponentButton, UnitScore,
     ModalBackdrop, ModalCard, ModalHeader, ModalTitle, CloseButton, ByeText, WeekNavigator, WeekArrow,
     WeekLabel, TeamHeader, TeamRecord, RosterActionButton } from '../../utils/rosterstyles'
@@ -210,7 +212,7 @@ export default function MyTeam() {
             }
         }
 
-        loadRoster()
+        void loadRoster()
     }, [leagueId, user, viewedWeek])
 
 
@@ -421,35 +423,6 @@ export default function MyTeam() {
                 )}
             </section>
         )
-    }
-
-    function formatUnitType(unitType: RosterUnitType) {
-        if (unitType === 'SPECIAL_TEAMS') {
-            return 'Special Teams'
-        }
-
-        return (
-            unitType.charAt(0) + unitType.slice(1).toLowerCase()
-        )
-    }
-
-    function getOpponentStatLabel(unitType: RosterUnitType) {
-        switch (unitType) {
-            case 'PASSING':
-                return 'Passing Defense'
-
-            case 'RUSHING':
-                return 'Rushing Defense'
-
-            case 'RECEIVING':
-                return 'Passing Defense'
-
-            case 'DEFENSE':
-                return 'Offense'
-
-            case 'SPECIAL_TEAMS':
-                return 'Special Teams'
-        }
     }
 
     function canMoveDirectlyToStarter(unit: RosterUnit) {
@@ -788,49 +761,21 @@ export default function MyTeam() {
     )
 }
 
-function normalizeTeamName(teamName: string): string {
-    return teamName.trim().toLowerCase()
-}
-
-function isGameLocked(gameStart: Date | null, now = new Date()): boolean {
-    if (!gameStart) {
-        return false
-    }
-
-    return (now.getTime() >= gameStart.getTime())
-}
-
-function formatGameStart(gameStart: Date): string {
-    return gameStart.toLocaleString(undefined,
-        {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-        }
-    )
-}
-
 function formatPlace(place: number): string {
     if (place === 0) {
         return '-'
     }
 
-    const lastTwoDigits = place % 100
+    const digitplace = place % 100
 
-    if (lastTwoDigits >= 11 && lastTwoDigits <= 13) {
+    if (digitplace >= 11 && digitplace <= 13) {
         return `${place}th`
     }
 
     switch (place % 10) {
-        case 1:
-            return `${place}st`
-        case 2:
-            return `${place}nd`
-        case 3:
-            return `${place}rd`
-        default:
-            return `${place}th`
+        case 1: return `${place}st`
+        case 2: return `${place}nd`
+        case 3: return `${place}rd`
+        default: return `${place}th`
     }
 }

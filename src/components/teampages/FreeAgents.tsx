@@ -108,14 +108,11 @@ const FilterButton = styled.button<{ $active?: boolean }>`
     font-weight: 600;
     cursor: pointer;
     
-    background: ${({ $active }) =>
-    $active ? '#1f2937' : '#ffffff'};
-    color: ${({ $active }) =>
-    $active ? '#ffffff' : '#374151'};
+    background: ${({ $active }) => $active ? '#1f2937' : '#ffffff'};
+    color: ${({ $active }) => $active ? '#ffffff' : '#374151'};
 
     &:hover {
-        background: ${({ $active }) =>
-            $active ? '#111827' : '#f3f4f6'};
+        background: ${({ $active }) => $active ? '#111827' : '#f3f4f6'};
     }
 
     @media (max-width: 700px) {
@@ -328,8 +325,7 @@ export default function FreeAgents() {
 
                             return {
                                 id: unit.id,
-                                collegeTeamId:
-                                unit.college_team_id,
+                                collegeTeamId: unit.college_team_id,
                                 teamName,
                                 unitType: unit.unit_type as RosterUnitType,
                                 rosterSlot: unit.roster_slot as | 'STARTER' | 'BENCH',
@@ -353,7 +349,7 @@ export default function FreeAgents() {
         }
 
 
-        loadFreeAgents()
+        void loadFreeAgents()
     }, [leagueId, user])
 
     useEffect(() => {
@@ -406,11 +402,8 @@ export default function FreeAgents() {
             return
         }
 
-        const freeAgent =
-            units.find((unit) => unit.id === selectedFreeAgent.id)
-
-        const rosterUnit =
-            myRoster.find((unit) => unit.id === dropUnit.id)
+        const freeAgent = units.find((unit) => unit.id === selectedFreeAgent.id)
+        const rosterUnit = myRoster.find((unit) => unit.id === dropUnit.id)
 
         if (!freeAgent || !rosterUnit) {
             return

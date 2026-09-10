@@ -15,6 +15,8 @@ import {BackButton} from "../../styles/commonstyles";
 import styled from 'styled-components'
 import { TeamLogo, getTeamLogo } from '../../styles/logos'
 
+import { formatUnitType } from "../../utils/rosterUtils"
+
 interface LeagueMember {
     id: string
     team_name: string
@@ -24,7 +26,7 @@ interface DraftPick {
     id: string
     league_member_id: string
     college_team_id: number
-    unit_type: string
+    unit_type: UnitType
     pick_number: number
 }
 
@@ -257,7 +259,7 @@ const DraftPickRow = styled.div`
         gap: 10px;
         padding: 12px;
     }
-`
+`;
 
 const DraftOwner = styled.div`
     font-weight: 700;
@@ -273,7 +275,7 @@ const DraftOwner = styled.div`
         color: #6b7280;
         margin-top: -4px;
     }
-`
+`;
 
 export default function Draft() {
     const { leagueId } = useParams()
@@ -379,7 +381,7 @@ export default function Draft() {
             }
         }
 
-        loadDraft()
+        void loadDraft()
     }, [leagueId, user])
 
     useEffect(() => {
@@ -434,7 +436,7 @@ export default function Draft() {
             .subscribe()
 
         return () => {
-            supabase.removeChannel(channel)
+            void supabase.removeChannel(channel)
         }
     }, [leagueId])
 
@@ -476,39 +478,27 @@ export default function Draft() {
                 <ResultsList>
                     {draftPicks.map((pick) => {
                         const unit = units.find(
-                            (unit) =>
-                                unit.teamId === pick.college_team_id &&
-                                unit.unitType === pick.unit_type
+                            (unit) => unit.teamId === pick.college_team_id && unit.unitType === pick.unit_type
                         )
 
                         const drafter = members.find(
-                            (member) =>
-                                member.id === pick.league_member_id
+                            (member) => member.id === pick.league_member_id
                         )
 
                         return (
                             <DraftPickRow key={pick.id}>
-                                <PickNumber>
-                                    #{pick.pick_number}
-                                </PickNumber>
+                                <PickNumber>#{pick.pick_number}</PickNumber>
 
                                 {unit && (
                                     <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
                                 )}
 
                                 <PickInfo>
-                                    <PickTeam>
-                                        {unit?.teamName ?? 'Unknown Team'}
-                                    </PickTeam>
-
-                                    <PickType>
-                                        {formatUnitType(pick.unit_type)}
-                                    </PickType>
+                                    <PickTeam>{unit?.teamName ?? 'Unknown Team'}</PickTeam>
+                                    <PickType>{formatUnitType(pick.unit_type)}</PickType>
                                 </PickInfo>
 
-                                <DraftOwner>
-                                    {drafter?.team_name ?? 'Unknown Team'}
-                                </DraftOwner>
+                                <DraftOwner>{drafter?.team_name ?? 'Unknown Team'}</DraftOwner>
                             </DraftPickRow>
                         )
                     })}
@@ -520,12 +510,9 @@ export default function Draft() {
     const currentDrafter = nextTurn.drafter
     const actualTurnNumber = nextTurn.turn
 
-    const round = Math.floor(
-        (actualTurnNumber - 1) / memberCount
-    )
+    const round = Math.floor((actualTurnNumber - 1) / memberCount)
 
-    const myTurn =
-        currentDrafter.league_member_id === member.id
+    const myTurn = currentDrafter.league_member_id === member.id
 
     const countRoster = rosterCounts()
 
@@ -539,9 +526,7 @@ export default function Draft() {
         )
 
     function getMemberPickCount(memberId: string) {
-        return draftPicks.filter(
-            (pick) => pick.league_member_id === memberId
-        ).length
+        return draftPicks.filter((pick) => pick.league_member_id === memberId).length
     }
 
     function isMemberRosterFull(memberId: string) {
@@ -553,10 +538,7 @@ export default function Draft() {
         const round = Math.floor((turnNumber - 1) / memberCount)
         const positionInRound = (turnNumber - 1) % memberCount
 
-        const draftIndex =
-            round % 2 === 0
-                ? positionInRound
-                : memberCount - 1 - positionInRound
+        const draftIndex = round % 2 === 0 ? positionInRound : memberCount - 1 - positionInRound
 
         return order[draftIndex]
     }
@@ -684,19 +666,13 @@ export default function Draft() {
     function isDrafted(unit: DraftUnit) {
         return draftPicks.some(
             (pick) =>
-                pick.college_team_id === unit.teamId &&
-                pick.unit_type === unit.unitType
+                pick.college_team_id === unit.teamId && pick.unit_type === unit.unitType
         )
     }
 
     const filteredUnits = units.filter((unit) => {
-        const matchesType =
-            selectedType === 'ALL' ||
-            unit.unitType === selectedType
-
-        const matchesConference =
-            selectedConference === 'ALL' ||
-            unit.conference === selectedConference
+        const matchesType = selectedType === 'ALL' || unit.unitType === selectedType
+        const matchesConference = selectedConference === 'ALL' || unit.conference === selectedConference
 
         return matchesType && matchesConference
     })
@@ -704,70 +680,33 @@ export default function Draft() {
     return (
         <DraftPage>
             <DraftHeader>
-                <BackButton
-                    onClick={() =>
-                        navigate(`/league/${leagueId}`)
-                    }
-                >
+                <BackButton onClick={() => navigate(`/league/${leagueId}`)}>
                     ← Back to League
                 </BackButton>
 
                 <h1>Draft Room</h1>
 
                 <DraftInfo>
-                    <InfoBadge>
-                        Round {round + 1}
-                    </InfoBadge>
-
-                    <InfoBadge>
-                        Pick #{league.current_pick_number}
-                    </InfoBadge>
-
-                    <InfoBadge>
-                        Status: {league.draft_status.split('_').join(' ')}
-                    </InfoBadge>
+                    <InfoBadge>Round {round + 1}</InfoBadge>
+                    <InfoBadge>Pick #{league.current_pick_number}</InfoBadge>
+                    <InfoBadge>Status: {league.draft_status.split('_').join(' ')}</InfoBadge>
                 </DraftInfo>
 
-                <TurnStatus $myTurn={myTurn}>
-                    {myTurn
-                        ? 'Your turn!'
-                        : 'Waiting for another team...'}
-                </TurnStatus>
+                <TurnStatus $myTurn={myTurn}>{myTurn ? 'Your turn!' : 'Waiting for another team...'}</TurnStatus>
 
-                {error && (
-                    <ErrorMessage>
-                        {error}
-                    </ErrorMessage>
-                )}
+                {error && (<ErrorMessage>{error}</ErrorMessage>)}
             </DraftHeader>
 
             <RosterCard>
                 <h2>Your Roster</h2>
 
                 <RosterCounts>
-                    <RosterCount>
-                        Passing: {countRoster.PASSING} / 3
-                    </RosterCount>
-
-                    <RosterCount>
-                        Rushing: {countRoster.RUSHING} / 3
-                    </RosterCount>
-
-                    <RosterCount>
-                        Receiving: {countRoster.RECEIVING} / 3
-                    </RosterCount>
-
-                    <RosterCount>
-                        Defense: {countRoster.DEFENSE} / 2
-                    </RosterCount>
-
-                    <RosterCount>
-                        Special Teams: {countRoster.SPECIAL_TEAMS} / 2
-                    </RosterCount>
-
-                    <RosterCount>
-                        Bench: {benchUsed} / 3
-                    </RosterCount>
+                    <RosterCount>Passing: {countRoster.PASSING} / 3</RosterCount>
+                    <RosterCount>Rushing: {countRoster.RUSHING} / 3</RosterCount>
+                    <RosterCount>Receiving: {countRoster.RECEIVING} / 3</RosterCount>
+                    <RosterCount>Defense: {countRoster.DEFENSE} / 2</RosterCount>
+                    <RosterCount>Special Teams: {countRoster.SPECIAL_TEAMS} / 2</RosterCount>
+                    <RosterCount>Bench: {benchUsed} / 3</RosterCount>
                 </RosterCounts>
             </RosterCard>
 
@@ -776,26 +715,14 @@ export default function Draft() {
                     <h3>Unit Type</h3>
 
                     <FilterGroup>
-                        {[
-                            'ALL',
-                            'PASSING',
-                            'RUSHING',
-                            'RECEIVING',
-                            'DEFENSE',
-                            'SPECIAL_TEAMS',
-                        ].map((type) => (
+                        {(['ALL', 'PASSING', 'RUSHING', 'RECEIVING', 'DEFENSE', 'SPECIAL_TEAMS'] as const
+                        ).map((type) => (
                             <FilterButton
                                 key={type}
                                 $active={selectedType === type}
-                                onClick={() =>
-                                    setSelectedType(
-                                        type as UnitType | 'ALL'
-                                    )
-                                }
+                                onClick={() => setSelectedType(type)}
                             >
-                                {type === 'ALL'
-                                    ? 'All'
-                                    : formatUnitType(type)}
+                                {type === 'ALL' ? 'All' : formatUnitType(type)}
                             </FilterButton>
                         ))}
                     </FilterGroup>
@@ -805,21 +732,11 @@ export default function Draft() {
                     <h3>Conference</h3>
 
                     <FilterGroup>
-                        {[
-                            'ALL',
-                            'ACC',
-                            'Big Ten',
-                            'Big 12',
-                            'SEC',
-                        ].map((conference) => (
+                        {['ALL', 'ACC', 'Big Ten', 'Big 12', 'SEC'].map((conference) => (
                             <FilterButton
                                 key={conference}
-                                $active={
-                                    selectedConference === conference
-                                }
-                                onClick={() =>
-                                    setSelectedConference(conference)
-                                }
+                                $active={selectedConference === conference}
+                                onClick={() => setSelectedConference(conference)}
                             >
                                 {conference === 'ALL' ? 'All Conferences' : conference}
                             </FilterButton>
@@ -833,18 +750,14 @@ export default function Draft() {
                     const drafted = isDrafted(unit)
                     const eligible = canDraftUnitType(unit.unitType)
 
-                    const team = teams.find(
-                        (team) => team.id === unit.teamId
-                    )
+                    const team = teams.find((team) => team.id === unit.teamId)
 
                     return (
                         <DraftUnitCard key={unit.id}>
                             <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
 
                             <DraftUnitInfo>
-                                <DraftUnitName>
-                                    {unit.teamName}
-                                </DraftUnitName>
+                                <DraftUnitName>{unit.teamName}</DraftUnitName>
 
                                 <DraftUnitType>
                                     {formatUnitType(unit.unitType)}
@@ -852,19 +765,11 @@ export default function Draft() {
                                     {unit.conference}
                                 </DraftUnitType>
 
-                                <UnitStats>
-                                    {getUnitStats(unit.unitType, team)}
-                                </UnitStats>
+                                <UnitStats>{getUnitStats(unit.unitType, team)}</UnitStats>
                             </DraftUnitInfo>
 
-                            <DraftButton
-                                disabled={drafted || !myTurn || !eligible}
-                                onClick={() => draftUnit(unit)}
-                            >
-                                {drafted
-                                    ? 'Drafted' : !eligible
-                                    ? 'Roster Full' : myTurn
-                                    ? 'Draft' : 'Waiting'}
+                            <DraftButton disabled={drafted || !myTurn || !eligible} onClick={() => draftUnit(unit)}>
+                                {drafted ? 'Drafted' : !eligible ? 'Roster Full' : myTurn ? 'Draft' : 'Waiting'}
                             </DraftButton>
                         </DraftUnitCard>
                     )
@@ -872,9 +777,4 @@ export default function Draft() {
             </DraftGrid>
         </DraftPage>
     )
-}
-
-function formatUnitType(unitType: string): string {
-    return unitType === 'SPECIAL_TEAMS' ? 'Special Teams'
-        : unitType.charAt(0) + unitType.slice(1).toLowerCase()
 }

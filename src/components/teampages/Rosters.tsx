@@ -15,6 +15,8 @@ import type { WeeklyTeamData } from '../../api/weeklyStats'
 import { getLeagueStandings } from '../../utils/standings'
 import TeamDetailsModal from '../../components/teampages/TeamDetails'
 
+import { normalizeTeamName, isGameLocked, formatGameStart, formatUnitType } from "../../utils/rosterUtils"
+
 import { UnitList, UnitRow, UnitInfo, UnitName, UnitDetails, TeamNameButton, OpponentButton, UnitScore,
     ModalBackdrop, ModalCard, ModalHeader, ModalTitle, CloseButton, ByeText, WeekNavigator, WeekArrow,
     WeekLabel, TeamHeader, TeamRecord } from '../../utils/rosterstyles'
@@ -130,24 +132,19 @@ export default function Rosters() {
                     throw rosterError
                 }
 
-                const [collegeTeams, weeklyStats,] = await Promise.all([getTeams(), getWeeklyStats(viewedWeek)])
+                const [collegeTeams, weeklyStats] = await Promise.all([getTeams(), getWeeklyStats(viewedWeek)])
 
                 setTeams(collegeTeams)
 
-                const teamMap = new Map<number, CollegeTeam>()
-
-                collegeTeams.forEach(
-                    (team) => {
-                        teamMap.set(team.id, team)
-                    }
+                const teamMap = new Map<number, CollegeTeam>(
+                    collegeTeams.map((team) => [team.id, team])
                 )
 
-                const weeklyMap = new Map<string, WeeklyTeamData>()
-
-                weeklyStats.forEach(
-                    (team) => {
-                        weeklyMap.set(normalizeTeamName(team.team), team)
-                    }
+                const weeklyMap = new Map<string, WeeklyTeamData>(
+                    weeklyStats.map((team) => [
+                        normalizeTeamName(team.team),
+                        team,
+                    ])
                 )
 
                 const now = new Date()
@@ -164,8 +161,8 @@ export default function Rosters() {
                             const gameStarted = gameStart !== null && now.getTime() >= gameStart.getTime()
 
                             const score =
-                                weeklyTeam &&
-                                gameStarted ? calculateUnitScore(unit.unit_type as RosterUnitType, weeklyTeam.stats) : 0
+                                weeklyTeam && gameStarted
+                                    ? calculateUnitScore(unit.unit_type as RosterUnitType, weeklyTeam.stats) : 0
 
                             return {
                                 id: unit.id,
@@ -200,7 +197,7 @@ export default function Rosters() {
             }
         }
 
-        loadRoster()
+        void loadRoster()
     }, [leagueId, memberId, viewedWeek])
 
     useEffect(() => {
@@ -362,63 +359,8 @@ export default function Rosters() {
             setSearchParams({})
         } else {
             setSearchParams({
-                week: String(week),
+                week: String(week)
             })
-        }
-    }
-
-    function normalizeTeamName(teamName: string): string {
-        return teamName.trim().toLowerCase()
-    }
-
-    function isGameLocked(gameStart: Date | null, now = new Date()): boolean {
-        if (!gameStart) {
-            return false
-        }
-
-        return (
-            now.getTime() >= gameStart.getTime()
-        )
-    }
-
-    function formatGameStart(gameStart: Date): string {
-        return gameStart.toLocaleString(undefined,
-            {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-            }
-        )
-    }
-
-    function formatUnitType(unitType: RosterUnitType) {
-        if (unitType === 'SPECIAL_TEAMS') {
-            return 'Special Teams'
-        }
-
-        return (
-            unitType.charAt(0) + unitType.slice(1).toLowerCase()
-        )
-    }
-
-    function getOpponentStatLabel(unitType: RosterUnitType) {
-        switch (unitType) {
-            case 'PASSING':
-                return 'Passing Defense'
-
-            case 'RUSHING':
-                return 'Rushing Defense'
-
-            case 'RECEIVING':
-                return 'Passing Defense'
-
-            case 'DEFENSE':
-                return 'Offense'
-
-            case 'SPECIAL_TEAMS':
-                return 'Special Teams'
         }
     }
 
