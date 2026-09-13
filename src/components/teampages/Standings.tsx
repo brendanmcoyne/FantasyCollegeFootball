@@ -85,6 +85,16 @@ const Points = styled.td`
     color: #4b5563;
 `;
 
+const PointDifferential = styled.td<{ $value: number }>`
+    font-weight: 600;
+    color: ${({ $value }) =>
+    $value > 0
+        ? '#16a34a'
+        : $value < 0
+            ? '#dc2626'
+            : '#4b5563'};
+`;
+
 export default function Standings() {
     const { leagueId } = useParams()
 
@@ -146,6 +156,7 @@ export default function Standings() {
                     <th>L</th>
                     <th>PF</th>
                     <th>PA</th>
+                    <th>PD</th>
                 </tr>
                 </thead>
 
@@ -158,6 +169,10 @@ export default function Standings() {
                         <Record>{team.losses}</Record>
                         <Points>{team.pointsFor.toFixed(1)}</Points>
                         <Points>{team.pointsAgainst.toFixed(1)}</Points>
+                        <PointDifferential $value={team.pointsFor - team.pointsAgainst}>
+                            {team.pointsFor - team.pointsAgainst > 0 ? '+' : ''}
+                            {(team.pointsFor - team.pointsAgainst).toFixed(1)}
+                        </PointDifferential>
                     </tr>
                 ))}
                 </tbody>
