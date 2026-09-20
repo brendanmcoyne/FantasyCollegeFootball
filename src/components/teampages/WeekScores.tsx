@@ -463,8 +463,7 @@ export default function WeekScores() {
     function MatchupTeamDisplay({ team }: { team: FantasyTeamScore }) {
         const sortedStarters = [...team.starters].sort(
             (a, b) =>
-                UNIT_ORDER.indexOf(a.unitType) -
-                UNIT_ORDER.indexOf(b.unitType)
+                UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType)
         )
 
         function renderUnit(unit: ScoredUnit) {

@@ -7,6 +7,7 @@ export interface WeeklyTeamData {
     team: string
     conference: string
     gameStart: Date | null
+    espnTeamId: string | null
     stats: TeamStats
 }
 
@@ -14,6 +15,7 @@ interface SpreadsheetRow {
     Team: string
     Conference: string
     'Game Start': string
+    'ESPN Team ID': string
 
     'Passing Yards': string
     'Passing TDs': string
@@ -114,7 +116,7 @@ export async function getWeeklyStats(
         .map((row) => ({
             team: row.Team.trim(),
             conference: row.Conference?.trim() ?? '',
-
+            espnTeamId: row['ESPN Team ID']?.trim() || null,
             gameStart: parseGameStart(row['Game Start']),
             
             stats: {
@@ -171,4 +173,92 @@ export async function getWeeklyStats(
                 blocked_kicks: toNumber(row['Blocked Kicks']),
             },
         }))
+}
+
+const ESPN_API_BASE_URL =
+    import.meta.env.VITE_STATS_API_URL ?? 'http://127.0.0.1:8000'
+
+interface EspnFantasyGameStats {
+    espn_team_id: string
+    team_name: string
+    event_id: string
+
+    passing_yards: number | null
+    passing_touchdowns: number | null
+    interceptions_thrown: number | null
+
+    rushing_yards: number | null
+    rushing_touchdowns: number | null
+    rushing_fumbles_lost: number | null
+    receiving_fumbles_lost: number | null
+
+    points_allowed: number | null
+    yards_allowed: number | null
+    defensive_interceptions: number | null
+    defensive_fumble_recoveries: number | null
+    defensive_touchdowns: number | null
+    sacks: number | null
+    safeties: number | null
+
+    field_goals_made: number | null
+    field_goals_attempted: number | null
+    made_field_goal_distances: number[] | null
+    extra_points_made: number | null
+    extra_points_attempted: number | null
+    special_teams_touchdowns: number | null
+    blocked_kicks: number | null
+}
+
+export interface LiveTeamStats {
+    espnTeamId: string
+    teamName: string
+    eventId: string
+    stats: Partial<TeamStats>
+}
+
+export async function getLiveGameStats(
+    eventId: string
+): Promise<LiveTeamStats[]> {
+    const response = await fetch(
+        `${ESPN_API_BASE_URL}/espn/fantasy-game/${encodeURIComponent(eventId)}`,
+        { cache: 'no-store' }
+    )
+
+    if (!response.ok) {
+        throw new Error(`Failed to load ESPN game ${eventId}.`)
+    }
+
+    const teams: EspnFantasyGameStats[] = await response.json()
+
+    return teams.map((team) => ({
+        espnTeamId: team.espn_team_id,
+        teamName: team.team_name,
+        eventId: team.event_id,
+        stats: {
+            passing_yards: team.passing_yards,
+            passing_touchdowns: team.passing_touchdowns,
+            passing_interceptions: team.interceptions_thrown,
+
+            rushing_yards: team.rushing_yards,
+            rushing_touchdowns: team.rushing_touchdowns,
+            rushing_fumbles_lost: team.rushing_fumbles_lost,
+            receiving_fumbles_lost: team.receiving_fumbles_lost,
+
+            points_allowed: team.points_allowed,
+            total_yards_allowed: team.yards_allowed,
+            defensive_interceptions: team.defensive_interceptions,
+            defensive_fumble_recoveries: team.defensive_fumble_recoveries,
+            defensive_touchdowns: team.defensive_touchdowns,
+            sacks: team.sacks,
+            safeties: team.safeties,
+
+            field_goals_made: team.field_goals_made,
+            field_goals_attempted: team.field_goals_attempted,
+            field_goal_distances_made: team.made_field_goal_distances,
+            extra_points_made: team.extra_points_made,
+            extra_points_attempted: team.extra_points_attempted,
+            special_teams_touchdowns: team.special_teams_touchdowns,
+            blocked_kicks: team.blocked_kicks,
+        },
+    }))
 }

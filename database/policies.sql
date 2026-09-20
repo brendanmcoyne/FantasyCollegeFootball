@@ -1,3 +1,4 @@
+
 alter table profiles enable row level security;
 alter table leagues enable row level security;
 alter table league_members enable row level security;
