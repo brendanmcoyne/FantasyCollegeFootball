@@ -692,7 +692,15 @@ export default function Draft() {
                     <InfoBadge>Status: {league.draft_status.split('_').join(' ')}</InfoBadge>
                 </DraftInfo>
 
-                <TurnStatus $myTurn={myTurn}>{myTurn ? 'Your turn!' : 'Waiting for another team...'}</TurnStatus>
+                <TurnStatus $myTurn={myTurn}>
+                    {myTurn
+                        ? `Your turn! (${member.team_name})`
+                        : `On the clock: ${
+                            members.find(
+                                (team) => team.id === currentDrafter.league_member_id
+                            )?.team_name ?? 'Unknown Team'
+                        }`}
+                </TurnStatus>
 
                 {error && (<ErrorMessage>{error}</ErrorMessage>)}
             </DraftHeader>
@@ -708,6 +716,43 @@ export default function Draft() {
                     <RosterCount>Special Teams: {countRoster.SPECIAL_TEAMS} / 2</RosterCount>
                     <RosterCount>Bench: {benchUsed} / 3</RosterCount>
                 </RosterCounts>
+
+                <h3>Drafted Units</h3>
+
+                <ResultsList>
+                    {draftPicks
+                        .filter((pick) => pick.league_member_id === member.id)
+                        .map((pick) => {
+                            const unit = units.find(
+                                (unit) =>
+                                    unit.teamId === pick.college_team_id && unit.unitType === pick.unit_type
+                            )
+
+                            return (
+                                <DraftUnitCard key={pick.id}>
+                                    {unit && (
+                                        <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
+                                    )}
+
+                                    <DraftUnitInfo>
+                                        <DraftUnitName>
+                                            {unit?.teamName ?? 'Unknown Team'}
+                                        </DraftUnitName>
+
+                                        <DraftUnitType>
+                                            {formatUnitType(pick.unit_type)}
+                                            {' • '}
+                                            Pick #{pick.pick_number}
+                                        </DraftUnitType>
+                                    </DraftUnitInfo>
+                                </DraftUnitCard>
+                            )
+                        })}
+
+                    {!draftPicks.some(
+                        (pick) => pick.league_member_id === member.id
+                    ) && <p>You haven't drafted any units yet.</p>}
+                </ResultsList>
             </RosterCard>
 
             <FiltersCard>
