@@ -1,19 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+
 import { supabase } from '../lib/supabase'
 import { getTeams } from '../../api/cfbApi'
-import { getWeeklyStats } from '../../api/weeklyStats'
-import { getTeamGame } from '../../utils/teamschedule'
-import { calculateUnitScore } from '../../utils/scoring'
-import { getScoreBreakdown } from '../../utils/ScoringBreakdown'
+import { getWeeklyStats, getEspnScoreboard, type EspnScoreboardGame } from '../../api/weeklyStats'
+
+import { getTeamOpponent } from '../../utils/teamschedule'
 import { CURRENT_WEEK } from '../../bigseasonfile'
-import { TeamLogo, getTeamLogo } from '../../styles/logos'
+
 import { STARTERS, type RosterUnitType } from '../../rosters'
-import { BackButton } from '../../styles/commonstyles'
+
 import type { CollegeTeam } from '../../types/football'
 import type { WeeklyTeamData } from '../../api/weeklyStats'
-import { getLeagueStandings } from '../../utils/standings'
+
 import TeamDetailsModal from '../../components/teampages/TeamDetails'
+import { BackButton } from '../../styles/commonstyles'
+import { getTeamLogo, TeamLogo } from '../../styles/logos'
+
+import { calculateUnitScore } from '../../utils/scoring'
+import { getScoreBreakdown } from "../../utils/ScoringBreakdown"
+import { getLeagueStandings } from '../../utils/standings'
 
 import { normalizeTeamName, isGameLocked, formatGameStart, formatUnitType } from "../../utils/rosterUtils"
 
@@ -48,11 +54,72 @@ interface RosterSectionProps {
     max: number
 }
 
+function normalizeEspnTeamName(name: string): string {
+    const aliases: Record<string, string> = {
+        mississippi: 'olemiss',
+    }
+
+    const normalized = name
+        .toLowerCase()
+        .replace(/\b(fighting irish|spartans|hoosiers|buckeyes|ducks|huskies|hawkeyes|cavaliers|mustangs|red raiders|bearcats|wildcats|rebels|tigers|sooners|bulldogs|gamecocks|aggies|razorbacks|gators|volunteers|commodores|longhorns|nittany lions|wolverines|scarlet knights|terrapins|boilermakers|bruins|badgers|golden gophers|cornhuskers|fighting illini|yellow jackets|blue devils|seminoles|wolfpack|cardinals|demon deacons|tar heels|cougars|utes|horned frogs|cyclones|knights|mountaineers|buffaloes|cowboys|crimson tide|war eagles)\b/g, '')
+        .replace(/[^a-z0-9]/g, '')
+
+    return aliases[normalized] ?? normalized
+}
+
+function getEspnGameForTeam(teamName: string, games: EspnScoreboardGame[]): EspnScoreboardGame | undefined {
+    const normalizedTeamName = normalizeEspnTeamName(teamName)
+
+    return games.find((game) =>
+        game.teams.some(
+            (team) =>
+                normalizeEspnTeamName(team.name) === normalizedTeamName
+        )
+    )
+}
+
+function getEspnGameResult(teamName: string, games: EspnScoreboardGame[]): { result: 'W' | 'L'; score: string } | null {
+    const game = getEspnGameForTeam(teamName, games)
+
+    if (!game || game.status !== 'STATUS_FINAL') {
+        return null
+    }
+
+    const normalizedTeamName = normalizeEspnTeamName(teamName)
+
+    const team = game.teams.find(
+        (gameTeam) =>
+            normalizeEspnTeamName(gameTeam.name) === normalizedTeamName
+    )
+
+    const opponent = game.teams.find(
+        (gameTeam) =>
+            normalizeEspnTeamName(gameTeam.name) !== normalizedTeamName
+    )
+
+    if (!team || !opponent) {
+        return null
+    }
+
+    const teamScore = Number(team.score)
+    const opponentScore = Number(opponent.score)
+
+    if (Number.isNaN(teamScore) || Number.isNaN(opponentScore) || teamScore === opponentScore) {
+        return null
+    }
+
+    return {
+        result: teamScore > opponentScore ? 'W' : 'L',
+        score: `${teamScore}-${opponentScore}`,
+    }
+}
+
 export default function Rosters() {
     const {leagueId, memberId,} = useParams()
     const [teamName, setTeamName] = useState('')
     const [roster, setRoster] = useState<RosterUnit[]>([])
     const [teams, setTeams] = useState<CollegeTeam[]>([])
+    const [espnGames, setEspnGames] = useState<EspnScoreboardGame[]>([])
     const [record, setRecord] = useState({wins: 0, losses: 0, place: 0})
     const [selectedStatsUnit, setSelectedStatsUnit] = useState<{ collegeTeamId: number, teamName: string, unitType: RosterUnitType, isOpponent?: boolean } | null>(null)
     const [selectedScoreUnit, setSelectedScoreUnit] = useState<RosterUnit | null>(null)
@@ -185,6 +252,28 @@ export default function Rosters() {
                         }
                     )
 
+                const scoreboardDates = Array.from(
+                    new Set(
+                        rosterUnits
+                            .map((unit) => unit.gameStart)
+                            .filter((date): date is Date => date !== null)
+                            .map((date) => {
+                                const year = date.getFullYear()
+                                const month = String(date.getMonth() + 1).padStart(2, '0')
+                                const day = String(date.getDate()).padStart(2, '0')
+
+                                return `${year}${month}${day}`
+                            })
+                    )
+                )
+
+                const scoreboards = await Promise.all(
+                    scoreboardDates.map((date) => getEspnScoreboard(date))
+                )
+
+                const scoreboard = scoreboards.flat()
+
+                setEspnGames(scoreboard)
                 setRoster(rosterUnits)
             } catch (err) {
                 if (err instanceof Error) {
@@ -236,14 +325,13 @@ export default function Rosters() {
     const specialTeams = starters.filter((unit) => unit.unitType === 'SPECIAL_TEAMS')
 
     function renderUnit(unit: RosterUnit) {
-        const game = getTeamGame(unit.teamName, viewedWeek)
+        const opponentName = getTeamOpponent(unit.teamName, viewedWeek)
+        const espnResult = getEspnGameResult(unit.teamName, espnGames)
 
-        const opponentName = game?.[0]
-        const gameResult = game?.[1]
-        const gameScore = game?.[2]
+        const gameResult = espnResult?.result
+        const gameScore = espnResult?.score
 
-        const hasFinalResult =
-            unit.locked && gameResult !== undefined && gameScore !== undefined
+        const hasFinalResult = unit.locked && gameResult !== undefined && gameScore !== undefined
 
         const opponentTeam =
             teams.find((team) => normalizeTeamName(team.name) === normalizeTeamName(opponentName ?? ''))

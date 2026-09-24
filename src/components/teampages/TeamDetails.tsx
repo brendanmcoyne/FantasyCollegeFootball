@@ -6,7 +6,7 @@ import type { RosterUnitType } from '../../rosters'
 
 import { get2026SeasonStats, type Season2026Stats } from '../../utils/2026stats'
 import { getStatRank, getStatRankByName, formatRank } from '../../utils/statRanking'
-import { getTeamGame } from '../../utils/teamschedule'
+import { getTeamOpponent } from '../../utils/teamschedule'
 
 import { ModalBackdrop, ModalCard, ModalHeader, ModalTitle, CloseButton } from '../../utils/rosterstyles'
 import { getTeamLogo, TeamLogo } from '../../styles/logos'
@@ -78,12 +78,8 @@ const ScheduleRow = styled.div`
 `;
 
 const ScheduleWeek = styled.strong``
-
 const ScheduleOpponent = styled.span``
 
-const ScheduleResult = styled.strong`
-    white-space: nowrap;
-`;
 
 export default function TeamDetails({teamName, teamId, unitType, isOpponent = false, teams, onClose,}: TeamDetailsModalProps) {
     const [activeTab, setActiveTab] = useState<Tab>('2025')
@@ -667,23 +663,20 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
     )
 }
 
-function ScheduleContent({teamName,}: { teamName: string }) {
+function ScheduleContent({teamName}: { teamName: string }) {
     return (
         <ScheduleList>
-            {Array.from({ length: 13 }, (_, week) => week).map((week) => {
-                const game = getTeamGame(teamName, week)
+            {Array.from({length: 13}, (_, week) => week).map((week) => {
+                const opponent = getTeamOpponent(teamName, week)
 
-                if (!game) {
+                if (!opponent) {
                     return null
                 }
-
-                const [opponent, result, score] = game
 
                 return (
                     <ScheduleRow key={week}>
                         <ScheduleWeek>Week {week}</ScheduleWeek>
                         <ScheduleOpponent>{opponent}</ScheduleOpponent>
-                        <ScheduleResult>{result && score ? `${result} ${score}` : ''}</ScheduleResult>
                     </ScheduleRow>
                 )
             })}

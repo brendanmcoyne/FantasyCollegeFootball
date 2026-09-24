@@ -216,9 +216,7 @@ export interface LiveTeamStats {
     stats: Partial<TeamStats>
 }
 
-export async function getLiveGameStats(
-    eventId: string
-): Promise<LiveTeamStats[]> {
+export async function getLiveGameStats(eventId: string): Promise<LiveTeamStats[]> {
     const response = await fetch(
         `${ESPN_API_BASE_URL}/espn/fantasy-game/${encodeURIComponent(eventId)}`,
         { cache: 'no-store' }
@@ -260,5 +258,63 @@ export async function getLiveGameStats(
             special_teams_touchdowns: team.special_teams_touchdowns,
             blocked_kicks: team.blocked_kicks,
         },
+    }))
+}
+
+export interface EspnScoreboardTeam {
+    espnTeamId: string
+    name: string
+    homeAway: 'home' | 'away'
+    score: string
+}
+
+export interface EspnScoreboardGame {
+    eventId: string
+    name: string
+    startTime: string
+    status: string
+    teams: EspnScoreboardTeam[]
+}
+
+interface EspnScoreboardResponse {
+    date: string
+    games: {
+        event_id: string
+        name: string
+        start_time: string
+        status: string
+        teams: {
+            espn_team_id: string
+            name: string
+            home_away: 'home' | 'away'
+            score: string
+        }[]
+    }[]
+}
+
+export async function getEspnScoreboard(date: string): Promise<EspnScoreboardGame[]> {
+    const response = await fetch(
+        `${ESPN_API_BASE_URL}/espn/scoreboard?date=${encodeURIComponent(date)}`,
+        { cache: 'no-store' }
+    )
+
+    if (!response.ok) {
+        throw new Error(`Failed to load ESPN scoreboard for ${date}.`)
+    }
+
+    const data: EspnScoreboardResponse = await response.json()
+
+    return data.games.map((game) => ({
+        eventId: game.event_id,
+        name: game.name,
+        startTime: game.start_time,
+        status: game.status,
+
+        teams: game.teams.map((team) => ({
+            espnTeamId: team.espn_team_id,
+            name: team.name,
+            homeAway: team.home_away,
+            score: team.score,
+        })),
     }))
 }
