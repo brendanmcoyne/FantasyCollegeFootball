@@ -7,7 +7,6 @@ export interface WeeklyTeamData {
     team: string
     conference: string
     gameStart: Date | null
-    espnTeamId: string | null
     stats: TeamStats
 }
 
@@ -15,7 +14,6 @@ interface SpreadsheetRow {
     Team: string
     Conference: string
     'Game Start': string
-    'ESPN Team ID': string
 
     'Passing Yards': string
     'Passing TDs': string
@@ -84,9 +82,7 @@ function parseGameStart(value: string | undefined): Date | null {
     return parsed
 }
 
-export async function getWeeklyStats(
-    week: number
-): Promise<WeeklyTeamData[]> {
+export async function getWeeklyStats(week: number): Promise<WeeklyTeamData[]> {
     const url = WEEKLY_DATA_URLS[week]
 
     if (!url) {
@@ -116,7 +112,6 @@ export async function getWeeklyStats(
         .map((row) => ({
             team: row.Team.trim(),
             conference: row.Conference?.trim() ?? '',
-            espnTeamId: row['ESPN Team ID']?.trim() || null,
             gameStart: parseGameStart(row['Game Start']),
             
             stats: {
@@ -175,8 +170,7 @@ export async function getWeeklyStats(
         }))
 }
 
-const ESPN_API_BASE_URL =
-    import.meta.env.VITE_STATS_API_URL ?? 'http://127.0.0.1:8000'
+const ESPN_API_BASE_URL = import.meta.env.VITE_STATS_API_URL ?? 'http://127.0.0.1:8000'
 
 interface EspnFantasyGameStats {
     espn_team_id: string
@@ -261,19 +255,21 @@ export async function getLiveGameStats(eventId: string): Promise<LiveTeamStats[]
     }))
 }
 
-export interface EspnScoreboardTeam {
+export interface EspnGameTeam {
     espnTeamId: string
     name: string
     homeAway: 'home' | 'away'
-    score: string
+    score: string | number | null
+    winner?: boolean | null
 }
 
-export interface EspnScoreboardGame {
+export interface EspnGame {
     eventId: string
     name: string
     startTime: string
-    status: string
-    teams: EspnScoreboardTeam[]
+    status: string | null
+    week?: number
+    teams: EspnGameTeam[]
 }
 
 interface EspnScoreboardResponse {
@@ -292,7 +288,48 @@ interface EspnScoreboardResponse {
     }[]
 }
 
-export async function getEspnScoreboard(date: string): Promise<EspnScoreboardGame[]> {
+
+interface EspnTeamScheduleResponse {
+    espn_team_id: string
+    season: number
+    games: {
+        event_id: string
+        name: string
+        start_time: string
+        status: string | null
+        week: number
+        teams: {
+            espn_team_id: string
+            name: string
+            home_away: 'home' | 'away'
+            score: number | null
+            winner: boolean | null
+        }[]
+    }[]
+}
+
+interface EspnTeamIdResponse {
+    espn_team_id: string
+    name: string
+}
+
+export async function getEspnTeamId(teamName: string): Promise<string> {
+    const response = await fetch(
+        `${ESPN_API_BASE_URL}/espn/team-id?team_name=${encodeURIComponent(teamName)}`,
+        { cache: 'no-store' }
+    )
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to find ESPN team ID for ${teamName}.`
+        )
+    }
+
+    const data: EspnTeamIdResponse = await response.json()
+    return data.espn_team_id
+}
+
+export async function getEspnScoreboard(date: string): Promise<EspnGame[]> {
     const response = await fetch(
         `${ESPN_API_BASE_URL}/espn/scoreboard?date=${encodeURIComponent(date)}`,
         { cache: 'no-store' }
@@ -315,6 +352,36 @@ export async function getEspnScoreboard(date: string): Promise<EspnScoreboardGam
             name: team.name,
             homeAway: team.home_away,
             score: team.score,
+        })),
+    }))
+}
+
+export async function getEspnTeamSchedule(espnTeamId: string, season = 2026): Promise<EspnGame[]> {
+    const response = await fetch(
+        `${ESPN_API_BASE_URL}/espn/team-schedule/${encodeURIComponent(espnTeamId)}?season=${season}`,
+        {cache: 'no-store'}
+    )
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to load ESPN schedule for team ${espnTeamId}.`
+        )
+    }
+
+    const data: EspnTeamScheduleResponse = await response.json()
+
+    return data.games.map((game) => ({
+        eventId: game.event_id,
+        name: game.name,
+        startTime: game.start_time,
+        status: game.status,
+        week: game.week,
+        teams: game.teams.map((team) => ({
+            espnTeamId: team.espn_team_id,
+            name: team.name,
+            homeAway: team.home_away,
+            score: team.score,
+            winner: team.winner,
         })),
     }))
 }

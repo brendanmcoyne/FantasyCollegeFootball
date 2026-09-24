@@ -4,6 +4,8 @@ import styled from 'styled-components'
 import type { CollegeTeam } from '../../types/football'
 import type { RosterUnitType } from '../../rosters'
 
+import { getEspnTeamId, getEspnTeamSchedule, type EspnGame} from '../../api/weeklyStats'
+
 import { get2026SeasonStats, type Season2026Stats } from '../../utils/2026stats'
 import { getStatRank, getStatRankByName, formatRank } from '../../utils/statRanking'
 import { getTeamOpponent } from '../../utils/teamschedule'
@@ -21,6 +23,7 @@ interface TeamDetailsModalProps {
     teams: CollegeTeam[]
     onClose: () => void
 }
+
 
 const DetailsCard = styled(ModalCard)`
     width: min(600px, calc(100vw - 32px));
@@ -76,10 +79,6 @@ const ScheduleRow = styled.div`
     padding: 10px 0;
     border-bottom: 1px solid #e5e7eb;
 `;
-
-const ScheduleWeek = styled.strong``
-const ScheduleOpponent = styled.span``
-
 
 export default function TeamDetails({teamName, teamId, unitType, isOpponent = false, teams, onClose,}: TeamDetailsModalProps) {
     const [activeTab, setActiveTab] = useState<Tab>('2025')
@@ -664,6 +663,30 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
 }
 
 function ScheduleContent({teamName}: { teamName: string }) {
+    const [games, setGames] = useState<EspnGame[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        async function loadSchedule() {
+            try {
+                const espnTeamId = await getEspnTeamId(teamName)
+                const schedule = await getEspnTeamSchedule(espnTeamId)
+
+                setGames(schedule)
+            } catch (error) {
+                console.error('Failed to load ESPN schedule:', error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        void loadSchedule()
+    }, [teamName])
+
+    if (loading) {
+        return <p>Loading schedule...</p>
+    }
+
     return (
         <ScheduleList>
             {Array.from({length: 13}, (_, week) => week).map((week) => {
@@ -673,10 +696,37 @@ function ScheduleContent({teamName}: { teamName: string }) {
                     return null
                 }
 
+                const game = games.find(
+                    (game) => game.week === week
+                )
+
+                const team = game?.teams.find(
+                    (team) => team.espnTeamId === game.teams.find(
+                        (otherTeam) => otherTeam.name.includes(teamName)
+                    )?.espnTeamId
+                )
+
+                const opponentTeam = game?.teams.find(
+                    (gameTeam) => gameTeam.espnTeamId !== team?.espnTeamId
+                )
+
+                const hasScore =
+                    team?.score !== null &&
+                    team?.score !== undefined &&
+                    opponentTeam?.score !== null &&
+                    opponentTeam?.score !== undefined
+
                 return (
                     <ScheduleRow key={week}>
-                        <ScheduleWeek>Week {week}</ScheduleWeek>
-                        <ScheduleOpponent>{opponent}</ScheduleOpponent>
+                        <strong>Week {week}</strong>
+                        <span>{opponent}</span>
+
+                        {hasScore && (
+                            <strong>
+                                {team!.winner ? 'W' : 'L'}{' '}
+                                {team!.score}-{opponentTeam!.score}
+                            </strong>
+                        )}
                     </ScheduleRow>
                 )
             })}
@@ -685,8 +735,7 @@ function ScheduleContent({teamName}: { teamName: string }) {
 }
 
 function StatRow({label, value, rank, suffix = ''}: { label: string, value: number, rank: number | null, suffix?: string }) {
-    const displayedValue =
-        Number.isInteger(value) ? value.toLocaleString() : value.toLocaleString(undefined, {maximumFractionDigits: 1})
+    const displayedValue = Number.isInteger(value) ? value.toLocaleString() : value.toLocaleString(undefined, {maximumFractionDigits: 1})
 
     return (
         <StatLine>

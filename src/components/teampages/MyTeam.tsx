@@ -4,7 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
 import { getTeams } from '../../api/cfbApi'
-import { getWeeklyStats, getEspnScoreboard, type EspnScoreboardGame } from '../../api/weeklyStats'
+import { getWeeklyStats, getEspnScoreboard, type EspnGame } from '../../api/weeklyStats'
 
 import { getTeamOpponent } from '../../utils/teamschedule'
 import { CURRENT_WEEK } from '../../bigseasonfile'
@@ -23,6 +23,7 @@ import { getScoreBreakdown } from "../../utils/ScoringBreakdown"
 import { getLeagueStandings } from '../../utils/standings'
 
 import { normalizeTeamName, isGameLocked, formatGameStart, formatUnitType } from "../../utils/rosterUtils"
+import { getEspnGameResult } from "../../utils/espnUtils";
 
 import { UnitList, UnitRow, UnitInfo, UnitName, UnitDetails, TeamNameButton, OpponentButton, UnitScore,
     ModalBackdrop, ModalCard, ModalHeader, ModalTitle, CloseButton, ByeText, WeekNavigator, WeekArrow,
@@ -52,66 +53,6 @@ interface RosterSectionProps {
     max: number
 }
 
-function normalizeEspnTeamName(name: string): string {
-    const aliases: Record<string, string> = {
-        mississippi: 'olemiss',
-    }
-
-    const normalized = name
-        .toLowerCase()
-        .replace(/\b(fighting irish|spartans|hoosiers|buckeyes|ducks|huskies|hawkeyes|cavaliers|mustangs|red raiders|bearcats|wildcats|rebels|tigers|sooners|bulldogs|gamecocks|aggies|razorbacks|gators|volunteers|commodores|longhorns|nittany lions|wolverines|scarlet knights|terrapins|boilermakers|bruins|badgers|golden gophers|cornhuskers|fighting illini|yellow jackets|blue devils|seminoles|wolfpack|cardinals|demon deacons|tar heels|cougars|utes|horned frogs|cyclones|knights|mountaineers|buffaloes|cowboys|crimson tide|war eagles)\b/g, '')
-        .replace(/[^a-z0-9]/g, '')
-
-    return aliases[normalized] ?? normalized
-}
-
-function getEspnGameForTeam(teamName: string, games: EspnScoreboardGame[]): EspnScoreboardGame | undefined {
-    const normalizedTeamName = normalizeEspnTeamName(teamName)
-
-    return games.find((game) =>
-        game.teams.some(
-            (team) =>
-                normalizeEspnTeamName(team.name) === normalizedTeamName
-        )
-    )
-}
-
-function getEspnGameResult(teamName: string, games: EspnScoreboardGame[]): { result: 'W' | 'L'; score: string } | null {
-    const game = getEspnGameForTeam(teamName, games)
-
-    if (!game || game.status !== 'STATUS_FINAL') {
-        return null
-    }
-
-    const normalizedTeamName = normalizeEspnTeamName(teamName)
-
-    const team = game.teams.find(
-        (gameTeam) =>
-            normalizeEspnTeamName(gameTeam.name) === normalizedTeamName
-    )
-
-    const opponent = game.teams.find(
-        (gameTeam) =>
-            normalizeEspnTeamName(gameTeam.name) !== normalizedTeamName
-    )
-
-    if (!team || !opponent) {
-        return null
-    }
-
-    const teamScore = Number(team.score)
-    const opponentScore = Number(opponent.score)
-
-    if (Number.isNaN(teamScore) || Number.isNaN(opponentScore) || teamScore === opponentScore) {
-        return null
-    }
-
-    return {
-        result: teamScore > opponentScore ? 'W' : 'L',
-        score: `${teamScore}-${opponentScore}`,
-    }
-}
-
 export default function MyTeam() {
     const { leagueId } = useParams()
     const { user } = useAuth()
@@ -127,7 +68,7 @@ export default function MyTeam() {
     const [teams, setTeams] = useState<CollegeTeam[]>([])
     const [selectedStatsUnit, setSelectedStatsUnit] = useState<(RosterUnit & { isOpponent?: boolean }) | null>(null)
 
-    const [espnGames, setEspnGames] = useState<EspnScoreboardGame[]>([])
+    const [espnGames, setEspnGames] = useState<EspnGame[]>([])
 
     const [selectedScoreUnit, setSelectedScoreUnit] = useState<RosterUnit | null>(null)
     const [searchParams, setSearchParams] = useSearchParams()
@@ -136,6 +77,7 @@ export default function MyTeam() {
     const viewingPastWeek = viewedWeek < CURRENT_WEEK
 
     const [record, setRecord] = useState({wins: 0, losses: 0, place: 0})
+    const [leagueMemberId, setLeagueMemberId] = useState<string | null>(null)
 
     useEffect(() => {
         async function loadRoster() {
@@ -159,6 +101,7 @@ export default function MyTeam() {
 
                 const leagueMember = member as LeagueMember
 
+                setLeagueMemberId(leagueMember.id)
                 setTeamName(leagueMember.team_name)
 
                 const standings = await getLeagueStandings(leagueId)
@@ -271,7 +214,6 @@ export default function MyTeam() {
                     )
                 )
 
-                console.log('ESPN SCOREBOARD DATES:', scoreboardDates)
 
                 const scoreboards = await Promise.all(
                     scoreboardDates.map((date) => getEspnScoreboard(date))
@@ -280,14 +222,6 @@ export default function MyTeam() {
                 const scoreboard = scoreboards.flat()
 
                 setEspnGames(scoreboard)
-
-                console.log(
-                    'ESPN RESULT TEST:',
-                    rosterUnits.map((unit) => ({
-                        team: unit.teamName,
-                        result: getEspnGameResult(unit.teamName, scoreboard),
-                    }))
-                )
 
                 if (!viewingPastWeek) {
                     for (const unit of rosterUnits) {
@@ -349,7 +283,7 @@ export default function MyTeam() {
     const specialTeams = starters.filter((unit) => unit.unitType === 'SPECIAL_TEAMS')
 
     async function swapUnits(benchUnit: RosterUnit, starterUnit: RosterUnit) {
-        if (!leagueId || !user) {
+        if (!leagueId || !leagueMemberId) {
             return
         }
 
@@ -373,22 +307,10 @@ export default function MyTeam() {
 
         setError('')
 
-        const {data: member, error: memberError} = await supabase
-            .from('league_members')
-            .select('id')
-            .eq('league_id', leagueId)
-            .eq('user_id', user.id)
-            .single()
-
-        if (memberError) {
-            setError(memberError.message)
-            return
-        }
-
         const { error: swapError } = await supabase.rpc('swap_roster_units',
             {
                 target_league_id: leagueId,
-                target_league_member_id: member.id,
+                target_league_member_id: leagueMemberId,
                 bench_unit_id: currentBenchUnit.id,
                 starter_unit_id: currentStarterUnit.id,
                 target_week: CURRENT_WEEK,
@@ -431,7 +353,6 @@ export default function MyTeam() {
                     <UnitList>
                         {units.map((unit) => {
                             const opponentName = getTeamOpponent(unit.teamName, viewedWeek)
-
                             const espnResult = getEspnGameResult(unit.teamName, espnGames)
 
                             const gameResult = espnResult?.result
@@ -528,7 +449,7 @@ export default function MyTeam() {
     }
 
     async function moveToStarter(unit: RosterUnit) {
-        if (!leagueId || !user) {
+        if (!leagueId || !leagueMemberId) {
             return
         }
 
@@ -546,22 +467,10 @@ export default function MyTeam() {
 
         setError('')
 
-        const {data: member, error: memberError} = await supabase
-            .from('league_members')
-            .select('id')
-            .eq('league_id', leagueId)
-            .eq('user_id', user.id)
-            .single()
-
-        if (memberError) {
-            setError(memberError.message)
-            return
-        }
-
         const { error: moveError } = await supabase.rpc('move_roster_unit_to_starter',
             {
                 target_league_id: leagueId,
-                target_league_member_id: member.id,
+                target_league_member_id: leagueMemberId,
                 target_roster_unit_id: currentUnit.id,
                 target_week: CURRENT_WEEK,
             }
