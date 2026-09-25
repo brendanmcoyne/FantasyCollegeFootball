@@ -184,6 +184,9 @@ interface EspnFantasyGameStats {
     rushing_yards: number | null
     rushing_touchdowns: number | null
     rushing_fumbles_lost: number | null
+
+    receiving_yards: number | null
+    receiving_touchdowns: number | null
     receiving_fumbles_lost: number | null
 
     points_allowed: number | null
@@ -207,7 +210,7 @@ export interface LiveTeamStats {
     espnTeamId: string
     teamName: string
     eventId: string
-    stats: Partial<TeamStats>
+    stats: TeamStats
 }
 
 export async function getLiveGameStats(eventId: string): Promise<LiveTeamStats[]> {
@@ -227,28 +230,57 @@ export async function getLiveGameStats(eventId: string): Promise<LiveTeamStats[]
         teamName: team.team_name,
         eventId: team.event_id,
         stats: {
+            games_played: null,
+            points_scored: null,
+            points_per_game: null,
+
+            rushing_yards: team.rushing_yards,
+            rushing_yards_per_game: null,
+            rushing_touchdowns: team.rushing_touchdowns,
+            rushing_fumbles_lost: team.rushing_fumbles_lost,
+
             passing_yards: team.passing_yards,
+            passing_yards_per_game: null,
             passing_touchdowns: team.passing_touchdowns,
             passing_interceptions: team.interceptions_thrown,
 
-            rushing_yards: team.rushing_yards,
-            rushing_touchdowns: team.rushing_touchdowns,
-            rushing_fumbles_lost: team.rushing_fumbles_lost,
+            receiving_yards: team.receiving_yards,
+            receiving_touchdowns: team.receiving_touchdowns,
             receiving_fumbles_lost: team.receiving_fumbles_lost,
 
+            total_yards: null,
+            total_yards_per_game: null,
+
             points_allowed: team.points_allowed,
+            points_allowed_per_game: null,
+
+            rushing_yards_allowed: null,
+            rushing_yards_allowed_per_game: null,
+
+            passing_yards_allowed: null,
+            passing_yards_allowed_per_game: null,
+
             total_yards_allowed: team.yards_allowed,
+            total_yards_allowed_per_game: null,
+
             defensive_interceptions: team.defensive_interceptions,
             defensive_fumble_recoveries: team.defensive_fumble_recoveries,
             defensive_touchdowns: team.defensive_touchdowns,
             sacks: team.sacks,
             safeties: team.safeties,
 
-            field_goals_made: team.field_goals_made,
+            turnovers: null,
+            takeaways: null,
+
             field_goals_attempted: team.field_goals_attempted,
+            field_goals_made: team.field_goals_made,
+            field_goal_percentage: null,
             field_goal_distances_made: team.made_field_goal_distances,
-            extra_points_made: team.extra_points_made,
+
             extra_points_attempted: team.extra_points_attempted,
+            extra_points_made: team.extra_points_made,
+            extra_point_percentage: null,
+
             special_teams_touchdowns: team.special_teams_touchdowns,
             blocked_kicks: team.blocked_kicks,
         },
@@ -384,4 +416,31 @@ export async function getEspnTeamSchedule(espnTeamId: string, season = 2026): Pr
             winner: team.winner,
         })),
     }))
+}
+
+export async function getEspnEventIdForWeek(espnTeamId: string, week: number, season = 2026): Promise<string | null> {
+    const schedule = await getEspnTeamSchedule(espnTeamId, season)
+    const game = schedule.find((game) => game.week === week)
+
+    return game?.eventId ?? null
+}
+
+export async function getLiveTeamStats(teamName: string, week: number, season = 2026): Promise<LiveTeamStats | null> {
+    const espnTeamId = await getEspnTeamId(teamName)
+
+    if (!espnTeamId) {
+        return null
+    }
+
+    const eventId = await getEspnEventIdForWeek(espnTeamId, week, season)
+
+    if (!eventId) {
+        return null
+    }
+
+    const gameStats = await getLiveGameStats(eventId)
+
+    return (
+        gameStats.find((team) => team.espnTeamId === espnTeamId) ?? null
+    )
 }

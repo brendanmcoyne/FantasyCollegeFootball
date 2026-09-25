@@ -665,13 +665,15 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
 function ScheduleContent({teamName}: { teamName: string }) {
     const [games, setGames] = useState<EspnGame[]>([])
     const [loading, setLoading] = useState(true)
+    const [espnTeamId, setEspnTeamId] = useState<string | null>(null)
 
     useEffect(() => {
         async function loadSchedule() {
             try {
-                const espnTeamId = await getEspnTeamId(teamName)
-                const schedule = await getEspnTeamSchedule(espnTeamId)
+                const resolvedEspnTeamId = await getEspnTeamId(teamName)
+                const schedule = await getEspnTeamSchedule(resolvedEspnTeamId)
 
+                setEspnTeamId(resolvedEspnTeamId)
                 setGames(schedule)
             } catch (error) {
                 console.error('Failed to load ESPN schedule:', error)
@@ -687,23 +689,34 @@ function ScheduleContent({teamName}: { teamName: string }) {
         return <p>Loading schedule...</p>
     }
 
+    const scheduledWeeks = Array.from(
+        {length: 13},
+        (_, week) => week
+    ).filter((week) => {
+        const opponent = getTeamOpponent(teamName, week)
+
+        return opponent && opponent !== 'BYE'
+    })
+
     return (
         <ScheduleList>
             {Array.from({length: 13}, (_, week) => week).map((week) => {
                 const opponent = getTeamOpponent(teamName, week)
 
-                if (!opponent) {
-                    return null
+                if (opponent === 'BYE') {
+                    return (
+                        <ScheduleRow key={week}>
+                            <strong>Week {week}</strong>
+                            <span>BYE</span>
+                        </ScheduleRow>
+                    )
                 }
 
-                const game = games.find(
-                    (game) => game.week === week
-                )
+                const gameIndex = scheduledWeeks.indexOf(week)
+                const game = games[gameIndex]
 
                 const team = game?.teams.find(
-                    (team) => team.espnTeamId === game.teams.find(
-                        (otherTeam) => otherTeam.name.includes(teamName)
-                    )?.espnTeamId
+                    (gameTeam) => gameTeam.espnTeamId === espnTeamId
                 )
 
                 const opponentTeam = game?.teams.find(
