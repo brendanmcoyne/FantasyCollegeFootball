@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { supabase } from '../lib/supabase'
@@ -54,6 +54,7 @@ export default function Rosters() {
     const {leagueId, memberId,} = useParams()
     const [teamName, setTeamName] = useState('')
     const [roster, setRoster] = useState<RosterUnit[]>([])
+    const rosterRef = useRef<RosterUnit[]>([])
     const [teams, setTeams] = useState<CollegeTeam[]>([])
     const [espnGames, setEspnGames] = useState<EspnGame[]>([])
     const [record, setRecord] = useState({wins: 0, losses: 0, place: 0})
@@ -68,6 +69,8 @@ export default function Rosters() {
     const viewedWeek = Number(searchParams.get('week')) || CURRENT_WEEK
 
     const viewingPastWeek = viewedWeek < CURRENT_WEEK
+
+    useEffect(() => {rosterRef.current = roster}, [roster])
 
     useEffect(() => {
         async function loadRoster() {
@@ -244,7 +247,6 @@ export default function Rosters() {
                 const scoreboard = scoreboards.flat()
 
                 setEspnGames(scoreboard)
-
                 setRoster(rosterUnits)
             } catch (err) {
                 if (err instanceof Error) {
@@ -267,43 +269,43 @@ export default function Rosters() {
 
         const interval = window.setInterval(() => {
             const now = new Date()
+            console.log('Refreshing live ESPN stats...', now)
 
-            setRoster((currentRoster) => {
-                void Promise.all(
-                    currentRoster.map(async (unit) => {
-                        const locked = isGameLocked(unit.gameStart, now)
+            void Promise.all(
+                rosterRef.current.map(async (unit) => {
+                    const locked = isGameLocked(unit.gameStart, now)
 
-                        if (!locked) {
-                            return {
-                                ...unit, locked
-                            }
+                    if (unit.gameStart === null || now.getTime() < unit.gameStart.getTime()) {
+                        return {
+                            ...unit,
+                            locked
                         }
+                    }
 
-                        try {
-                            const liveStats = await getLiveTeamStats(unit.teamName, viewedWeek)
+                    try {
+                        const liveStats = await getLiveTeamStats(unit.teamName, viewedWeek)
+                        const stats = liveStats?.stats ?? unit.weeklyStats
 
-                            const stats = liveStats?.stats ?? unit.weeklyStats
-
-                            return {
-                                ...unit, locked,
-                                weeklyStats: stats,
-                                score: stats
-                                    ? calculateUnitScore(unit.unitType, stats)
-                                    : unit.score
-                            }
-                        } catch (error) {
-                            console.error(`Failed to refresh ESPN stats for ${unit.teamName}:`, error)
-
-                            return {
-                                ...unit, locked
-                            }
+                        return {
+                            ...unit,
+                            locked,
+                            weeklyStats: stats,
+                            score: stats ? calculateUnitScore(unit.unitType, stats) : unit.score
                         }
-                    })
-                ).then((updatedRoster) => {
-                    setRoster(updatedRoster)
+                    } catch (error) {
+                        console.error(
+                            `Failed to refresh ESPN stats for ${unit.teamName}:`,
+                            error
+                        )
+
+                        return {
+                            ...unit,
+                            locked
+                        }
+                    }
                 })
-
-                return currentRoster
+            ).then((updatedRoster) => {
+                setRoster(updatedRoster)
             })
         }, 30000)
 
