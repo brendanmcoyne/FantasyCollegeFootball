@@ -307,7 +307,7 @@ export default function Rosters() {
             ).then((updatedRoster) => {
                 setRoster(updatedRoster)
             })
-        }, 30000)
+        }, 15000)
 
         return () => {
             window.clearInterval(interval)

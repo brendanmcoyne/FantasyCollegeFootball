@@ -339,7 +339,7 @@ export default function MyTeam() {
             ).then((updatedRoster) => {
                 setRoster(updatedRoster)
             })
-        }, 30000)
+        }, 15000)
 
         return () => {
             window.clearInterval(interval)

@@ -579,7 +579,7 @@ export default function WeekScores() {
             ).then((updatedScores) => {
                 setScores(updatedScores)
             })
-        }, 30000)
+        }, 15000)
 
         return () => {
             window.clearInterval(interval)
