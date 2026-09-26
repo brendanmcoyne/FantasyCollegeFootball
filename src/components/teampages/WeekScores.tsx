@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link, useParams } from 'react-router-dom'
 
 import { supabase } from '../lib/supabase'
 import { getTeams } from '../../api/cfbApi'
-import { getWeeklyStats } from '../../api/weeklyStats'
+import { getWeeklyStats, getLiveTeamStats } from '../../api/weeklyStats'
 import { calculateUnitScore } from '../../utils/scoring'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 import styled from 'styled-components'
@@ -276,6 +276,8 @@ export default function WeekScores() {
 
     const [scores, setScores] = useState<FantasyTeamScore[]>([])
     const [matchups, setMatchups] = useState<LeagueMatchup[]>([])
+    const scoresRef = useRef<FantasyTeamScore[]>([])
+
     const [selectedUnit, setSelectedUnit] = useState<ScoredUnit | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
@@ -283,6 +285,10 @@ export default function WeekScores() {
 
     const weekStarted = week <= CURRENT_WEEK
     const weekComplete = week < CURRENT_WEEK
+
+    useEffect(() => {
+        scoresRef.current = scores
+    }, [scores])
 
     useEffect(() => {
         async function loadScores() {
@@ -355,6 +361,47 @@ export default function WeekScores() {
 
                 const now = new Date()
 
+                const liveStatsEntries = await Promise.all(
+                    effectiveRosterRows.map(async (row) => {
+                        const collegeTeam = teamMap.get(row.college_team_id)
+
+                        if (!collegeTeam) {
+                            return [row.college_team_id, null] as const
+                        }
+
+                        const weeklyTeam = weeklyMap.get(
+                            collegeTeam.name.trim().toLowerCase()
+                        )
+
+                        const gameStart = weeklyTeam?.gameStart ?? null
+
+                        if (
+                            gameStart === null ||
+                            now.getTime() < gameStart.getTime()
+                        ) {
+                            return [row.college_team_id, null] as const
+                        }
+
+                        try {
+                            const liveStats = await getLiveTeamStats(
+                                collegeTeam.name,
+                                week
+                            )
+
+                            return [row.college_team_id, liveStats] as const
+                        } catch (error) {
+                            console.error(
+                                `Failed to load ESPN stats for ${collegeTeam.name}:`,
+                                error
+                            )
+
+                            return [row.college_team_id, null] as const
+                        }
+                    })
+                )
+
+                const liveStatsMap = new Map(liveStatsEntries)
+
                 function scoreUnit(row: RosterRow): ScoredUnit {
                     const collegeTeam =
                         teamMap.get(row.college_team_id)
@@ -370,17 +417,26 @@ export default function WeekScores() {
                         }
                     }
 
-                    const weeklyTeam = weeklyMap.get(collegeTeam.name.trim().toLowerCase())
+                    const weeklyTeam = weeklyMap.get(
+                        collegeTeam.name.trim().toLowerCase()
+                    )
 
-                    const gameStarted = weeklyTeam?.gameStart && now >= weeklyTeam.gameStart
+                    const liveTeam = liveStatsMap.get(row.college_team_id)
+
+                    const gameStarted =
+                        weeklyTeam?.gameStart !== null &&
+                        weeklyTeam?.gameStart !== undefined &&
+                        now.getTime() >= weeklyTeam.gameStart.getTime()
+
+                    const stats = liveTeam?.stats ?? null
 
                     return {
                         rosterId: row.id,
                         teamName: collegeTeam.name,
                         unitType: row.unit_type,
-                        score: weeklyTeam && gameStarted && weekStarted ? calculateUnitScore(row.unit_type, weeklyTeam.stats) : 0,
-                        stats: weeklyTeam?.stats ?? null,
-                        locked: Boolean(gameStarted),
+                        score: stats && gameStarted && weekStarted ? calculateUnitScore(row.unit_type, stats) : 0,
+                        stats,
+                        locked: gameStarted,
                     }
                 }
 
@@ -459,6 +515,76 @@ export default function WeekScores() {
 
         void loadScores()
     }, [leagueId, week, weekStarted, weekComplete])
+
+    useEffect(() => {
+        if (week !== CURRENT_WEEK) {
+            return
+        }
+
+        const interval = window.setInterval(() => {
+            void Promise.all(
+                scoresRef.current.map(async (team) => {
+                    async function refreshUnit(unit: ScoredUnit): Promise<ScoredUnit> {
+                        if (!unit.locked) {
+                            return unit
+                        }
+
+                        try {
+                            const liveStats = await getLiveTeamStats(
+                                unit.teamName,
+                                week
+                            )
+
+                            const stats = liveStats?.stats ?? unit.stats
+
+                            return {
+                                ...unit,
+                                stats,
+                                score: stats
+                                    ? calculateUnitScore(unit.unitType, stats)
+                                    : unit.score
+                            }
+                        } catch (error) {
+                            console.error(
+                                `Failed to refresh ESPN stats for ${unit.teamName}:`,
+                                error
+                            )
+
+                            return unit
+                        }
+                    }
+
+                    const starters = await Promise.all(
+                        team.starters.map(refreshUnit)
+                    )
+
+                    const bench = await Promise.all(
+                        team.bench.map(refreshUnit)
+                    )
+
+                    return {
+                        ...team,
+                        starters,
+                        bench,
+                        starterTotal: starters.reduce(
+                            (total, unit) => total + unit.score,
+                            0
+                        ),
+                        benchTotal: bench.reduce(
+                            (total, unit) => total + unit.score,
+                            0
+                        )
+                    }
+                })
+            ).then((updatedScores) => {
+                setScores(updatedScores)
+            })
+        }, 30000)
+
+        return () => {
+            window.clearInterval(interval)
+        }
+    }, [week])
 
     function MatchupTeamDisplay({ team }: { team: FantasyTeamScore }) {
         const sortedStarters = [...team.starters].sort(

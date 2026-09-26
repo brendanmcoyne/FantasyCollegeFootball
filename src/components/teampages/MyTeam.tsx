@@ -1,18 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../Auth'
 import { getTeams } from '../../api/cfbApi'
-import { getWeeklyStats, getEspnScoreboard, type EspnGame } from '../../api/weeklyStats'
+import { getWeeklyStats, getEspnScoreboard, getLiveTeamStats, type EspnGame } from '../../api/weeklyStats'
 
 import { getTeamOpponent } from '../../utils/teamschedule'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 
 import { STARTERS, type RosterUnitType } from '../../rosters'
 
-import type { CollegeTeam } from '../../types/football'
-import type { WeeklyTeamData } from '../../api/weeklyStats'
+import type { CollegeTeam, TeamStats } from '../../types/football'
 
 import TeamDetailsModal from '../../components/teampages/TeamDetails'
 import { BackButton } from '../../styles/commonstyles'
@@ -44,7 +43,7 @@ interface RosterUnit {
     gameStart: Date | null
     locked: boolean
     score: number
-    weeklyStats: WeeklyTeamData['stats'] | null
+    weeklyStats: TeamStats | null
 }
 
 interface RosterSectionProps {
@@ -59,6 +58,8 @@ export default function MyTeam() {
 
     const [teamName, setTeamName] = useState('')
     const [roster, setRoster] = useState<RosterUnit[]>([])
+    const rosterRef = useRef<RosterUnit[]>([])
+
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
@@ -154,30 +155,81 @@ export default function MyTeam() {
                 teams.forEach((team) => {teamMap.set(team.id, team)})
 
                 const weeklyStats = await getWeeklyStats(viewedWeek)
-                const weeklyMap = new Map<string, WeeklyTeamData>()
-
-                weeklyStats.forEach(
-                    (team) => {
-                        weeklyMap.set(normalizeTeamName(team.team), team)
-                    }
+                const weeklyMap = new Map(
+                    weeklyStats.map((team) => [
+                        normalizeTeamName(team.team),
+                        team
+                    ])
                 )
 
                 const now = new Date()
+
+                const liveStatsEntries = await Promise.all(
+                    (rosterData ?? []).map(async (unit) => {
+                        const collegeTeam = teamMap.get(unit.college_team_id)
+
+                        if (!collegeTeam) {
+                            return [unit.college_team_id, null] as const
+                        }
+
+                        const weeklyTeam = weeklyMap.get(
+                            normalizeTeamName(collegeTeam.name)
+                        )
+
+                        const gameStart = weeklyTeam?.gameStart ?? null
+
+                        if (
+                            gameStart === null ||
+                            now.getTime() < gameStart.getTime()
+                        ) {
+                            return [unit.college_team_id, null] as const
+                        }
+
+                        try {
+                            const liveStats = await getLiveTeamStats(
+                                collegeTeam.name,
+                                viewedWeek
+                            )
+
+                            return [unit.college_team_id, liveStats] as const
+                        } catch (error) {
+                            console.error(
+                                `Failed to load ESPN stats for ${collegeTeam.name}:`,
+                                error
+                            )
+
+                            return [unit.college_team_id, null] as const
+                        }
+                    })
+                )
+
+                const liveStatsMap = new Map(liveStatsEntries)
 
                 const rosterUnits: RosterUnit[] =
                     (rosterData ?? []).map(
                         (unit) => {
                             const collegeTeam = teamMap.get(unit.college_team_id)
                             const collegeTeamName = collegeTeam?.name ?? 'Unknown Team'
-                            const weeklyTeam = weeklyMap.get(normalizeTeamName(collegeTeamName))
+                            const weeklyTeam = weeklyMap.get(
+                                normalizeTeamName(collegeTeamName)
+                            )
+
+                            const liveTeam = liveStatsMap.get(unit.college_team_id)
                             const gameStart = weeklyTeam?.gameStart ?? null
 
                             const gameStarted =
-                                gameStart !== null && now.getTime() >= gameStart.getTime()
+                                gameStart !== null &&
+                                now.getTime() >= gameStart.getTime()
+
+                            const stats = liveTeam?.stats ?? null
 
                             const score =
-                                weeklyTeam && gameStarted
-                                    ? calculateUnitScore(unit.unit_type as RosterUnitType, weeklyTeam.stats) : 0
+                                stats && gameStarted
+                                    ? calculateUnitScore(
+                                        unit.unit_type as RosterUnitType,
+                                        stats
+                                    )
+                                    : 0
 
                             return {
                                 id: unit.id,
@@ -194,7 +246,7 @@ export default function MyTeam() {
 
                                 locked: viewingPastWeek || isGameLocked(gameStart, now),
                                 score,
-                                weeklyStats: weeklyTeam?.stats ?? null,
+                                weeklyStats: stats,
                             }
                         }
                     )
@@ -244,27 +296,55 @@ export default function MyTeam() {
         void loadRoster()
     }, [leagueId, user, viewedWeek])
 
+    useEffect(() => {
+        rosterRef.current = roster
+    }, [roster])
 
     useEffect(() => {
-        const interval = window.setInterval(() => {const now = new Date()
-            setRoster(
-                (currentRoster) => currentRoster.map(
-                    (unit) => ({...unit, locked: isGameLocked(unit.gameStart, now),})
-                )
-            )
+        if (viewingPastWeek) {
+            return
+        }
 
-            setSelectedBenchUnit((currentUnit) => {
-                if (!currentUnit) {
-                    return null
-                }
+        const interval = window.setInterval(() => {
+            const now = new Date()
 
-                return {...currentUnit, locked: isGameLocked(currentUnit.gameStart, now),}
-            }
-        )
-    }, 30000)
+            void Promise.all(
+                rosterRef.current.map(async (unit) => {
+                    const locked = isGameLocked(unit.gameStart, now)
 
-        return () => {window.clearInterval(interval)}
-    }, [])
+                    if (unit.gameStart === null || now.getTime() < unit.gameStart.getTime()) {
+                        return {
+                            ...unit, locked
+                        }
+                    }
+
+                    try {
+                        const liveStats = await getLiveTeamStats(unit.teamName, viewedWeek)
+
+                        const stats = liveStats?.stats ?? unit.weeklyStats
+
+                        return {
+                            ...unit, locked,
+                            weeklyStats: stats,
+                            score: stats ? calculateUnitScore(unit.unitType, stats) : unit.score
+                        }
+                    } catch (error) {
+                        console.error(`Failed to refresh ESPN stats for ${unit.teamName}:`, error)
+
+                        return {
+                            ...unit, locked
+                        }
+                    }
+                })
+            ).then((updatedRoster) => {
+                setRoster(updatedRoster)
+            })
+        }, 30000)
+
+        return () => {
+            window.clearInterval(interval)
+        }
+    }, [viewedWeek, viewingPastWeek])
 
     if (loading) {
         return <p>Loading roster...</p>
@@ -502,6 +582,25 @@ export default function MyTeam() {
             return
         }
 
+        const { data: existing, error: lookupError } = await supabase
+            .from('weekly_rosters')
+            .select('id')
+            .eq('league_id', leagueId)
+            .eq('league_member_id', leagueMemberId)
+            .eq('week', CURRENT_WEEK)
+            .eq('college_team_id', unit.collegeTeamId)
+            .eq('unit_type', unit.unitType)
+            .maybeSingle()
+
+        if (lookupError) {
+            console.error(lookupError)
+            return
+        }
+
+        if (existing) {
+            return
+        }
+
         const { error } = await supabase
             .from('weekly_rosters')
             .insert({
@@ -511,7 +610,9 @@ export default function MyTeam() {
                 college_team_id: unit.collegeTeamId,
                 unit_type: unit.unitType,
                 roster_slot: unit.rosterSlot,
-                locked_at: unit.gameStart?.toISOString() ?? new Date().toISOString(),
+                locked_at:
+                    unit.gameStart?.toISOString() ??
+                    new Date().toISOString(),
             })
 
         if (error && error.code !== '23505') {
