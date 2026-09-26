@@ -6,7 +6,7 @@ import { getTeams } from '../../api/cfbApi'
 import { getWeeklyStats, getLiveTeamStats } from '../../api/weeklyStats'
 import { calculateUnitScore } from '../../utils/scoring'
 import { CURRENT_WEEK } from '../../bigseasonfile'
-import styled from 'styled-components'
+import styled, { keyframes } from 'styled-components'
 
 import type { CollegeTeam, TeamStats } from '../../types/football'
 import type { ScoringUnitType } from '../../utils/scoring'
@@ -29,6 +29,7 @@ interface ScoredUnit {
     score: number
     stats: TeamStats | null
     locked: boolean
+    scoreChange?: 'up' | 'down'
 }
 
 interface FantasyTeamScore {
@@ -193,6 +194,31 @@ const ScoreUnit = styled.div<{ $clickable?: boolean }>`
     }
 `;
 
+const scoreFlash = keyframes`
+    0% {
+        transform: scale(1);
+    }
+
+    25% {
+        transform: scale(1.15);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+`;
+
+const UnitScore = styled.strong<{ $change?: 'up' | 'down' }>`
+    display: inline-block;
+
+    color: ${({ $change }) =>
+            $change === 'up' ? '#16a34a' : $change === 'down' ? '#dc2626' : 'inherit'
+    };
+
+    animation: ${({ $change }) =>
+            $change ? scoreFlash : 'none'} 1s ease;
+`;
+
 const ModalBackdrop = styled.div`
     position: fixed;
     inset: 0;
@@ -353,10 +379,7 @@ export default function WeekScores() {
                 const teamMap = new Map<number, CollegeTeam>(collegeTeams.map((team) => [team.id, team]))
 
                 const weeklyMap = new Map<string, WeeklyTeamData>(
-                    weeklyStats.map((team) => [
-                        team.team.trim().toLowerCase(),
-                        team,
-                    ])
+                    weeklyStats.map((team) => [team.team.trim().toLowerCase(), team])
                 )
 
                 const now = new Date()
@@ -369,31 +392,19 @@ export default function WeekScores() {
                             return [row.college_team_id, null] as const
                         }
 
-                        const weeklyTeam = weeklyMap.get(
-                            collegeTeam.name.trim().toLowerCase()
-                        )
-
+                        const weeklyTeam = weeklyMap.get(collegeTeam.name.trim().toLowerCase())
                         const gameStart = weeklyTeam?.gameStart ?? null
 
-                        if (
-                            gameStart === null ||
-                            now.getTime() < gameStart.getTime()
-                        ) {
+                        if (gameStart === null || now.getTime() < gameStart.getTime()) {
                             return [row.college_team_id, null] as const
                         }
 
                         try {
-                            const liveStats = await getLiveTeamStats(
-                                collegeTeam.name,
-                                week
-                            )
+                            const liveStats = await getLiveTeamStats(collegeTeam.name, week)
 
                             return [row.college_team_id, liveStats] as const
                         } catch (error) {
-                            console.error(
-                                `Failed to load ESPN stats for ${collegeTeam.name}:`,
-                                error
-                            )
+                            console.error(`Failed to load ESPN stats for ${collegeTeam.name}:`, error)
 
                             return [row.college_team_id, null] as const
                         }
@@ -445,11 +456,8 @@ export default function WeekScores() {
                         const roster = effectiveRosterRows.filter(
                             (row: RosterRow) => row.league_member_id === member.id)
 
-                        const starters = roster
-                            .filter((row: RosterRow) => row.roster_slot === 'STARTER').map(scoreUnit)
-
-                        const bench = roster
-                            .filter((row: RosterRow) => row.roster_slot === 'BENCH').map(scoreUnit)
+                        const starters = roster.filter((row: RosterRow) => row.roster_slot === 'STARTER').map(scoreUnit)
+                        const bench = roster.filter((row: RosterRow) => row.roster_slot === 'BENCH').map(scoreUnit)
 
                         return {
                             memberId: member.id,
@@ -530,54 +538,50 @@ export default function WeekScores() {
                         }
 
                         try {
-                            const liveStats = await getLiveTeamStats(
-                                unit.teamName,
-                                week
-                            )
+                            const liveStats = await getLiveTeamStats(unit.teamName, week)
 
                             const stats = liveStats?.stats ?? unit.stats
+                            const newScore = stats ? calculateUnitScore(unit.unitType, stats) : unit.score
 
                             return {
-                                ...unit,
-                                stats,
-                                score: stats
-                                    ? calculateUnitScore(unit.unitType, stats)
-                                    : unit.score
+                                ...unit, stats,
+                                score: newScore,
+                                scoreChange: newScore > unit.score ? 'up' : newScore < unit.score ? 'down' : undefined
                             }
                         } catch (error) {
                             console.error(
-                                `Failed to refresh ESPN stats for ${unit.teamName}:`,
-                                error
+                                `Failed to refresh ESPN stats for ${unit.teamName}:`, error
                             )
 
                             return unit
                         }
                     }
 
-                    const starters = await Promise.all(
-                        team.starters.map(refreshUnit)
-                    )
-
-                    const bench = await Promise.all(
-                        team.bench.map(refreshUnit)
-                    )
+                    const starters = await Promise.all(team.starters.map(refreshUnit))
+                    const bench = await Promise.all(team.bench.map(refreshUnit))
 
                     return {
-                        ...team,
-                        starters,
-                        bench,
-                        starterTotal: starters.reduce(
-                            (total, unit) => total + unit.score,
-                            0
-                        ),
-                        benchTotal: bench.reduce(
-                            (total, unit) => total + unit.score,
-                            0
-                        )
+                        ...team, starters, bench,
+                        starterTotal: starters.reduce((total, unit) => total + unit.score, 0),
+                        benchTotal: bench.reduce((total, unit) => total + unit.score, 0)
                     }
                 })
             ).then((updatedScores) => {
                 setScores(updatedScores)
+
+                window.setTimeout(() => {
+                    setScores((currentScores) =>
+                        currentScores.map((team) => ({
+                            ...team,
+                            starters: team.starters.map((unit) => ({
+                                ...unit, scoreChange: undefined,
+                            })),
+                            bench: team.bench.map((unit) => ({
+                                ...unit, scoreChange: undefined,
+                            })),
+                        }))
+                    )
+                }, 1500)
             })
         }, 15000)
 
@@ -608,9 +612,9 @@ export default function WeekScores() {
                     {formatUnitType(unit.unitType)}
                 </span>
 
-                    <strong>
+                    <UnitScore $change={unit.scoreChange}>
                         {unit.score.toFixed(1)}
-                    </strong>
+                    </UnitScore>
                 </ScoreUnit>
             )
         }
