@@ -7,7 +7,7 @@ function normalizeEspnTeamName(name: string): string {
 
     const normalized = name
         .toLowerCase()
-        .replace(/\b(fighting irish|spartans|hoosiers|buckeyes|ducks|huskies|hawkeyes|cavaliers|mustangs|red raiders|bearcats|wildcats|rebels|tigers|sooners|bulldogs|gamecocks|aggies|razorbacks|gators|volunteers|commodores|longhorns|nittany lions|wolverines|scarlet knights|terrapins|boilermakers|bruins|badgers|golden gophers|cornhuskers|fighting illini|yellow jackets|blue devils|seminoles|wolfpack|cardinals|demon deacons|tar heels|cougars|utes|horned frogs|cyclones|knights|mountaineers|buffaloes|cowboys|crimson tide|war eagles|hurricanes|panthers|bears|trojans|cardinal)\b/g, '')
+        .replace(/\b(fighting irish|spartans|hoosiers|buckeyes|ducks|huskies|hawkeyes|cavaliers|mustangs|red raiders|bearcats|wildcats|rebels|tigers|sooners|bulldogs|gamecocks|aggies|razorbacks|gators|volunteers|commodores|longhorns|nittany lions|wolverines|scarlet knights|terrapins|boilermakers|bruins|badgers|golden gophers|cornhuskers|fighting illini|yellow jackets|blue devils|seminoles|sun devils|wolfpack|cardinals|demon deacons|tar heels|cougars|utes|horned frogs|cyclones|knights|mountaineers|buffaloes|cowboys|crimson tide|war eagles|hurricanes|panthers|golden bears|trojans|cardinal)\b/g, '')
         .replace(/[^a-z0-9]/g, '')
 
     return aliases[normalized] ?? normalized
@@ -15,6 +15,19 @@ function normalizeEspnTeamName(name: string): string {
 
 function getEspnGameForTeam(teamName: string, games: EspnGame[]): EspnGame | undefined {
     const normalizedTeamName = normalizeEspnTeamName(teamName)
+
+    console.log(
+        'ESPN RESULT MATCH:',
+        teamName,
+        '→',
+        normalizedTeamName,
+        games.flatMap((game) =>
+            game.teams.map((team) => ({
+                original: team.name,
+                normalized: normalizeEspnTeamName(team.name),
+            }))
+        )
+    )
 
     return games.find((game) =>
         game.teams.some(

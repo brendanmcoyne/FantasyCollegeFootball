@@ -183,12 +183,47 @@ const HistoryCard = styled.div`
 `;
 
 const HistoryRow = styled.div`
-    padding: 10px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    align-items: center;
+    padding: 12px 0;
     border-bottom: 1px solid #e5e7eb;
 
     &:last-child {
         border-bottom: none;
     }
+
+    @media (max-width: 700px) {
+        gap: 10px;
+        font-size: 0.9rem;
+    }
+`;
+
+const HistoryHeader = styled.div`
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    padding: 0 0 10px;
+    border-bottom: 2px solid #d1d5db;
+    font-weight: 700;
+    color: #6b7280;
+
+    @media (max-width: 700px) {
+        gap: 10px;
+        font-size: 0.85rem;
+    }
+`;
+
+const HistoryUnit = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+`;
+
+const HistoryUnitType = styled.span`
+    color: #6b7280;
+    font-size: 0.85rem;
 `;
 
 const UnitNameButton = styled.button`
@@ -610,37 +645,59 @@ export default function FreeAgents() {
             )}
 
             <HistoryCard>
-            <h2>Free Agency History</h2>
+                <h2>Free Agency History</h2>
 
-            {transactions.length === 0 ? (
-                <p>No free agency moves yet.</p>
-            ) : (
-                transactions.map((transaction) => {
-                    const fantasyTeam = members.find((member) => member.id === transaction.league_member_id)
+                {transactions.length === 0 ? (
+                    <p>No free agency moves yet.</p>
+                ) : (
+                    <>
+                        <HistoryHeader>
+                            <div>Team</div>
+                            <div>Added</div>
+                            <div>Dropped</div>
+                        </HistoryHeader>
 
-                    const addedTeam = teamMap.get(transaction.added_college_team_id)
-                    const droppedTeam = teamMap.get(transaction.dropped_college_team_id)
+                        {transactions.map((transaction) => {
+                            const fantasyTeam = members.find(
+                                (member) =>
+                                    member.id === transaction.league_member_id
+                            )
 
-                    return (
-                        <HistoryRow key={transaction.id}>
-                            <strong>
-                                {fantasyTeam?.team_name ?? 'Unknown Team'}
-                            </strong>
+                            const addedTeam = teamMap.get(transaction.added_college_team_id)
+                            const droppedTeam = teamMap.get(transaction.dropped_college_team_id)
 
-                            {' — Added '}
+                            return (
+                                <HistoryRow key={transaction.id}>
+                                    <strong>
+                                        {fantasyTeam?.team_name}
+                                    </strong>
 
-                            {addedTeam?.name ?? 'Unknown Team'}{' '}
-                            {formatUnitType(transaction.added_unit_type)}
+                                    <HistoryUnit>
+                                        <strong>
+                                            {addedTeam?.name}
+                                        </strong>
 
-                            {' — Dropped '}
+                                        <HistoryUnitType>
+                                            {formatUnitType(transaction.added_unit_type)}
+                                        </HistoryUnitType>
+                                    </HistoryUnit>
 
-                            {droppedTeam?.name ?? 'Unknown Team'}{' '}
-                            {formatUnitType(transaction.dropped_unit_type)}
-                        </HistoryRow>
-                    )
-                })
-            )}
+                                    <HistoryUnit>
+                                        <strong>
+                                            {droppedTeam?.name}
+                                        </strong>
+
+                                        <HistoryUnitType>
+                                            {formatUnitType(transaction.dropped_unit_type)}
+                                        </HistoryUnitType>
+                                    </HistoryUnit>
+                                </HistoryRow>
+                            )
+                        })}
+                    </>
+                )}
             </HistoryCard>
+
             {selectedStatsUnit && (
                 <TeamDetailsModal
                     teamName={selectedStatsUnit.teamName}

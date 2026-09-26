@@ -147,6 +147,35 @@ export default function Schedule() {
         void loadSchedule()
     }, [leagueId])
 
+    useEffect(() => {
+        if (!leagueId) {
+            return
+        }
+
+        const interval = window.setInterval(() => {
+            async function refreshScores() {
+                const { data, error } = await supabase
+                    .from('league_matchups')
+                    .select('id, week, team1_id, team2_id, team1_score, team2_score, winner_id')
+                    .eq('league_id', leagueId)
+                    .order('week', { ascending: true })
+
+                if (error) {
+                    console.error('Failed to refresh matchup scores:', error)
+                    return
+                }
+
+                setMatchups(data ?? [])
+            }
+
+            void refreshScores()
+        }, 60000)
+
+        return () => {
+            window.clearInterval(interval)
+        }
+    }, [leagueId])
+
     function getTeamName(memberId: string): string {
         return (members.find((member) => member.id === memberId)?.team_name ?? 'Unknown Team')
     }
@@ -187,8 +216,7 @@ export default function Schedule() {
                                         const team1Name = getTeamName(matchup.team1_id)
                                         const team2Name = getTeamName(matchup.team2_id)
 
-                                        const hasScore = matchup.team1_score !== null &&
-                                            matchup.team2_score !== null
+                                        const hasScore = (matchup.team1_score !== null) && (matchup.team2_score !== null)
 
                                         return (
                                             <MatchupRow key={matchup.id}>
