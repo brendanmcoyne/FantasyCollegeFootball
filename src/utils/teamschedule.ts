@@ -666,7 +666,7 @@ export const schedules: Schedule[] = [
         week2: "PAC12",
         week3: "FCS",
         week4: "Minnesota",
-        week5: "UCS",
+        week5: "USC",
         week6: "Iowa",
         week7: "Purdue",
         week8: "BYE",
