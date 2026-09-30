@@ -13,6 +13,7 @@ import type { ScoringUnitType } from '../../utils/scoring'
 import type { WeeklyTeamData } from '../../api/weeklyStats'
 import { BackButton } from "../../styles/commonstyles";
 import { getScoreBreakdown } from "../../utils/ScoringBreakdown"
+import { getLeagueStandings, type Standing } from '../../utils/standings'
 
 interface RosterRow {
     id: string
@@ -292,6 +293,19 @@ const VsText = styled.div`
     text-align: center;
 `;
 
+const TeamRecord = styled.span`
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+`;
+
+const TeamNameWithRecord = styled.div`
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+`;
+
 function formatUnitType(unitType: ScoringUnitType): string {
     return unitType === 'SPECIAL_TEAMS' ? 'Special Teams' : unitType.charAt(0) + unitType.slice(1).toLowerCase()
 }
@@ -303,6 +317,7 @@ export default function WeekScores() {
     const [scores, setScores] = useState<FantasyTeamScore[]>([])
     const [matchups, setMatchups] = useState<LeagueMatchup[]>([])
     const scoresRef = useRef<FantasyTeamScore[]>([])
+    const [standings, setStandings] = useState<Standing[]>([])
 
     const [selectedUnit, setSelectedUnit] = useState<ScoredUnit | null>(null)
     const [loading, setLoading] = useState(true)
@@ -328,6 +343,9 @@ export default function WeekScores() {
             setError('')
 
             try {
+                const loadedStandings = await getLeagueStandings(leagueId)
+                setStandings(loadedStandings)
+
                 const [weeklyStats, collegeTeams] = await Promise.all([
                     getWeeklyStats(week),
                     getTeams(),
@@ -414,8 +432,7 @@ export default function WeekScores() {
                 const liveStatsMap = new Map(liveStatsEntries)
 
                 function scoreUnit(row: RosterRow): ScoredUnit {
-                    const collegeTeam =
-                        teamMap.get(row.college_team_id)
+                    const collegeTeam = teamMap.get(row.college_team_id)
 
                     if (!collegeTeam) {
                         return {
@@ -462,8 +479,7 @@ export default function WeekScores() {
                         return {
                             memberId: member.id,
                             teamName: member.team_name,
-                            starters,
-                            bench,
+                            starters, bench,
                             starterTotal: starters.reduce((total, unit) => total + unit.score, 0),
                             benchTotal: bench.reduce((total, unit) => total + unit.score, 0),
                         }
@@ -544,14 +560,11 @@ export default function WeekScores() {
                             const newScore = stats ? calculateUnitScore(unit.unitType, stats) : unit.score
 
                             return {
-                                ...unit, stats,
-                                score: newScore,
+                                ...unit, stats, score: newScore,
                                 scoreChange: newScore > unit.score ? 'up' : newScore < unit.score ? 'down' : undefined
                             }
                         } catch (error) {
-                            console.error(
-                                `Failed to refresh ESPN stats for ${unit.teamName}:`, error
-                            )
+                            console.error(`Failed to refresh ESPN stats for ${unit.teamName}:`, error)
 
                             return unit
                         }
@@ -574,10 +587,10 @@ export default function WeekScores() {
                         currentScores.map((team) => ({
                             ...team,
                             starters: team.starters.map((unit) => ({
-                                ...unit, scoreChange: undefined,
+                                ...unit, scoreChange: undefined
                             })),
                             bench: team.bench.map((unit) => ({
-                                ...unit, scoreChange: undefined,
+                                ...unit, scoreChange: undefined
                             })),
                         }))
                     )
@@ -590,7 +603,13 @@ export default function WeekScores() {
         }
     }, [week])
 
-    function MatchupTeamDisplay({ team }: { team: FantasyTeamScore }) {
+    function MatchupTeamDisplay({team, side}: { team: FantasyTeamScore, side: 'left' | 'right' }) {
+        const standing = standings.find(
+            (standing) => standing.memberId === team.memberId
+        )
+
+        const record = standing ? `${standing.wins}-${standing.losses}` : '0-0'
+
         const sortedStarters = [...team.starters].sort(
             (a, b) =>
                 UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType)
@@ -607,14 +626,29 @@ export default function WeekScores() {
                         }
                     }}
                 >
-                <span>
-                    {unit.teamName}{' '}
-                    {formatUnitType(unit.unitType)}
-                </span>
+                    {side === 'left' ? (
+                        <>
+                            <span>
+                                {unit.teamName}{' '}
+                                {formatUnitType(unit.unitType)}
+                            </span>
 
-                    <UnitScore $change={unit.scoreChange}>
-                        {unit.score.toFixed(1)}
-                    </UnitScore>
+                            <UnitScore $change={unit.scoreChange}>
+                                {unit.score.toFixed(1)}
+                            </UnitScore>
+                        </>
+                    ) : (
+                        <>
+                            <UnitScore $change={unit.scoreChange}>
+                                {unit.score.toFixed(1)}
+                            </UnitScore>
+
+                            <span>
+                                {unit.teamName}{' '}
+                                {formatUnitType(unit.unitType)}
+                            </span>
+                        </>
+                    )}
                 </ScoreUnit>
             )
         }
@@ -622,19 +656,32 @@ export default function WeekScores() {
         return (
             <MatchupTeam>
                 <MatchupTeamHeader>
-                    <MatchupTeamName>
-                        {team.teamName}
-                    </MatchupTeamName>
+                    {side === 'left' ? (
+                        <>
+                            <TeamNameWithRecord>
+                                <MatchupTeamName>{team.teamName}</MatchupTeamName>
+                                <TeamRecord>({record})</TeamRecord>
+                            </TeamNameWithRecord>
 
-                    <BigScore>
-                        {team.starterTotal.toFixed(1)}
-                    </BigScore>
+                            <BigScore>{team.starterTotal.toFixed(1)}</BigScore>
+                        </>
+                    ) : (
+                        <>
+                            <BigScore>{team.starterTotal.toFixed(1)}</BigScore>
+
+                            <TeamNameWithRecord>
+                                <TeamRecord>({record})</TeamRecord>
+                                <MatchupTeamName>{team.teamName}</MatchupTeamName>
+                            </TeamNameWithRecord>
+                        </>
+                    )}
                 </MatchupTeamHeader>
 
                 {sortedStarters.map(renderUnit)}
 
-                <h4>Bench</h4>
-
+                <h4 style={{ textAlign: side === 'left' ? 'left' : 'right' }}>
+                    Bench
+                </h4>
                 {team.bench.map(renderUnit)}
             </MatchupTeam>
         )
@@ -701,8 +748,8 @@ export default function WeekScores() {
 
                 return (
                     <MatchupCard key={matchup.id}>
-                        <MatchupTeamDisplay team={team1} />
-                        <MatchupTeamDisplay team={team2} />
+                        <MatchupTeamDisplay team={team1} side="left" />
+                        <MatchupTeamDisplay team={team2} side="right" />
                     </MatchupCard>
                 )
             })}
