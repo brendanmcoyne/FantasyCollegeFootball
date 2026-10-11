@@ -137,7 +137,7 @@ const SectionCard = styled.section`
 
 const MatchupCard = styled.div`
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 24px;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
@@ -145,8 +145,103 @@ const MatchupCard = styled.div`
     margin-top: 14px;
 
     @media (max-width: 700px) {
-        grid-template-columns: 1fr;
-        gap: 0;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 4px;
+    }
+`;
+
+const GroupedMatchup = styled.div`
+    grid-column: 1 / -1;
+    padding: 18px;
+
+    @media (max-width: 700px) {
+        padding: 12px;
+    }
+`;
+
+const MobileHeader = styled.div`
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e5e7eb;
+
+    @media (max-width: 700px) {
+        gap: 12px;
+    }
+`;
+
+const MobileUnitRow = styled.div`
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    padding: 7px 0;
+
+    @media (max-width: 700px) {
+        gap: 12px;
+    }
+`;
+
+const MobileHeaderTeam = styled.div<{ $side: 'left' | 'right' }>`
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+
+    text-align: ${({ $side }) =>
+            $side === 'left' ? 'left' : 'right'};
+
+    @media (min-width: 701px) {
+        flex-direction: ${({ $side }) =>
+                $side === 'left' ? 'row' : 'row-reverse'};
+
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+    
+    @media (max-width: 700px) {
+        ${({ $side }) => $side === 'right' && `
+        align-items: flex-end;
+
+        ${TeamNameWithRecord} {
+            align-items: flex-end;
+        }
+    `}
+    }
+`;
+
+const MobileHeaderScore = styled.div`
+    font-size: 1.3rem;
+    font-weight: 700;
+`;
+
+const MobileSectionTitle = styled.h4`
+    margin: 16px 0 8px;
+    padding: 6px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #374151;
+`;
+
+const MobileUnitCell = styled.div<{ $side: 'left' | 'right' }>`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    cursor: pointer;
+
+    ${({ $side }) => $side === 'right' && `
+        flex-direction: row-reverse;
+    `}
+
+    span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        font-size: 0.85rem;
     }
 `;
 
@@ -159,6 +254,32 @@ const MatchupTeam = styled.div`
     }
 `;
 
+const MatchupTeamName = styled.h3`
+    margin: 0;
+
+    @media (max-width: 700px) {
+        font-size: 0.8rem;
+        overflow-wrap: anywhere;
+    }
+`;
+
+const BigScore = styled.div`
+    font-size: 1.6rem;
+    font-weight: 700;
+
+    @media (max-width: 700px) {
+        font-size: 1rem;
+        white-space: nowrap;
+    }
+`;
+
+const TeamRecord = styled.span`
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+`;
+
 const MatchupTeamHeader = styled.div`
     display: flex;
     justify-content: space-between;
@@ -169,17 +290,23 @@ const MatchupTeamHeader = styled.div`
     border-bottom: 1px solid #e5e7eb;
 
     @media (max-width: 700px) {
-        gap: 10px;
+        gap: 4px;
+        align-items: center;
+
+        ${MatchupTeamName} {
+            font-size: 0.8rem;
+            overflow-wrap: anywhere;
+        }
+
+        ${BigScore} {
+            font-size: 1rem;
+            white-space: nowrap;
+        }
+
+        ${TeamRecord} {
+            font-size: 0.65rem;
+        }
     }
-`;
-
-const MatchupTeamName = styled.h3`
-    margin: 0;
-`;
-
-const BigScore = styled.div`
-    font-size: 1.6rem;
-    font-weight: 700;
 `;
 
 const ScoreUnit = styled.div<{ $clickable?: boolean }>`
@@ -293,17 +420,17 @@ const VsText = styled.div`
     text-align: center;
 `;
 
-const TeamRecord = styled.span`
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #6b7280;
-    white-space: nowrap;
-`;
-
 const TeamNameWithRecord = styled.div`
     display: flex;
     align-items: baseline;
     gap: 6px;
+    min-width: 0;
+
+    @media (max-width: 700px) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
 `;
 
 function formatUnitType(unitType: ScoringUnitType): string {
@@ -603,6 +730,109 @@ export default function WeekScores() {
         }
     }, [week])
 
+    function GroupedMatchupDisplay({team1, team2,}: { team1: FantasyTeamScore, team2: FantasyTeamScore }) {
+        const getRecord = (team: FantasyTeamScore) => {
+            const standing = standings.find(
+                (item) => item.memberId === team.memberId
+            )
+
+            return standing
+                ? `${standing.wins}-${standing.losses}`
+                : '0-0'
+        }
+
+        function renderMobileUnit(unit: ScoredUnit | undefined, side: 'left' | 'right') {
+            if (!unit) {
+                return <div />
+            }
+
+            return (
+                <MobileUnitCell
+                    key={unit.rosterId}
+                    $side={side}
+                    onClick={() => {
+                        if (unit.locked) {
+                            setSelectedUnit(unit)
+                        }
+                    }}
+                >
+                    <span>{unit.teamName}</span>
+
+                    <UnitScore $change={unit.scoreChange}>
+                        {unit.score.toFixed(1)}
+                    </UnitScore>
+                </MobileUnitCell>
+            )
+        }
+
+        function renderSection(title: string, leftUnits: ScoredUnit[], rightUnits: ScoredUnit[]) {
+            const count = Math.max(leftUnits.length, rightUnits.length)
+
+            if (count === 0) {
+                return null
+            }
+
+            return (
+                <div key={title}>
+                    <MobileSectionTitle>{title}</MobileSectionTitle>
+
+                    {Array.from({ length: count }, (_, index) => (
+                        <MobileUnitRow key={index}>
+                            {renderMobileUnit(leftUnits[index], 'left')}
+                            {renderMobileUnit(rightUnits[index], 'right')}
+                        </MobileUnitRow>
+                    ))}
+                </div>
+            )
+        }
+
+        return (
+            <>
+                <MobileHeader>
+                    <MobileHeaderTeam $side="left">
+                        <TeamNameWithRecord>
+                            <strong>{team1.teamName}</strong>
+                            <TeamRecord>({getRecord(team1)})</TeamRecord>
+                        </TeamNameWithRecord>
+
+                        <MobileHeaderScore>
+                            {team1.starterTotal.toFixed(1)}
+                        </MobileHeaderScore>
+                    </MobileHeaderTeam>
+
+                    <MobileHeaderTeam $side="right">
+                        <TeamNameWithRecord>
+                            <strong>{team2.teamName}</strong>
+                            <TeamRecord>({getRecord(team2)})</TeamRecord>
+                        </TeamNameWithRecord>
+
+                        <MobileHeaderScore>
+                            {team2.starterTotal.toFixed(1)}
+                        </MobileHeaderScore>
+                    </MobileHeaderTeam>
+                </MobileHeader>
+
+                {UNIT_ORDER.map((unitType) =>
+                    renderSection(
+                        formatUnitType(unitType),
+                        team1.starters.filter((unit) => unit.unitType === unitType),
+                        team2.starters.filter((unit) => unit.unitType === unitType)
+                    )
+                )}
+
+                <MobileSectionTitle>Bench</MobileSectionTitle>
+
+                {UNIT_ORDER.map((unitType) =>
+                    renderSection(
+                        formatUnitType(unitType),
+                        team1.bench.filter((unit) => unit.unitType === unitType),
+                        team2.bench.filter((unit) => unit.unitType === unitType)
+                    )
+                )}
+            </>
+        )
+    }
+
     function MatchupTeamDisplay({team, side}: { team: FantasyTeamScore, side: 'left' | 'right' }) {
         const standing = standings.find(
             (standing) => standing.memberId === team.memberId
@@ -748,8 +978,9 @@ export default function WeekScores() {
 
                 return (
                     <MatchupCard key={matchup.id}>
-                        <MatchupTeamDisplay team={team1} side="left" />
-                        <MatchupTeamDisplay team={team2} side="right" />
+                        <GroupedMatchup>
+                            <GroupedMatchupDisplay team1={team1} team2={team2} />
+                        </GroupedMatchup>
                     </MatchupCard>
                 )
             })}

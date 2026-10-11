@@ -387,8 +387,7 @@ export default function MyTeam() {
 
         setError('')
 
-        const { error: swapError } = await supabase.rpc('swap_roster_units',
-            {
+        const { error: swapError } = await supabase.rpc('swap_roster_units', {
                 target_league_id: leagueId,
                 target_league_member_id: leagueMemberId,
                 bench_unit_id: currentBenchUnit.id,
