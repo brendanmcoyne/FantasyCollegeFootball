@@ -1,12 +1,4 @@
-import {
-    getWeeklyStats,
-    getEspnTeamId,
-    getEspnTeamSchedule,
-    getLiveGameStats,
-    type WeeklyTeamData,
-    type EspnGame,
-    type LiveTeamStats
-} from '../api/weeklyStats'
+import {getWeeklyStats, getLiveGameStats, getEspnTeamId, getEspnTeamSchedule, type WeeklyTeamData} from '../api/weeklyStats'
 
 import { CURRENT_WEEK } from '../bigseasonfile'
 
@@ -153,131 +145,121 @@ function calculateDerivedStats(season: Season2026Stats) {
     }
 }
 
-function isCompletedGame(game: EspnGame): boolean {
-    const status = (game.status ?? '').toLowerCase()
 
-    return (
-        status.includes('final') || status.includes('post')
-    )
-}
+async function runInBatches<T>(items: T[], batchSize: number, task: (item: T) => Promise<void>): Promise<void> {
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize)
 
-function convertEspnStats(game: LiveTeamStats, conference: string): WeeklyTeamData {
-    return {
-        team: game.teamName,
-        conference,
-        gameStart: new Date(0),
-        stats: game.stats
+        await Promise.all(batch.map(task))
     }
 }
 
-export async function get2026SeasonStats(): Promise<Season2026Stats[]> {
+async function calculate2026SeasonStats(): Promise<Season2026Stats[]> {
     const seasonMap = new Map<string, Season2026Stats>()
-    const teamNames = new Map<string, { name: string, conference: string }>()
+    const now = Date.now()
 
+    const failedTeams: string[] = []
+    const failedGames: string[] = []
 
-    for (let week = 0; week <= CURRENT_WEEK; week++) {
-        const weeklyStats = await getWeeklyStats(week)
+    const weeklyResults = await Promise.all(
+        Array.from({ length: CURRENT_WEEK + 1 },
+            (_, week) => getWeeklyStats(week)
+        )
+    )
 
-        for (const weeklyTeam of weeklyStats) {
+    for (const weeklyTeams of weeklyResults) {
+        for (const weeklyTeam of weeklyTeams) {
             const key = normalizeTeamName(weeklyTeam.team)
 
-            teamNames.set(key, {
-                name: weeklyTeam.team,
-                conference: weeklyTeam.conference
-            })
-        }
-    }
-
-    const teams = Array.from(teamNames.values())
-
-    const teamSchedules: {
-        name: string
-        conference: string
-        espnId: string
-        games: EspnGame[]
-    }[] = []
-
-    for (let index = 0; index < teams.length; index += 5) {
-        const batch = teams.slice(index, index + 5)
-
-        const results = await Promise.all(
-            batch.map(async (team) => {
-                const espnId = await getEspnTeamId(team.name)
-                const games = await getEspnTeamSchedule(espnId, 2026)
-
-                return {
-                    ...team,
-                    espnId,
-                    games
-                }
-            })
-        )
-
-        teamSchedules.push(...results)
-    }
-
-    for (const team of teamSchedules) {
-        seasonMap.set(normalizeTeamName(team.name), createEmptySeasonStats(team.name, team.conference))
-    }
-
-    const eventIds = new Set<string>()
-
-    for (const team of teamSchedules) {
-        for (const game of team.games) {
-            if (isCompletedGame(game)) {
-                eventIds.add(game.eventId)
+            if (!seasonMap.has(key)) {
+                seasonMap.set(key,
+                    createEmptySeasonStats(weeklyTeam.team, weeklyTeam.conference)
+                )
             }
         }
     }
 
-    const gameStatsMap = new Map<string, LiveTeamStats[]>()
-    const events = Array.from(eventIds)
+    const teams = Array.from(seasonMap.values())
+    const gameAssignments: Array<{ team: Season2026Stats, espnTeamId: string, eventId: string }> = []
 
-    for (let index = 0; index < events.length; index += 5) {
-        const batch = events.slice(index, index + 5)
+    await runInBatches(teams, 8, async (team) => {
+        try {
+            const espnTeamId = await getEspnTeamId(team.team)
+            const schedule = await getEspnTeamSchedule(espnTeamId, 2026)
 
-        const results = await Promise.all(
-            batch.map(async (eventId) => {
-                const stats = await getLiveGameStats(eventId)
+            const seenEvents = new Set<string>()
 
-                return {
-                    eventId,
-                    stats
+            for (const game of schedule) {
+                const startTime = new Date(game.startTime).getTime()
+
+                if (!Number.isFinite(startTime) || startTime > now) {
+                    continue
                 }
-            })
+
+                if (seenEvents.has(game.eventId)) {
+                    continue
+                }
+
+                seenEvents.add(game.eventId)
+                gameAssignments.push({team, espnTeamId, eventId: game.eventId})
+            }
+        } catch (error) {
+            failedTeams.push(team.team)
+            console.error(`Could not load ESPN schedule for ${team.team}:`, error)
+        }
+    })
+
+    const uniqueEventIds = Array.from(
+        new Set(gameAssignments.map((game) => game.eventId))
+    )
+
+    type GameStats = Awaited<ReturnType<typeof getLiveGameStats>>
+    const eventResults = new Map<string, GameStats>()
+
+    await runInBatches(uniqueEventIds, 10, async (eventId) => {
+        try {
+            const result = await getLiveGameStats(eventId)
+
+            eventResults.set(eventId, result)
+        } catch (error) {
+            failedGames.push(eventId)
+
+            console.error(`Could not load ESPN event ${eventId}:`, error)
+        }
+    })
+
+    for (const assignment of gameAssignments) {
+        const gameStats = eventResults.get(assignment.eventId)
+
+        if (!gameStats) {
+            continue
+        }
+
+        const liveTeam = gameStats.find(
+            (result) => result.espnTeamId === assignment.espnTeamId
         )
 
-        for (const result of results) {
-            gameStatsMap.set(result.eventId, result.stats)
-        }
-    }
-
-    for (const team of teamSchedules) {
-        const season = seasonMap.get(normalizeTeamName(team.name))
-
-        if (!season) continue
-
-        for (const game of team.games) {
-            if (!isCompletedGame(game)) continue
-
-            const gameStats = gameStatsMap.get(game.eventId)
-
-            if (!gameStats) {
-                throw new Error(`Missing ESPN stats for game ${game.eventId}`)
-            }
-
-            const matchingTeam = gameStats.find(
-                (entry) => entry.espnTeamId === team.espnId
+        if (!liveTeam) {
+            failedGames.push(
+                `${assignment.team.team}: ${assignment.eventId}`
             )
-
-            if (!matchingTeam) {
-                throw new Error(`Missing ESPN stats for ${team.name}, game ${game.eventId}`)
-            }
-
-            const weeklyTeam = convertEspnStats(matchingTeam, team.conference)
-
-            addWeeklyStats(season, weeklyTeam)
+            continue
         }
+
+        const stats = liveTeam.stats
+
+        if (stats.passing_yards == null && stats.rushing_yards == null) {
+            continue
+        }
+
+        const weeklyTeam: WeeklyTeamData = {
+            team: assignment.team.team,
+            conference: assignment.team.conference,
+            gameStart: new Date(0),
+            stats
+        }
+
+        addWeeklyStats(assignment.team, weeklyTeam)
     }
 
     const seasonStats = Array.from(seasonMap.values())
@@ -286,5 +268,37 @@ export async function get2026SeasonStats(): Promise<Season2026Stats[]> {
         calculateDerivedStats(season)
     }
 
+    console.log('2026 ESPN Season Stats:', seasonStats)
+    console.log('Unique ESPN events fetched:', uniqueEventIds.length)
+
+    if (failedTeams.length > 0 || failedGames.length > 0) {
+        console.warn('Incomplete 2026 ESPN statistics:', {failedTeams, failedGames})
+    }
+
     return seasonStats
 }
+
+
+let seasonStatsPromise: Promise<Season2026Stats[]> | null = null
+let seasonStatsCachedAt = 0
+
+const CACHE_DURATION = 5 * 60 * 1000
+
+export function get2026SeasonStats(): Promise<Season2026Stats[]> {
+    const now = Date.now()
+
+    if (seasonStatsPromise && (now - seasonStatsCachedAt < CACHE_DURATION)) {
+        return seasonStatsPromise
+    }
+
+    seasonStatsCachedAt = now
+
+    seasonStatsPromise = calculate2026SeasonStats().catch((error) => {
+        seasonStatsPromise = null
+        seasonStatsCachedAt = 0
+        throw error
+    })
+
+    return seasonStatsPromise
+}
+

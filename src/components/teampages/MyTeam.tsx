@@ -707,46 +707,54 @@ export default function MyTeam() {
                                         {formatUnitType(unit.unitType)}
                                     </UnitName>
 
+
                                     <UnitDetails>
-                                        vs{' '}
-
-                                        {opponentTeam ? (
-                                            <OpponentButton
-                                                onClick={() =>
-                                                    setSelectedStatsUnit({...unit,
-                                                        collegeTeamId: opponentTeam.id,
-                                                        teamName: opponentTeam.name,
-                                                        isOpponent: true,
-                                                    })
-                                                }
-                                            >
-                                                {opponentTeam.name}
-                                            </OpponentButton>
+                                        {opponentName === 'BYE' ? (
+                                            <ByeText>BYE</ByeText>
                                         ) : (
-                                            opponentName ?? 'Unknown'
-                                        )}
-
-                                        {!unit.locked && unit.gameStart && (
                                             <>
-                                                {' • '}
-                                                {formatGameStart(unit.gameStart)}
-                                            </>
-                                        )}
+                                                vs{' '}
 
-                                        {unit.locked && (
-                                            <>
-                                                {' • '}
-
-                                                {hasFinalResult ? (
-                                                    <strong>
-                                                        ({gameResult}) {gameScore}
-                                                    </strong>
+                                                {opponentTeam ? (
+                                                    <OpponentButton
+                                                        onClick={() =>
+                                                            setSelectedStatsUnit({
+                                                                ...unit,
+                                                                collegeTeamId: opponentTeam.id,
+                                                                teamName: opponentTeam.name,
+                                                                isOpponent: true,
+                                                            })
+                                                        }
+                                                    >
+                                                        {opponentTeam.name}
+                                                    </OpponentButton>
                                                 ) : (
-                                                    <strong>Locked</strong>
+                                                    opponentName ?? 'Unknown'
+                                                )}
+
+                                                {!unit.locked && unit.gameStart && (
+                                                    <>
+                                                        {' • '}
+                                                        {formatGameStart(unit.gameStart)}
+                                                    </>
+                                                )}
+
+                                                {unit.locked && (
+                                                    <>
+                                                        {' • '}
+                                                        {hasFinalResult ? (
+                                                            <strong>
+                                                                ({gameResult}) {gameScore}
+                                                            </strong>
+                                                        ) : (
+                                                            <strong>Locked</strong>
+                                                        )}
+                                                    </>
                                                 )}
                                             </>
                                         )}
                                     </UnitDetails>
+
                                 </UnitInfo>
 
                                 <UnitScore onClick={() => {
