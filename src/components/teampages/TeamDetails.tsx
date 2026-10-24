@@ -84,6 +84,7 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
     const [activeTab, setActiveTab] = useState<Tab>('2025')
     const [season2026Stats, setSeason2026Stats] = useState<Season2026Stats[]>([])
     const [loading2026, setLoading2026] = useState(false)
+    const [error2026, setError2026] = useState<string | null>(null)
     const collegeTeam = teams.find((team) => team.id === teamId)
 
     const team2026 = season2026Stats.find(
@@ -100,16 +101,27 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
 
         async function load2026Stats() {
             setLoading2026(true)
+            setError2026(null)
 
             try {
-                const stats =
-                    await get2026SeasonStats()
+                const stats = await get2026SeasonStats()
+
+                console.log('2026 Season Stats:', stats)
+
+                const usc = stats.find(
+                    (team) => team.team.toLowerCase().includes('usc')
+                )
+
+                console.log('USC 2026 Stats:', usc)
 
                 setSeason2026Stats(stats)
             } catch (error) {
-                console.error(
-                    'Failed to load 2026 stats:',
-                    error
+                console.error('Failed to load 2026 stats:', error)
+
+                setError2026(
+                    error instanceof Error
+                        ? error.message
+                        : 'Could not load 2026 season statistics.'
                 )
             } finally {
                 setLoading2026(false)
@@ -160,7 +172,11 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
                 {activeTab === '2026' && (
                     <StatsContent>
                         {loading2026 ? (
-                            <p>Loading 2026 stats...</p>
+                            <p>Loading 2026 stats from ESPN...</p>
+                        ) : error2026 ? (
+                            <p style={{ color: '#dc2626' }}>
+                                {error2026}
+                            </p>
                         ) : team2026 ? (
                             <Stats2026 team={team2026} teams={season2026Stats} unitType={unitType} isOpponent={isOpponent}/>
                         ) : (

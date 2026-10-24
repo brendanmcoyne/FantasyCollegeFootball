@@ -1,4 +1,12 @@
-import { getWeeklyStats, type WeeklyTeamData } from '../api/weeklyStats'
+import {
+    getWeeklyStats,
+    getEspnTeamId,
+    getEspnTeamSchedule,
+    getLiveGameStats,
+    type WeeklyTeamData,
+    type EspnGame,
+    type LiveTeamStats
+} from '../api/weeklyStats'
 
 import { CURRENT_WEEK } from '../bigseasonfile'
 
@@ -145,8 +153,27 @@ function calculateDerivedStats(season: Season2026Stats) {
     }
 }
 
+function isCompletedGame(game: EspnGame): boolean {
+    const status = (game.status ?? '').toLowerCase()
+
+    return (
+        status.includes('final') || status.includes('post')
+    )
+}
+
+function convertEspnStats(game: LiveTeamStats, conference: string): WeeklyTeamData {
+    return {
+        team: game.teamName,
+        conference,
+        gameStart: new Date(0),
+        stats: game.stats
+    }
+}
+
 export async function get2026SeasonStats(): Promise<Season2026Stats[]> {
     const seasonMap = new Map<string, Season2026Stats>()
+    const teamNames = new Map<string, { name: string, conference: string }>()
+
 
     for (let week = 0; week <= CURRENT_WEEK; week++) {
         const weeklyStats = await getWeeklyStats(week)
@@ -154,12 +181,100 @@ export async function get2026SeasonStats(): Promise<Season2026Stats[]> {
         for (const weeklyTeam of weeklyStats) {
             const key = normalizeTeamName(weeklyTeam.team)
 
-            let season = seasonMap.get(key)
+            teamNames.set(key, {
+                name: weeklyTeam.team,
+                conference: weeklyTeam.conference
+            })
+        }
+    }
 
-            if (!season) {
-                season = createEmptySeasonStats(weeklyTeam.team, weeklyTeam.conference)
-                seasonMap.set(key, season)
+    const teams = Array.from(teamNames.values())
+
+    const teamSchedules: {
+        name: string
+        conference: string
+        espnId: string
+        games: EspnGame[]
+    }[] = []
+
+    for (let index = 0; index < teams.length; index += 5) {
+        const batch = teams.slice(index, index + 5)
+
+        const results = await Promise.all(
+            batch.map(async (team) => {
+                const espnId = await getEspnTeamId(team.name)
+                const games = await getEspnTeamSchedule(espnId, 2026)
+
+                return {
+                    ...team,
+                    espnId,
+                    games
+                }
+            })
+        )
+
+        teamSchedules.push(...results)
+    }
+
+    for (const team of teamSchedules) {
+        seasonMap.set(normalizeTeamName(team.name), createEmptySeasonStats(team.name, team.conference))
+    }
+
+    const eventIds = new Set<string>()
+
+    for (const team of teamSchedules) {
+        for (const game of team.games) {
+            if (isCompletedGame(game)) {
+                eventIds.add(game.eventId)
             }
+        }
+    }
+
+    const gameStatsMap = new Map<string, LiveTeamStats[]>()
+    const events = Array.from(eventIds)
+
+    for (let index = 0; index < events.length; index += 5) {
+        const batch = events.slice(index, index + 5)
+
+        const results = await Promise.all(
+            batch.map(async (eventId) => {
+                const stats = await getLiveGameStats(eventId)
+
+                return {
+                    eventId,
+                    stats
+                }
+            })
+        )
+
+        for (const result of results) {
+            gameStatsMap.set(result.eventId, result.stats)
+        }
+    }
+
+    for (const team of teamSchedules) {
+        const season = seasonMap.get(normalizeTeamName(team.name))
+
+        if (!season) continue
+
+        for (const game of team.games) {
+            if (!isCompletedGame(game)) continue
+
+            const gameStats = gameStatsMap.get(game.eventId)
+
+            if (!gameStats) {
+                throw new Error(`Missing ESPN stats for game ${game.eventId}`)
+            }
+
+            const matchingTeam = gameStats.find(
+                (entry) => entry.espnTeamId === team.espnId
+            )
+
+            if (!matchingTeam) {
+                throw new Error(`Missing ESPN stats for ${team.name}, game ${game.eventId}`)
+            }
+
+            const weeklyTeam = convertEspnStats(matchingTeam, team.conference)
 
             addWeeklyStats(season, weeklyTeam)
         }
