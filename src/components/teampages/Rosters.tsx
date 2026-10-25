@@ -293,10 +293,7 @@ export default function Rosters() {
                             score: stats ? calculateUnitScore(unit.unitType, stats) : unit.score
                         }
                     } catch (error) {
-                        console.error(
-                            `Failed to refresh ESPN stats for ${unit.teamName}:`,
-                            error
-                        )
+                        console.error(`Failed to refresh ESPN stats for ${unit.teamName}:`, error)
 
                         return {
                             ...unit,

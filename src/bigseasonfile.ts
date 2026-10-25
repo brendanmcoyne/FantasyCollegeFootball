@@ -1,1 +1,1 @@
-export const CURRENT_WEEK = 8
+export const CURRENT_WEEK = 9
