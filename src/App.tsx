@@ -20,13 +20,15 @@ import Standings from './components/teampages/Standings'
 import Rankings from './components/teampages/rankings/Rankings2025'
 import Rankings2026 from './components/teampages/rankings/Rankings2026'
 
+import StatLoader from './components/StatLoader'
+
 function App() {
     return (
         <BrowserRouter>
             <Routes>
                 <Route path="/login" element={<Login />}/>
 
-                <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                <Route element={<ProtectedRoute><StatLoader /><Layout /></ProtectedRoute>}>
                     <Route path="/" element={<Home />} />
                     <Route path="/units" element={<Units />} />
                     <Route path="/create-league" element={<CreateLeague />} />

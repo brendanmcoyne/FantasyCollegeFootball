@@ -4,10 +4,14 @@ import styled from 'styled-components'
 import type { CollegeTeam } from '../../types/football'
 import type { RosterUnitType } from '../../rosters'
 
-import { getEspnTeamId, getEspnTeamSchedule, type EspnGame} from '../../api/weeklyStats'
+import { getEspnTeamId, getEspnTeamSchedule, getLiveGameStats, type EspnGame, type LiveTeamStats } from '../../api/weeklyStats'
+
+import { calculateUnitScore } from '../../utils/scoring'
+import { getScoreBreakdown } from '../../utils/ScoringBreakdown'
 
 import { get2026SeasonStats, type Season2026Stats } from '../../utils/2026stats'
 import { getStatRank, getStatRankByName, formatRank } from '../../utils/statRanking'
+import { getPositionRanks } from '../../utils/unitRankings'
 import { getTeamOpponent } from '../../utils/teamschedule'
 
 import { ModalBackdrop, ModalCard, ModalHeader, ModalTitle, CloseButton } from '../../utils/rosterstyles'
@@ -74,10 +78,77 @@ const ScheduleList = styled.div`
 
 const ScheduleRow = styled.div`
     display: grid;
-    grid-template-columns: 75px 1fr auto;
+    grid-template-columns: 95px minmax(0, 1fr) auto;
+    align-items: center;
     gap: 12px;
-    padding: 10px 0;
+
+    min-height: 62px;
+    padding: 0;
     border-bottom: 1px solid #e5e7eb;
+
+    @media (max-width: 500px) {
+        grid-template-columns: 65px minmax(0, 1fr) auto;
+        gap: 8px;
+        font-size: 0.85rem;
+    }
+`;
+
+const FantasyPointsButton = styled.button`
+    border: none;
+    background: #f3f4f6;
+    color: #111827;
+    border-radius: 6px;
+    height: 36px;
+    min-width: 94px;
+    padding: 0 10px;
+
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+        background: #e5e7eb;
+    }
+`;
+
+const ScheduleResult = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    min-width: 0;
+
+    @media (max-width: 500px) {
+        gap: 6px;
+    }
+`;
+
+const BreakdownCard = styled.div`
+    margin-top: 14px;
+    padding: 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+`;
+
+const BreakdownHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+`;
+
+const BreakdownCloseButton = styled.button`
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+        color: #111827;
+    }
 `;
 
 export default function TeamDetails({teamName, teamId, unitType, isOpponent = false, teams, onClose,}: TeamDetailsModalProps) {
@@ -86,6 +157,9 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
     const [loading2026, setLoading2026] = useState(false)
     const [error2026, setError2026] = useState<string | null>(null)
     const collegeTeam = teams.find((team) => team.id === teamId)
+
+    const [positionRank, setPositionRank] = useState<number | null>(null)
+    const [loadingRank, setLoadingRank] = useState(true)
 
     const team2026 = season2026Stats.find(
         (team) => normalizeTeamName(team.team) === normalizeTeamName(teamName))
@@ -108,21 +182,11 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
 
                 console.log('2026 Season Stats:', stats)
 
-                const usc = stats.find(
-                    (team) => team.team.toLowerCase().includes('usc')
-                )
-
-                console.log('USC 2026 Stats:', usc)
-
                 setSeason2026Stats(stats)
             } catch (error) {
                 console.error('Failed to load 2026 stats:', error)
 
-                setError2026(
-                    error instanceof Error
-                        ? error.message
-                        : 'Could not load 2026 season statistics.'
-                )
+                setError2026(error instanceof Error ? error.message : 'Could not load 2026 season statistics.')
             } finally {
                 setLoading2026(false)
             }
@@ -130,6 +194,35 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
 
         void load2026Stats()
     }, [activeTab, season2026Stats.length])
+
+    useEffect(() => {
+        let cancelled = false
+
+        async function loadPositionRank() {
+            setLoadingRank(true)
+            setPositionRank(null)
+
+            try {
+                const ranks = await getPositionRanks(teams, unitType)
+
+                if (!cancelled) {
+                    setPositionRank(ranks.get(teamId) ?? null)
+                }
+            } catch (error) {
+                console.error('Failed to calculate position rank:', error)
+            } finally {
+                if (!cancelled) {
+                    setLoadingRank(false)
+                }
+            }
+        }
+
+        void loadPositionRank()
+
+        return () => {
+            cancelled = true
+        }
+    }, [teams, teamId, unitType])
 
     return (
         <ModalBackdrop onClick={onClose}>
@@ -139,7 +232,20 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
 
                     <ModalTitle>
                         <h2>{teamName}</h2>
-                        <p>{isOpponent ? getOpponentStatLabel(unitType) : formatUnitType(unitType)}</p>
+
+                        <p>
+                            {isOpponent ? getOpponentStatLabel(unitType) : formatUnitType(unitType)}
+                        </p>
+
+                        {!isOpponent && (
+                            <p>
+                                <strong>
+                                    Pos. Rank:{' '}
+                                    {loadingRank ? 'Calculating...'
+                                        : positionRank !== null ? `#${positionRank}` : 'N/A'}
+                                </strong>
+                            </p>
+                        )}
                     </ModalTitle>
 
                     <CloseButton onClick={onClose}>Close</CloseButton>
@@ -174,9 +280,7 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
                         {loading2026 ? (
                             <p>Loading 2026 stats from ESPN...</p>
                         ) : error2026 ? (
-                            <p style={{ color: '#dc2626' }}>
-                                {error2026}
-                            </p>
+                            <p style={{ color: '#dc2626' }}>{error2026}</p>
                         ) : team2026 ? (
                             <Stats2026 team={team2026} teams={season2026Stats} unitType={unitType} isOpponent={isOpponent}/>
                         ) : (
@@ -186,7 +290,7 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
                 )}
 
                 {activeTab === 'SCHEDULE' && (
-                    <ScheduleContent teamName={teamName}/>
+                    <ScheduleContent teamName={teamName} unitType={unitType}/>
                 )}
             </DetailsCard>
         </ModalBackdrop>
@@ -201,20 +305,17 @@ function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: 
             return (
                 <>
                     <StatRow
-                        label="Passing Yards Allowed"
-                        value={stats.passing_yards_allowed ?? 0}
+                        label="Passing Yards Allowed" value={stats.passing_yards_allowed ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => -(team.stats.passing_yards_allowed ?? 0))}
                     />
 
                     <StatRow
-                        label="Passing Yards Allowed Per Game"
-                        value={stats.passing_yards_allowed_per_game ?? 0}
+                        label="Passing Yards Allowed Per Game" value={stats.passing_yards_allowed_per_game ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => -(team.stats.passing_yards_allowed_per_game ?? 0))}
                     />
 
                     <StatRow
-                        label="Takeaways"
-                        value={stats.takeaways ?? 0}
+                        label="Takeaways" value={stats.takeaways ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.takeaways ?? 0)}
                     />
                 </>
@@ -224,14 +325,12 @@ function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: 
         return (
             <>
                 <StatRow
-                    label="Passing Yards"
-                    value={stats.passing_yards ?? 0}
+                    label="Passing Yards" value={stats.passing_yards ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.passing_yards ?? 0)}
                 />
 
                 <StatRow
-                    label="Passing Touchdowns"
-                    value={stats.passing_touchdowns ?? 0}
+                    label="Passing Touchdowns" value={stats.passing_touchdowns ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.passing_touchdowns ?? 0)}
                 />
             </>
@@ -243,21 +342,17 @@ function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: 
             return (
                 <>
                     <StatRow
-                        label="Rushing Yards Allowed"
-                        value={stats.rushing_yards_allowed ?? 0}
+                        label="Rushing Yards Allowed" value={stats.rushing_yards_allowed ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => -(team.stats.rushing_yards_allowed ?? 0))}
                     />
 
                     <StatRow
-                        label="Rushing Yards Allowed Per Game"
-                        value={stats.rushing_yards_allowed_per_game ?? 0}
-                        rank={getStatRank(teams, collegeTeam.id,
-                            (team) => -(team.stats.rushing_yards_allowed_per_game ?? 0))}
+                        label="Rushing Yards Allowed Per Game" value={stats.rushing_yards_allowed_per_game ?? 0}
+                        rank={getStatRank(teams, collegeTeam.id, (team) => -(team.stats.rushing_yards_allowed_per_game ?? 0))}
                     />
 
                     <StatRow
-                        label="Takeaways"
-                        value={stats.takeaways ?? 0}
+                        label="Takeaways" value={stats.takeaways ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.takeaways ?? 0)}
                     />
                 </>
@@ -267,20 +362,17 @@ function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: 
         return (
             <>
                 <StatRow
-                    label="Rushing Yards"
-                    value={stats.rushing_yards ?? 0}
+                    label="Rushing Yards" value={stats.rushing_yards ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.rushing_yards ?? 0)}
                 />
 
                 <StatRow
-                    label="Rushing Touchdowns"
-                    value={stats.rushing_touchdowns ?? 0}
+                    label="Rushing Touchdowns" value={stats.rushing_touchdowns ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.rushing_touchdowns ?? 0)}
                 />
 
                 <StatRow
-                    label="Rushing Yards Per Game"
-                    value={stats.rushing_yards_per_game ?? 0}
+                    label="Rushing Yards Per Game" value={stats.rushing_yards_per_game ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.rushing_yards_per_game ?? 0)}
                 />
             </>
@@ -292,14 +384,12 @@ function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: 
             return (
                 <>
                     <StatRow
-                        label="Passing Yards Allowed"
-                        value={stats.passing_yards_allowed ?? 0}
+                        label="Passing Yards Allowed" value={stats.passing_yards_allowed ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => -(team.stats.passing_yards_allowed ?? 0))}
                     />
 
                     <StatRow
-                        label="Passing Yards Allowed Per Game"
-                        value={stats.passing_yards_allowed_per_game ?? 0}
+                        label="Passing Yards Allowed Per Game" value={stats.passing_yards_allowed_per_game ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => -(team.stats.passing_yards_allowed_per_game ?? 0))}
                     />
                 </>
@@ -309,20 +399,17 @@ function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: 
         return (
             <>
                 <StatRow
-                    label="Receiving Yards"
-                    value={stats.passing_yards ?? 0}
+                    label="Receiving Yards" value={stats.passing_yards ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.passing_yards ?? 0)}
                 />
 
                 <StatRow
-                    label="Receiving Touchdowns"
-                    value={stats.passing_touchdowns ?? 0}
+                    label="Receiving Touchdowns" value={stats.passing_touchdowns ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.passing_touchdowns ?? 0)}
                 />
 
                 <StatRow
-                    label="Receiving Yards Per Game"
-                    value={stats.passing_yards_per_game ?? 0}
+                    label="Receiving Yards Per Game" value={stats.passing_yards_per_game ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.passing_yards_per_game ?? 0)}
                 />
             </>
@@ -334,32 +421,27 @@ function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: 
             return (
                 <>
                     <StatRow
-                        label="Points Per Game"
-                        value={stats.points_per_game ?? 0}
+                        label="Points Per Game" value={stats.points_per_game ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.points_per_game ?? 0)}
                     />
 
                     <StatRow
-                        label="Passing Yards Per Game"
-                        value={stats.passing_yards_per_game ?? 0}
+                        label="Passing Yards Per Game" value={stats.passing_yards_per_game ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.passing_yards_per_game ?? 0)}
                     />
 
                     <StatRow
-                        label="Rushing Yards Per Game"
-                        value={stats.rushing_yards_per_game ?? 0}
+                        label="Rushing Yards Per Game" value={stats.rushing_yards_per_game ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.rushing_yards_per_game ?? 0)}
                     />
 
                     <StatRow
-                        label="Total Yards Per Game"
-                        value={stats.total_yards_per_game ?? 0}
+                        label="Total Yards Per Game" value={stats.total_yards_per_game ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.total_yards_per_game ?? 0)}
                     />
 
                     <StatRow
-                        label="Turnovers"
-                        value={stats.turnovers ?? 0}
+                        label="Turnovers" value={stats.turnovers ?? 0}
                         rank={getStatRank(teams, collegeTeam.id, (team) => -(team.stats.turnovers ?? 0))}
                     />
                 </>
@@ -369,20 +451,17 @@ function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: 
         return (
             <>
                 <StatRow
-                    label="Points Allowed"
-                    value={stats.points_allowed ?? 0}
+                    label="Points Allowed" value={stats.points_allowed ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => -(team.stats.points_allowed ?? 0))}
                 />
 
                 <StatRow
-                    label="Yards Allowed"
-                    value={stats.total_yards_allowed ?? 0}
+                    label="Yards Allowed" value={stats.total_yards_allowed ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => -(team.stats.total_yards_allowed ?? 0))}
                 />
 
                 <StatRow
-                    label="Takeaways"
-                    value={stats.takeaways ?? 0}
+                    label="Takeaways" value={stats.takeaways ?? 0}
                     rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.takeaways ?? 0)}
                 />
             </>
@@ -392,35 +471,28 @@ function Stats2025({ collegeTeam, teams, unitType, isOpponent }: { collegeTeam: 
     return (
         <>
             <StatRow
-                label="Field Goals Made"
-                value={stats.field_goals_made ?? 0}
+                label="Field Goals Made" value={stats.field_goals_made ?? 0}
                 rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.field_goals_made ?? 0)}
             />
 
             <StatRow
-                label="Field Goals Attempted"
-                value={stats.field_goals_attempted ?? 0}
+                label="Field Goals Attempted" value={stats.field_goals_attempted ?? 0}
                 rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.field_goals_attempted ?? 0)}
             />
 
             <StatRow
-                label="Field Goal Percentage"
-                value={stats.field_goal_percentage ?? 0}
-                rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.field_goal_percentage ?? 0)}
-                suffix="%"
+                label="Field Goal Percentage" value={stats.field_goal_percentage ?? 0}
+                rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.field_goal_percentage ?? 0)} suffix="%"
             />
 
             <StatRow
-                label="Extra Points Made"
-                value={stats.extra_points_made ?? 0}
+                label="Extra Points Made" value={stats.extra_points_made ?? 0}
                 rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.extra_points_made ?? 0)}
             />
 
             <StatRow
-                label="Extra Point Percentage"
-                value={stats.extra_point_percentage ?? 0}
-                rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.extra_point_percentage ?? 0)}
-                suffix="%"
+                label="Extra Point Percentage" value={stats.extra_point_percentage ?? 0}
+                rank={getStatRank(teams, collegeTeam.id, (team) => team.stats.extra_point_percentage ?? 0)} suffix="%"
             />
         </>
     )
@@ -435,21 +507,15 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
         if (isOpponent) {
             return (
                 <>
-                    <StatRow
-                        label="Yards Allowed"
-                        value={team.totalYardsAllowed}
+                    <StatRow label="Yards Allowed" value={team.totalYardsAllowed}
                         rank={rank((item) => -item.totalYardsAllowed)}
                     />
 
-                    <StatRow
-                        label="Yards Allowed Per Game"
-                        value={team.totalYardsAllowedPerGame}
+                    <StatRow label="Yards Allowed Per Game" value={team.totalYardsAllowedPerGame}
                         rank={rank((item) => -item.totalYardsAllowedPerGame)}
                     />
 
-                    <StatRow
-                        label="Takeaways"
-                        value={team.takeaways}
+                    <StatRow label="Takeaways" value={team.takeaways}
                         rank={rank((item) => item.takeaways)}
                     />
                 </>
@@ -458,21 +524,15 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
 
         return (
             <>
-                <StatRow
-                    label="Passing Yards"
-                    value={team.passingYards}
+                <StatRow label="Passing Yards" value={team.passingYards}
                     rank={rank((item) => item.passingYards)}
                 />
 
-                <StatRow
-                    label="Passing Touchdowns"
-                    value={team.passingTouchdowns}
+                <StatRow label="Passing Touchdowns" value={team.passingTouchdowns}
                     rank={rank((item) => item.passingTouchdowns)}
                 />
 
-                <StatRow
-                    label="Passing Yards Per Game"
-                    value={team.passingYardsPerGame}
+                <StatRow label="Passing Yards Per Game" value={team.passingYardsPerGame}
                     rank={rank((item) => item.passingYardsPerGame)}
                 />
             </>
@@ -483,21 +543,15 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
         if (isOpponent) {
             return (
                 <>
-                    <StatRow
-                        label="Yards Allowed"
-                        value={team.totalYardsAllowed}
+                    <StatRow label="Yards Allowed" value={team.totalYardsAllowed}
                         rank={rank((item) => -item.totalYardsAllowed)}
                     />
 
-                    <StatRow
-                        label="Yards Allowed Per Game"
-                        value={team.totalYardsAllowedPerGame}
+                    <StatRow label="Yards Allowed Per Game" value={team.totalYardsAllowedPerGame}
                         rank={rank((item) => -item.totalYardsAllowedPerGame)}
                     />
 
-                    <StatRow
-                        label="Takeaways"
-                        value={team.takeaways}
+                    <StatRow label="Takeaways" value={team.takeaways}
                         rank={rank((item) => item.takeaways)}
                     />
                 </>
@@ -506,21 +560,15 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
 
         return (
             <>
-                <StatRow
-                    label="Rushing Yards"
-                    value={team.rushingYards}
+                <StatRow label="Rushing Yards" value={team.rushingYards}
                     rank={rank((item) => item.rushingYards)}
                 />
 
-                <StatRow
-                    label="Rushing Touchdowns"
-                    value={team.rushingTouchdowns}
+                <StatRow label="Rushing Touchdowns" value={team.rushingTouchdowns}
                     rank={rank((item) => item.rushingTouchdowns)}
                 />
 
-                <StatRow
-                    label="Rushing Yards Per Game"
-                    value={team.rushingYardsPerGame}
+                <StatRow label="Rushing Yards Per Game" value={team.rushingYardsPerGame}
                     rank={rank((item) => item.rushingYardsPerGame)}
                 />
             </>
@@ -531,15 +579,11 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
         if (isOpponent) {
             return (
                 <>
-                    <StatRow
-                        label="Yards Allowed"
-                        value={team.totalYardsAllowed}
+                    <StatRow label="Yards Allowed" value={team.totalYardsAllowed}
                         rank={rank((item) => -item.totalYardsAllowed)}
                     />
 
-                    <StatRow
-                        label="Yards Allowed Per Game"
-                        value={team.totalYardsAllowedPerGame}
+                    <StatRow label="Yards Allowed Per Game" value={team.totalYardsAllowedPerGame}
                         rank={rank((item) => -item.totalYardsAllowedPerGame)}
                     />
                 </>
@@ -548,21 +592,15 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
 
         return (
             <>
-                <StatRow
-                    label="Receiving Yards"
-                    value={team.passingYards}
+                <StatRow label="Receiving Yards" value={team.passingYards}
                     rank={rank((item) => item.passingYards)}
                 />
 
-                <StatRow
-                    label="Receiving Touchdowns"
-                    value={team.passingTouchdowns}
+                <StatRow label="Receiving Touchdowns" value={team.passingTouchdowns}
                     rank={rank((item) => item.passingTouchdowns)}
                 />
 
-                <StatRow
-                    label="Receiving Yards Per Game"
-                    value={team.passingYardsPerGame}
+                <StatRow label="Receiving Yards Per Game" value={team.passingYardsPerGame}
                     rank={rank((item) => item.passingYardsPerGame)}
                 />
             </>
@@ -573,15 +611,11 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
         if (isOpponent) {
             return (
                 <>
-                    <StatRow
-                        label="Passing Yards Per Game"
-                        value={team.passingYardsPerGame}
+                    <StatRow label="Passing Yards Per Game" value={team.passingYardsPerGame}
                         rank={rank((item) => item.passingYardsPerGame)}
                     />
 
-                    <StatRow
-                        label="Rushing Yards Per Game"
-                        value={team.rushingYardsPerGame}
+                    <StatRow label="Rushing Yards Per Game" value={team.rushingYardsPerGame}
                         rank={rank((item) => item.rushingYardsPerGame)}
                     />
                 </>
@@ -590,39 +624,27 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
 
         return (
             <>
-                <StatRow
-                    label="Points Allowed"
-                    value={team.pointsAllowed}
+                <StatRow label="Points Allowed" value={team.pointsAllowed}
                     rank={rank((item) => -item.pointsAllowed)}
                 />
 
-                <StatRow
-                    label="Points Allowed Per Game"
-                    value={team.pointsAllowedPerGame}
+                <StatRow label="Points Allowed Per Game" value={team.pointsAllowedPerGame}
                     rank={rank((item) => -item.pointsAllowedPerGame)}
                 />
 
-                <StatRow
-                    label="Yards Allowed"
-                    value={team.totalYardsAllowed}
+                <StatRow label="Yards Allowed" value={team.totalYardsAllowed}
                     rank={rank((item) => -item.totalYardsAllowed)}
                 />
 
-                <StatRow
-                    label="Yards Allowed Per Game"
-                    value={team.totalYardsAllowedPerGame}
+                <StatRow label="Yards Allowed Per Game" value={team.totalYardsAllowedPerGame}
                     rank={rank((item) => -item.totalYardsAllowedPerGame)}
                 />
 
-                <StatRow
-                    label="Takeaways"
-                    value={team.takeaways}
+                <StatRow label="Takeaways" value={team.takeaways}
                     rank={rank((item) => item.takeaways)}
                 />
 
-                <StatRow
-                    label="Sacks"
-                    value={team.sacks}
+                <StatRow label="Sacks" value={team.sacks}
                     rank={rank((item) => item.sacks)}
                 />
             </>
@@ -631,92 +653,165 @@ function Stats2026({team, teams, unitType, isOpponent}: { team: Season2026Stats,
 
     return (
         <>
-            <StatRow
-                label="Field Goals Made"
-                value={team.fieldGoalsMade}
+            <StatRow label="Field Goals Made" value={team.fieldGoalsMade}
                 rank={rank((item) => item.fieldGoalsMade)}
             />
 
-            <StatRow
-                label="Field Goals Attempted"
-                value={team.fieldGoalsAttempted}
+            <StatRow label="Field Goals Attempted" value={team.fieldGoalsAttempted}
                 rank={rank((item) => item.fieldGoalsAttempted)}
             />
 
-            <StatRow
-                label="Field Goal Percentage"
-                value={team.fieldGoalPercentage}
-                rank={rank((item) => item.fieldGoalPercentage)}
-                suffix="%"
+            <StatRow label="Field Goal Percentage" value={team.fieldGoalPercentage}
+                rank={rank((item) => item.fieldGoalPercentage)} suffix="%"
             />
 
-            <StatRow
-                label="Extra Points Made"
-                value={team.extraPointsMade}
+            <StatRow label="Extra Points Made" value={team.extraPointsMade}
                 rank={rank((item) => item.extraPointsMade)}
             />
 
-            <StatRow
-                label="Extra Point Percentage"
-                value={team.extraPointPercentage}
-                rank={rank((item) => item.extraPointPercentage)}
-                suffix="%"
+            <StatRow label="Extra Point Percentage" value={team.extraPointPercentage}
+                rank={rank((item) => item.extraPointPercentage)} suffix="%"
             />
 
-            <StatRow
-                label="Special Teams Touchdowns"
-                value={team.specialTeamsTouchdowns}
+            <StatRow label="Special Teams Touchdowns" value={team.specialTeamsTouchdowns}
                 rank={rank((item) => item.specialTeamsTouchdowns)}
             />
 
-            <StatRow
-                label="Blocked Kicks"
-                value={team.blockedKicks}
+            <StatRow label="Blocked Kicks" value={team.blockedKicks}
                 rank={rank((item) => item.blockedKicks)}
             />
         </>
     )
 }
 
-function ScheduleContent({teamName}: { teamName: string }) {
+function matchGamesToSchedule(teamName: string, games: EspnGame[]): Map<number, EspnGame> {
+    const sortedGames = [...games].sort(
+        (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+    )
+
+    const scheduledWeeks = Array.from({ length: 13 }, (_, week) => week
+    ).filter((week) => {
+        const opponent = getTeamOpponent(teamName, week)
+
+        return Boolean(opponent && opponent !== 'BYE')
+    })
+
+    const gamesByWeek = new Map<number, EspnGame>()
+
+    scheduledWeeks.forEach((week, index) => {
+        const game = sortedGames[index]
+
+        if (game) {
+            gamesByWeek.set(week, game)
+        }
+    })
+
+    return gamesByWeek
+}
+
+function ScheduleContent({teamName, unitType}: { teamName: string, unitType: RosterUnitType }) {
     const [games, setGames] = useState<EspnGame[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+
     const [espnTeamId, setEspnTeamId] = useState<string | null>(null)
+    const [gameStats, setGameStats] = useState<Record<string, LiveTeamStats>>({})
+    const [selectedGame, setSelectedGame] = useState<string | null>(null)
 
     useEffect(() => {
-        async function loadSchedule() {
-            try {
-                const resolvedEspnTeamId = await getEspnTeamId(teamName)
-                const schedule = await getEspnTeamSchedule(resolvedEspnTeamId)
+        let cancelled = false
 
-                setEspnTeamId(resolvedEspnTeamId)
+        async function loadSchedule() {
+            setLoading(true)
+            setError(null)
+            setGameStats({})
+            setSelectedGame(null)
+
+            try {
+                const resolvedId = await getEspnTeamId(teamName)
+                const schedule = await getEspnTeamSchedule(resolvedId)
+
+                if (cancelled) return
+
+                setEspnTeamId(resolvedId)
                 setGames(schedule)
-            } catch (error) {
-                console.error('Failed to load ESPN schedule:', error)
+
+                const completedGames = schedule.filter((game) => {
+                    const team = game.teams.find(
+                        (item) => item.espnTeamId === resolvedId
+                    )
+
+                    const opponent = game.teams.find(
+                        (item) => item.espnTeamId !== resolvedId
+                    )
+
+                    return (
+                        team?.score !== null &&
+                        team?.score !== undefined &&
+                        opponent?.score !== null &&
+                        opponent?.score !== undefined
+                    )
+                })
+
+                const results = await Promise.allSettled(
+                    completedGames.map(async (game) => {
+                        const stats = await getLiveGameStats(game.eventId)
+
+                        const selectedTeamStats = stats.find(
+                            (item) => item.espnTeamId === resolvedId
+                        )
+
+                        return {eventId: game.eventId, stats: selectedTeamStats}
+                    })
+                )
+
+                if (cancelled) return
+
+                const statsByGame: Record<string, LiveTeamStats> = {}
+
+                results.forEach((result) => {
+                    if (result.status === 'fulfilled' && result.value.stats) {
+                        statsByGame[result.value.eventId] = result.value.stats
+                    }
+                })
+
+                setGameStats(statsByGame)
+
+            } catch (err) {
+                if (cancelled) return
+
+                console.error('Failed to load schedule:', err)
+
+                setError(err instanceof Error ? err.message : 'Could not load schedule.')
             } finally {
-                setLoading(false)
+                if (!cancelled) {
+                    setLoading(false)
+                }
             }
         }
 
         void loadSchedule()
+
+        return () => {
+            cancelled = true
+        }
     }, [teamName])
 
     if (loading) {
-        return <p>Loading schedule...</p>
+        return <p>Loading schedule and fantasy scores...</p>
     }
 
-    const scheduledWeeks = Array.from(
-        {length: 13},
-        (_, week) => week
-    ).filter((week) => {
-        const opponent = getTeamOpponent(teamName, week)
+    if (error) {
+        return <p style={{ color: '#dc2626' }}>{error}</p>
+    }
 
-        return opponent && opponent !== 'BYE'
-    })
+    const gamesByWeek = matchGamesToSchedule(teamName, games)
+    const selectedStats = selectedGame ? gameStats[selectedGame] : null
+    const selectedFantasyScore = selectedStats ? calculateUnitScore(unitType, selectedStats.stats) : null
 
     return (
         <ScheduleList>
-            {Array.from({length: 13}, (_, week) => week).map((week) => {
+            {Array.from({ length: 13 }, (_, week) => week).map((week) => {
                 const opponent = getTeamOpponent(teamName, week)
 
                 if (opponent === 'BYE') {
@@ -724,19 +819,19 @@ function ScheduleContent({teamName}: { teamName: string }) {
                         <ScheduleRow key={week}>
                             <strong>Week {week}</strong>
                             <span>BYE</span>
+                            <span />
                         </ScheduleRow>
                     )
                 }
 
-                const gameIndex = scheduledWeeks.indexOf(week)
-                const game = games[gameIndex]
+                const game = gamesByWeek.get(week)
 
                 const team = game?.teams.find(
-                    (gameTeam) => gameTeam.espnTeamId === espnTeamId
+                    (item) => item.espnTeamId === espnTeamId
                 )
 
                 const opponentTeam = game?.teams.find(
-                    (gameTeam) => gameTeam.espnTeamId !== team?.espnTeamId
+                    (item) => item.espnTeamId !== espnTeamId
                 )
 
                 const hasScore =
@@ -745,18 +840,54 @@ function ScheduleContent({teamName}: { teamName: string }) {
                     opponentTeam?.score !== null &&
                     opponentTeam?.score !== undefined
 
-                return (
-                    <ScheduleRow key={week}>
-                        <strong>Week {week}</strong>
-                        <span>{opponent}</span>
+                const stats = game ? gameStats[game.eventId] : undefined
+                const fantasyPoints = stats ? calculateUnitScore(unitType, stats.stats) : null
 
-                        {hasScore && (
-                            <strong>
-                                {team!.winner ? 'W' : 'L'}{' '}
-                                {team!.score}-{opponentTeam!.score}
-                            </strong>
-                        )}
-                    </ScheduleRow>
+                return (
+                    <div key={week}>
+                        <ScheduleRow>
+                            <strong>Week {week}</strong>
+                            <span>{opponent}</span>
+
+                            <ScheduleResult>
+                                {hasScore && (
+                                    <strong>
+                                        {team!.winner ? 'W' : 'L'}{' '}
+                                        {team!.score}-{opponentTeam!.score}
+                                    </strong>
+                                )}
+
+                                {fantasyPoints !== null && (
+                                    <FantasyPointsButton
+                                        onClick={() => {
+                                            setSelectedGame(selectedGame === game?.eventId ? null : game?.eventId ?? null)
+                                        }}
+                                    >
+                                        {fantasyPoints.toFixed(1)} PTS
+                                    </FantasyPointsButton>
+                                )}
+                            </ScheduleResult>
+                        </ScheduleRow>
+
+                        {selectedGame === game?.eventId &&
+                            selectedStats &&
+                            selectedFantasyScore !== null && (
+                                <BreakdownCard>
+                                    <BreakdownHeader>
+                                        <strong>
+                                            Week {week} —{' '}
+                                            {selectedFantasyScore.toFixed(1)} PTS
+                                        </strong>
+
+                                        <BreakdownCloseButton onClick={() => setSelectedGame(null)}>
+                                            Close
+                                        </BreakdownCloseButton>
+                                    </BreakdownHeader>
+
+                                    {getScoreBreakdown(unitType, selectedStats.stats)}
+                                </BreakdownCard>
+                            )}
+                    </div>
                 )
             })}
         </ScheduleList>
