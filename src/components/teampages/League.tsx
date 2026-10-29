@@ -343,6 +343,7 @@ export default function League() {
                         <ActionLink to={`/league/${league.id}/free-agents`}>Free Agents</ActionLink>
                         <ActionLink to={`/league/${league.id}/schedule`}>Schedule</ActionLink>
                         <ActionLink to={`/league/${league.id}/standings`}>Standings</ActionLink>
+                        <ActionLink to={`/league/${league.id}/playoffs`}>Playoffs</ActionLink>
                     </>
                 )}
 

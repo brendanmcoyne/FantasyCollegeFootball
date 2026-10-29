@@ -21,20 +21,11 @@ function normalizeTeamName(name: string): string {
 
 function getSeasonFantasyPoints(team: Season2026Stats, unitType: ScoringUnitType): number {
     switch (unitType) {
-        case 'PASSING':
-            return team.passingFantasyPoints
-
-        case 'RUSHING':
-            return team.rushingFantasyPoints
-
-        case 'RECEIVING':
-            return team.receivingFantasyPoints
-
-        case 'DEFENSE':
-            return team.defenseFantasyPoints
-
-        case 'SPECIAL_TEAMS':
-            return team.specialTeamsFantasyPoints
+        case 'PASSING': return team.passingFantasyPoints
+        case 'RUSHING': return team.rushingFantasyPoints
+        case 'RECEIVING': return team.receivingFantasyPoints
+        case 'DEFENSE': return team.defenseFantasyPoints
+        case 'SPECIAL_TEAMS':return team.specialTeamsFantasyPoints
     }
 }
 

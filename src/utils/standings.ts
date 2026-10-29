@@ -26,7 +26,7 @@ export async function getLeagueStandings(leagueId: string): Promise<Standing[]> 
             .from('league_matchups')
             .select('team1_id, team2_id, team1_score, team2_score')
             .eq('league_id', leagueId)
-            .lt('week', CURRENT_WEEK)
+            .lte('week', Math.min(CURRENT_WEEK - 1, 10))
 
     if (matchupsError) {
         throw matchupsError

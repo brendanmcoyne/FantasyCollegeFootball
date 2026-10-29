@@ -12,4 +12,5 @@ export const WEEKLY_DATA_URLS: Record<number, string> = {
     10: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=1544478399&single=true&output=csv',
     11: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=869730775&single=true&output=csv',
     12: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=1080384290&single=true&output=csv',
+    13: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTUWCSaZ0bMSitLxskLi_GM2z5kqJCgF8zho26Hf2NVMpkyeneGf5TiK7qXf0doi6bD-8AnZOUCeguL/pub?gid=77674277&single=true&output=csv',
 }

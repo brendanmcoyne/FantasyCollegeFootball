@@ -19,6 +19,7 @@ import Schedule from './components/teampages/Schedule'
 import Standings from './components/teampages/Standings'
 import Rankings from './components/teampages/rankings/Rankings2025'
 import Rankings2026 from './components/teampages/rankings/Rankings2026'
+import Playoffs from './components/teampages/Playoffs'
 
 import StatLoader from './components/StatLoader'
 
@@ -44,6 +45,7 @@ function App() {
                     <Route path="/league/:leagueId/free-agents" element={<FreeAgents />}/>
                     <Route path="/league/:leagueId/team/:memberId" element={<Rosters />}/>
                     <Route path="/league/:leagueId/week-scores/:week" element={<WeekScores />}/>
+                    <Route path="/league/:leagueId/playoffs" element={<Playoffs />} />
                     <Route path="/league/:leagueId/schedule" element={<Schedule />}/>
                     <Route path="/league/:leagueId/standings" element={<Standings />}/>
                 </Route>
