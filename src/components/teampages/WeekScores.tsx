@@ -132,6 +132,7 @@ const SectionCard = styled.section`
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 14px;
+    margin: 0;
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 `;
@@ -227,17 +228,25 @@ const MobileSectionTitle = styled.h4`
     color: #374151;
 `;
 
+
 const MobileUnitCell = styled.div<{ $side: 'left' | 'right' }>`
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     min-width: 0;
+    padding: 6px;
+    border-radius: 6px;
     cursor: pointer;
+    transition: background 0.15s ease;
 
     ${({ $side }) => $side === 'right' && `
         flex-direction: row-reverse;
     `}
+
+    &:hover {
+        background: #f3f4f6;
+    }
 
     span {
         min-width: 0;
@@ -246,81 +255,11 @@ const MobileUnitCell = styled.div<{ $side: 'left' | 'right' }>`
     }
 `;
 
-const MatchupTeam = styled.div`
-    padding: 18px;
-
-    @media (max-width: 700px) {
-        padding: 14px;
-        min-width: 0;
-    }
-`;
-
-const MatchupTeamName = styled.h3`
-    margin: 0;
-
-    @media (max-width: 700px) {
-        font-size: 0.8rem;
-        overflow-wrap: anywhere;
-    }
-`;
-
-const BigScore = styled.div`
-    font-size: 1.6rem;
-    font-weight: 700;
-
-    @media (max-width: 700px) {
-        font-size: 1rem;
-        white-space: nowrap;
-    }
-`;
-
 const TeamRecord = styled.span`
     font-size: 0.75rem;
     font-weight: 600;
     color: #6b7280;
     white-space: nowrap;
-`;
-
-const MatchupTeamHeader = styled.div`
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 14px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e5e7eb;
-
-    @media (max-width: 700px) {
-        gap: 4px;
-        align-items: center;
-
-        ${MatchupTeamName} {
-            font-size: 0.8rem;
-            overflow-wrap: anywhere;
-        }
-
-        ${BigScore} {
-            font-size: 1rem;
-            white-space: nowrap;
-        }
-
-        ${TeamRecord} {
-            font-size: 0.65rem;
-        }
-    }
-`;
-
-const ScoreUnit = styled.div<{ $clickable?: boolean }>`
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 8px 6px;
-    border-radius: 6px;
-    cursor: ${({ $clickable }) => $clickable ? 'pointer' : 'default'};
-
-    &:hover {
-        background: ${({ $clickable }) => $clickable ? '#f3f4f6' : 'transparent'};
-    }
 `;
 
 const scoreFlash = keyframes`
@@ -467,6 +406,68 @@ const ByeLabel = styled.span`
     font-weight: 700;
 `;
 
+const BenchUnitRow = styled(MobileUnitRow)`
+    padding: 10px 8px;
+    border-bottom: 1px solid #f3f4f6;
+
+    &:last-child {
+        border-bottom: none;
+    }
+`;
+
+const MatchupBar = styled.div`
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+
+    @media (max-width: 700px) {
+        gap: 6px;
+    }
+`;
+
+const MatchupTab = styled.button<{ $active: boolean }>`
+    width: 100%;
+    min-width: 0;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 2px solid ${({ $active }) =>
+            $active ? '#2563eb' : '#e5e7eb'};
+    background: ${({ $active }) =>
+            $active ? '#eff6ff' : '#ffffff'};
+    color: #111827;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease;
+
+    &:hover {
+        background: ${({ $active }) =>
+                $active ? '#eff6ff' : '#f9fafb'};
+    }
+
+    @media (max-width: 700px) {
+        padding: 10px 6px;
+    }
+`;
+
+const MatchupTabTeam = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    padding: 4px 0;
+
+    span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    strong {
+        flex-shrink: 0;
+    }
+`;
 
 function formatUnitType(unitType: ScoringUnitType): string {
     return unitType === 'SPECIAL_TEAMS' ? 'Special Teams' : unitType.charAt(0) + unitType.slice(1).toLowerCase()
@@ -481,6 +482,7 @@ export default function WeekScores() {
     const scoresRef = useRef<FantasyTeamScore[]>([])
     const [standings, setStandings] = useState<Standing[]>([])
     const [playoffSeeds, setPlayoffSeeds] = useState<PlayoffTeam[]>([])
+    const [selectedMatchupId, setSelectedMatchupId] = useState<string | null>(null)
 
     const [selectedUnit, setSelectedUnit] = useState<ScoredUnit | null>(null)
     const [loading, setLoading] = useState(true)
@@ -493,6 +495,19 @@ export default function WeekScores() {
     useEffect(() => {
         scoresRef.current = scores
     }, [scores])
+
+    useEffect(() => {
+        if (matchups.length === 0) {
+            setSelectedMatchupId(null)
+            return
+        }
+
+        setSelectedMatchupId((current) =>
+            matchups.some((matchup) => matchup.id === current)
+                ? current
+                : matchups[0].id
+        )
+    }, [matchups])
 
     useEffect(() => {
         async function loadScores() {
@@ -684,14 +699,11 @@ export default function WeekScores() {
                         .from('league_matchups')
                         .update(weekStarted
                             ? {
-                                team1_score: team1.starterTotal,
-                                team2_score: team2.starterTotal,
+                                team1_score: team1.starterTotal, team2_score: team2.starterTotal,
                                 winner_id: weekComplete ? team1.starterTotal >= team2.starterTotal
                                     ? matchup.team1_id : matchup.team2_id : null,
                             } : {
-                                team1_score: null,
-                                team2_score: null,
-                                winner_id: null,
+                                team1_score: null, team2_score: null, winner_id: null,
                             }
                         )
                         .eq('id', matchup.id)
@@ -759,11 +771,9 @@ export default function WeekScores() {
                         currentScores.map((team) => ({
                             ...team,
                             starters: team.starters.map((unit) => ({
-                                ...unit, scoreChange: undefined
-                            })),
+                                ...unit, scoreChange: undefined})),
                             bench: team.bench.map((unit) => ({
-                                ...unit, scoreChange: undefined
-                            })),
+                                ...unit, scoreChange: undefined})),
                         }))
                     )
                 }, 1500)
@@ -781,12 +791,10 @@ export default function WeekScores() {
                 (item) => item.memberId === team.memberId
             )
 
-            return standing
-                ? `${standing.wins}-${standing.losses}`
-                : '0-0'
+            return standing ? `${standing.wins}-${standing.losses}` : '0-0'
         }
 
-        function renderMobileUnit(unit: ScoredUnit | undefined, side: 'left' | 'right') {
+        function renderMobileUnit(unit: ScoredUnit | undefined, side: 'left' | 'right', bench = false) {
             if (!unit) {
                 return <div />
             }
@@ -796,12 +804,15 @@ export default function WeekScores() {
                     key={unit.rosterId}
                     $side={side}
                     onClick={() => {
-                        if (unit.locked) {
+                        if (unit.stats) {
                             setSelectedUnit(unit)
                         }
                     }}
                 >
-                    <span>{unit.teamName}</span>
+                    <span style={{fontSize: bench ? '0.85rem' : '1rem', fontWeight: bench ? 400 : 700,}}>
+                        {unit.teamName}
+                        {bench && ` ${formatUnitType(unit.unitType)}`}
+                    </span>
 
                     <UnitScore $change={unit.scoreChange}>
                         {unit.score.toFixed(1)}
@@ -831,6 +842,12 @@ export default function WeekScores() {
             )
         }
 
+        const bench1 = [...team1.bench].sort(
+            (a, b) => UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType))
+
+        const bench2 = [...team2.bench].sort(
+            (a, b) => UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType))
+
         return (
             <>
                 <MobileHeader>
@@ -840,9 +857,7 @@ export default function WeekScores() {
                             <TeamRecord>({getRecord(team1)})</TeamRecord>
                         </TeamNameWithRecord>
 
-                        <MobileHeaderScore>
-                            {team1.starterTotal.toFixed(1)}
-                        </MobileHeaderScore>
+                        <MobileHeaderScore>{team1.starterTotal.toFixed(1)}</MobileHeaderScore>
                     </MobileHeaderTeam>
 
                     <MobileHeaderTeam $side="right">
@@ -851,9 +866,7 @@ export default function WeekScores() {
                             <TeamRecord>({getRecord(team2)})</TeamRecord>
                         </TeamNameWithRecord>
 
-                        <MobileHeaderScore>
-                            {team2.starterTotal.toFixed(1)}
-                        </MobileHeaderScore>
+                        <MobileHeaderScore>{team2.starterTotal.toFixed(1)}</MobileHeaderScore>
                     </MobileHeaderTeam>
                 </MobileHeader>
 
@@ -867,98 +880,17 @@ export default function WeekScores() {
 
                 <MobileSectionTitle>Bench</MobileSectionTitle>
 
-                {UNIT_ORDER.map((unitType) =>
-                    renderSection(
-                        formatUnitType(unitType),
-                        team1.bench.filter((unit) => unit.unitType === unitType),
-                        team2.bench.filter((unit) => unit.unitType === unitType)
+                {Array.from(
+                    { length: Math.max(bench1.length, bench2.length) },
+                    (_, index) => (
+                        <BenchUnitRow key={`bench-${index}`}>
+                            {renderMobileUnit(bench1[index], 'left', true)}
+                            {renderMobileUnit(bench2[index], 'right', true)}
+                        </BenchUnitRow>
                     )
                 )}
+
             </>
-        )
-    }
-
-    function MatchupTeamDisplay({team, side}: { team: FantasyTeamScore, side: 'left' | 'right' }) {
-        const standing = standings.find(
-            (standing) => standing.memberId === team.memberId
-        )
-
-        const record = standing ? `${standing.wins}-${standing.losses}` : '0-0'
-
-        const sortedStarters = [...team.starters].sort(
-            (a, b) =>
-                UNIT_ORDER.indexOf(a.unitType) - UNIT_ORDER.indexOf(b.unitType)
-        )
-
-        function renderUnit(unit: ScoredUnit) {
-            return (
-                <ScoreUnit
-                    key={unit.rosterId}
-                    $clickable={unit.locked}
-                    onClick={() => {
-                        if (unit.locked) {
-                            setSelectedUnit(unit)
-                        }
-                    }}
-                >
-                    {side === 'left' ? (
-                        <>
-                            <span>
-                                {unit.teamName}{' '}
-                                {formatUnitType(unit.unitType)}
-                            </span>
-
-                            <UnitScore $change={unit.scoreChange}>
-                                {unit.score.toFixed(1)}
-                            </UnitScore>
-                        </>
-                    ) : (
-                        <>
-                            <UnitScore $change={unit.scoreChange}>
-                                {unit.score.toFixed(1)}
-                            </UnitScore>
-
-                            <span>
-                                {unit.teamName}{' '}
-                                {formatUnitType(unit.unitType)}
-                            </span>
-                        </>
-                    )}
-                </ScoreUnit>
-            )
-        }
-
-        return (
-            <MatchupTeam>
-                <MatchupTeamHeader>
-                    {side === 'left' ? (
-                        <>
-                            <TeamNameWithRecord>
-                                <MatchupTeamName>{team.teamName}</MatchupTeamName>
-                                <TeamRecord>({record})</TeamRecord>
-                            </TeamNameWithRecord>
-
-                            <BigScore>{team.starterTotal.toFixed(1)}</BigScore>
-                        </>
-                    ) : (
-                        <>
-                            <BigScore>{team.starterTotal.toFixed(1)}</BigScore>
-
-                            <TeamNameWithRecord>
-                                <TeamRecord>({record})</TeamRecord>
-                                <MatchupTeamName>{team.teamName}</MatchupTeamName>
-                            </TeamNameWithRecord>
-                        </>
-                    )}
-                </MatchupTeamHeader>
-
-                {sortedStarters.map(renderUnit)}
-
-                <h4 style={{ textAlign: side === 'left' ? 'left' : 'right' }}>
-                    Bench
-                </h4>
-                {team.bench.map(renderUnit)}
-            </MatchupTeam>
         )
     }
 
@@ -1006,38 +938,95 @@ export default function WeekScores() {
                 <Status>{weekComplete ? 'Final' : weekStarted ? 'In Progress' : 'Not Started'}</Status>
             </p>
             </HeaderCard>
-            <hr />
 
             <SectionCard>
-            <h2>Matchups</h2>
+                <MatchupBar>
+                    {matchups.map((matchup) => {
+                        const team1 = scores.find(
+                            (team) => team.memberId === matchup.team1_id
+                        )
+                        const team2 = scores.find(
+                            (team) => team.memberId === matchup.team2_id
+                        )
 
-            {matchups.map((matchup) => {
-                const team1 = scores.find((team) => team.memberId === matchup.team1_id)
-                const team2 = scores.find((team) => team.memberId === matchup.team2_id)
+                        if (!team1 || !team2) return null
 
-                if (!team1 || !team2) {
-                    return null
-                }
+                        return (
+                            <MatchupTab
+                                key={matchup.id}
+                                type="button"
+                                $active={selectedMatchupId === matchup.id}
+                                onClick={() => setSelectedMatchupId(matchup.id)}
+                            >
+                                <MatchupTabTeam>
+                                    <span>{team1.teamName}</span>
+                                    <strong>
+                                        {weekStarted
+                                            ? team1.starterTotal.toFixed(1)
+                                            : '-'}
+                                    </strong>
+                                </MatchupTabTeam>
 
-                if (!weekStarted) {
-                    return (
-                        <FutureMatchupCard key={matchup.id}>
-                            <FutureTeamLeft>{team1.teamName}</FutureTeamLeft>
-                            <VsText>vs</VsText>
-                            <FutureTeamRight>{team2.teamName}</FutureTeamRight>
-                        </FutureMatchupCard>
-                    )
-                }
+                                <MatchupTabTeam>
+                                    <span>{team2.teamName}</span>
+                                    <strong>
+                                        {weekStarted
+                                            ? team2.starterTotal.toFixed(1)
+                                            : '-'}
+                                    </strong>
+                                </MatchupTabTeam>
+                            </MatchupTab>
+                        )
+                    })}
 
-                return (
-                    <MatchupCard key={matchup.id}>
-                        <GroupedMatchup>
-                            <GroupedMatchupDisplay team1={team1} team2={team2} />
-                        </GroupedMatchup>
-                    </MatchupCard>
-                )
-            })}
+                </MatchupBar>
+            </SectionCard>
 
+            <SectionCard>
+                <h2>Matchups</h2>
+
+                {matchups
+                    .filter((matchup) => matchup.id === selectedMatchupId)
+                    .map((matchup) => {
+                        const team1 = scores.find(
+                            (team) => team.memberId === matchup.team1_id
+                        )
+
+                        const team2 = scores.find(
+                            (team) => team.memberId === matchup.team2_id
+                        )
+
+                        if (!team1 || !team2) {
+                            return null
+                        }
+
+                        if (!weekStarted) {
+                            return (
+                                <FutureMatchupCard key={matchup.id}>
+                                    <FutureTeamLeft>
+                                        {team1.teamName}
+                                    </FutureTeamLeft>
+
+                                    <VsText>vs</VsText>
+
+                                    <FutureTeamRight>
+                                        {team2.teamName}
+                                    </FutureTeamRight>
+                                </FutureMatchupCard>
+                            )
+                        }
+
+                        return (
+                            <MatchupCard key={matchup.id}>
+                                <GroupedMatchup>
+                                    <GroupedMatchupDisplay
+                                        team1={team1}
+                                        team2={team2}
+                                    />
+                                </GroupedMatchup>
+                            </MatchupCard>
+                        )
+                    })}
 
                 {week === 11 && playoffSeeds.length >= 2 && (
                     <ByeSection>
@@ -1046,14 +1035,15 @@ export default function WeekScores() {
                         <ByeGrid>
                             {playoffSeeds.slice(0, 2).map((team) => (
                                 <ByeTeam key={team.memberId}>
-                                    <span>
-                                        <strong>
-                                            #{team.seed} {team.teamName}
-                                        </strong>
-                                        <TeamRecord>
-                                            {' '}({team.wins}-{team.losses})
-                                        </TeamRecord>
-                                    </span>
+                                <span>
+                                    <strong>
+                                        #{team.seed} {team.teamName}
+                                    </strong>
+
+                                    <TeamRecord>
+                                        {' '}({team.wins}-{team.losses})
+                                    </TeamRecord>
+                                </span>
 
                                     <ByeLabel>BYE</ByeLabel>
                                 </ByeTeam>
@@ -1061,11 +1051,12 @@ export default function WeekScores() {
                         </ByeGrid>
                     </ByeSection>
                 )}
-
             </SectionCard>
+
             <hr />
 
             {selectedUnit && selectedUnit.stats && (
+
                 <ModalBackdrop onClick={() => setSelectedUnit(null)}>
                     <ModalCard onClick={(event) => event.stopPropagation()}>
                         <h2>

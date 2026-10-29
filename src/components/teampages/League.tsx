@@ -187,8 +187,7 @@ export default function League() {
         return <p>League not found.</p>
     }
 
-    const isCommissioner =
-        user?.id === league.commissioner_id
+    const isCommissioner = (user?.id === league.commissioner_id)
 
     async function handleStartDraft() {
         if (!league || !isCommissioner) {
@@ -197,13 +196,8 @@ export default function League() {
 
         setError('')
 
-        if (members.length < 2) {
-            setError('The league must have at least 2 teams before starting the draft.')
-            return
-        }
-
-        if (members.length % 2 !== 0) {
-            setError('The league must have an even number of teams before starting the draft.')
+        if (members.length < 2 || members.length % 2 !== 0) {
+            setError('Invalid number of teams.')
             return
         }
 
