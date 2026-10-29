@@ -11,7 +11,7 @@ import { getScoreBreakdown } from '../../utils/ScoringBreakdown'
 
 import { get2026SeasonStats, type Season2026Stats } from '../../utils/2026stats'
 import { getStatRank, getStatRankByName, formatRank } from '../../utils/statRanking'
-import { getPositionRanks } from '../../utils/unitRankings'
+import { getPositionRanks, getTeamPositionRank } from '../../utils/unitRankings'
 import { getTeamOpponent } from '../../utils/teamschedule'
 
 import { ModalBackdrop, ModalCard, ModalHeader, ModalTitle, CloseButton } from '../../utils/rosterstyles'
@@ -28,6 +28,12 @@ interface TeamDetailsModalProps {
     onClose: () => void
 }
 
+const conferenceLogos: Record<string, string> = {
+    'ACC': '/conferences/ACC.png',
+    'Big Ten': '/conferences/Big Ten.png',
+    'Big 12': '/conferences/Big 12.png',
+    'SEC': '/conferences/SEC.png',
+}
 
 const DetailsCard = styled(ModalCard)`
     width: min(600px, calc(100vw - 32px));
@@ -151,6 +157,23 @@ const BreakdownCloseButton = styled.button`
     }
 `;
 
+const ConferenceInfo = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+`;
+
+const ConferenceLogo = styled.img`
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex-shrink: 0;
+`;
+
 export default function TeamDetails({teamName, teamId, unitType, isOpponent = false, teams, onClose,}: TeamDetailsModalProps) {
     const [activeTab, setActiveTab] = useState<Tab>('2025')
     const [season2026Stats, setSeason2026Stats] = useState<Season2026Stats[]>([])
@@ -164,10 +187,9 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
     const team2026 = season2026Stats.find(
         (team) => normalizeTeamName(team.team) === normalizeTeamName(teamName))
 
+    const conference = team2026?.conference ?? collegeTeam?.conference
+
     useEffect(() => {
-        if (activeTab !== '2026') {
-            return
-        }
 
         if (season2026Stats.length > 0) {
             return
@@ -203,13 +225,15 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
             setPositionRank(null)
 
             try {
-                const ranks = await getPositionRanks(teams, unitType)
+                const ranks = await getPositionRanks(unitType)
 
                 if (!cancelled) {
-                    setPositionRank(ranks.get(teamId) ?? null)
+                    setPositionRank(
+                        getTeamPositionRank(ranks, teamName)
+                    )
                 }
             } catch (error) {
-                console.error('Failed to calculate position rank:', error)
+                console.error('Failed to load position rank:', error)
             } finally {
                 if (!cancelled) {
                     setLoadingRank(false)
@@ -222,7 +246,7 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
         return () => {
             cancelled = true
         }
-    }, [teams, teamId, unitType])
+    }, [teamName, unitType])
 
     return (
         <ModalBackdrop onClick={onClose}>
@@ -237,14 +261,39 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
                             {isOpponent ? getOpponentStatLabel(unitType) : formatUnitType(unitType)}
                         </p>
 
+                        {conference && (
+                            <ConferenceInfo>
+                                {conferenceLogos[conference] && (
+                                    <ConferenceLogo
+                                        src={conferenceLogos[conference]}
+                                        alt={`${conference} logo`}
+                                    />
+                                )}
+
+                                <span>{conference}</span>
+                            </ConferenceInfo>
+                        )}
+
                         {!isOpponent && (
-                            <p>
-                                <strong>
-                                    Pos. Rank:{' '}
-                                    {loadingRank ? 'Calculating...'
-                                        : positionRank !== null ? `#${positionRank}` : 'N/A'}
-                                </strong>
-                            </p>
+                            <>
+                                <p>
+                                    <strong>
+                                        Pos. Rank:{' '}
+                                        {loadingRank
+                                            ? 'Calculating...' : positionRank !== null
+                                                ? `#${positionRank}` : 'N/A'}
+                                    </strong>
+                                </p>
+
+                                <p>
+                                    <strong>
+                                        AVG PPG:{' '}
+                                        {loading2026
+                                            ? 'Calculating...' : team2026 && team2026.gamesPlayed > 0
+                                                ? getAveragePPG(team2026, unitType).toFixed(1) : 'N/A'}
+                                    </strong>
+                                </p>
+                            </>
                         )}
                     </ModalTitle>
 
@@ -931,4 +980,27 @@ function getOpponentStatLabel(unitType: RosterUnitType) {
 
 function normalizeTeamName(teamName: string): string {
     return teamName.trim().toLowerCase()
+}
+
+function getAveragePPG(team: Season2026Stats, unitType: RosterUnitType): number {
+    if (team.gamesPlayed === 0) {
+        return 0
+    }
+
+    switch (unitType) {
+        case 'PASSING':
+            return team.passingFantasyPoints / team.gamesPlayed
+
+        case 'RUSHING':
+            return team.rushingFantasyPoints / team.gamesPlayed
+
+        case 'RECEIVING':
+            return team.receivingFantasyPoints / team.gamesPlayed
+
+        case 'DEFENSE':
+            return team.defenseFantasyPoints / team.gamesPlayed
+
+        case 'SPECIAL_TEAMS':
+            return team.specialTeamsFantasyPoints / team.gamesPlayed
+    }
 }

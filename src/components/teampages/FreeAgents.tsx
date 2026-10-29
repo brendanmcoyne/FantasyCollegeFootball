@@ -57,6 +57,14 @@ interface LeagueMember {
     team_name: string
 }
 
+
+const conferenceLogos: Record<string, string> = {
+    'ACC': '/conferences/ACC.png',
+    'Big Ten': '/conferences/Big Ten.png',
+    'Big 12': '/conferences/Big 12.png',
+    'SEC': '/conferences/SEC.png',
+}
+
 const FreeAgentsPage = styled.div`
     display: grid;
     gap: 24px;
@@ -86,40 +94,6 @@ const FiltersCard = styled.div`
     h3 {
         margin-top: 0;
         margin-bottom: 12px;
-    }
-`;
-
-const FilterGroup = styled.div`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-
-    @media (max-width: 700px) {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
-    }
-`;
-
-const FilterButton = styled.button<{ $active?: boolean }>`
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-weight: 600;
-    cursor: pointer;
-    
-    background: ${({ $active }) => $active ? '#1f2937' : '#ffffff'};
-    color: ${({ $active }) => $active ? '#ffffff' : '#374151'};
-
-    &:hover {
-        background: ${({ $active }) => $active ? '#111827' : '#f3f4f6'};
-    }
-
-    @media (max-width: 700px) {
-        width: 100%;
-        min-height: 44px;
-        padding: 10px 8px;
-        text-align: center;
     }
 `;
 
@@ -241,6 +215,59 @@ const UnitNameButton = styled.button`
     &:hover {
         text-decoration: underline;
     }
+`;
+
+
+const FilterGroup = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+`;
+
+const FilterButton = styled.button<{ $active: boolean }>`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    min-width: 145px;
+    min-height: 58px;
+    padding: 12px 18px;
+
+    border: 2px solid ${({ $active }) =>
+    $active ? '#111827' : '#d1d5db'};
+    border-radius: 10px;
+
+    background: ${({ $active }) =>
+    $active ? '#111827' : '#ffffff'};
+    color: ${({ $active }) =>
+    $active ? '#ffffff' : '#111827'};
+
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+
+    transition: background 0.2s, border-color 0.2s;
+
+    &:hover {
+        background: ${({ $active }) =>
+    $active ? '#111827' : '#f3f4f6'};
+    }
+
+    @media (max-width: 600px) {
+        min-width: 120px;
+        min-height: 52px;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+`;
+
+const ConferenceLogo = styled.img`
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    flex-shrink: 0;
 `;
 
 export default function FreeAgents() {
@@ -481,7 +508,7 @@ export default function FreeAgents() {
     return (
         <FreeAgentsPage>
             <HeaderCard>
-                <BackButton onClick={() => navigate(-1)}>
+                <BackButton onClick={() => navigate(`/league/${leagueId}`)}>
                     ← Back
                 </BackButton>
 
@@ -510,6 +537,7 @@ export default function FreeAgents() {
                 <div>
                     <h3>Conference</h3>
 
+
                     <FilterGroup>
                         {['ALL', 'ACC', 'Big Ten', 'Big 12', 'SEC'].map((conference) => (
                             <FilterButton
@@ -517,10 +545,20 @@ export default function FreeAgents() {
                                 $active={selectedConference === conference}
                                 onClick={() => setSelectedConference(conference)}
                             >
-                                {conference === 'ALL' ? 'All Conferences' : conference}
+                                {conference !== 'ALL' && (
+                                    <ConferenceLogo
+                                        src={conferenceLogos[conference]}
+                                        alt={`${conference} logo`}
+                                    />
+                                )}
+
+                                <span>
+                                    {conference === 'ALL' ? 'All Conferences' : conference}
+                                </span>
                             </FilterButton>
                         ))}
                     </FilterGroup>
+
                 </div>
             </FiltersCard>
 

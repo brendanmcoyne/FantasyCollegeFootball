@@ -1,6 +1,7 @@
 import {getWeeklyStats, getLiveGameStats, getEspnTeamId, getEspnTeamSchedule, type WeeklyTeamData} from '../api/weeklyStats'
 
 import { CURRENT_WEEK } from '../bigseasonfile'
+import { calculateUnitScore } from './scoring'
 
 export interface Season2026Stats {
     team: string
@@ -40,6 +41,12 @@ export interface Season2026Stats {
 
     specialTeamsTouchdowns: number
     blockedKicks: number
+
+    passingFantasyPoints: number
+    rushingFantasyPoints: number
+    receivingFantasyPoints: number
+    defenseFantasyPoints: number
+    specialTeamsFantasyPoints: number
 }
 
 function normalizeTeamName(teamName: string): string {
@@ -85,6 +92,12 @@ function createEmptySeasonStats(team: string, conference: string): Season2026Sta
 
         specialTeamsTouchdowns: 0,
         blockedKicks: 0,
+
+        passingFantasyPoints: 0,
+        rushingFantasyPoints: 0,
+        receivingFantasyPoints: 0,
+        defenseFantasyPoints: 0,
+        specialTeamsFantasyPoints: 0,
     }
 }
 
@@ -94,6 +107,12 @@ function addWeeklyStats(season: Season2026Stats, weeklyTeam: WeeklyTeamData) {
     }
 
     const stats = weeklyTeam.stats
+
+    season.passingFantasyPoints += calculateUnitScore('PASSING', stats)
+    season.rushingFantasyPoints += calculateUnitScore('RUSHING', stats)
+    season.receivingFantasyPoints += calculateUnitScore('RECEIVING', stats)
+    season.defenseFantasyPoints += calculateUnitScore('DEFENSE', stats)
+    season.specialTeamsFantasyPoints += calculateUnitScore('SPECIAL_TEAMS', stats)
 
     season.gamesPlayed += 1
 
