@@ -149,57 +149,6 @@ const ActionButton = styled.button`
     }
 `;
 
-const HistoryCard = styled.div`
-    background: #ffffff;
-    border: 1px solid #d1d5db;
-    border-radius: 14px;
-    padding: 20px;
-`;
-
-const HistoryRow = styled.div`
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 20px;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #e5e7eb;
-
-    &:last-child {
-        border-bottom: none;
-    }
-
-    @media (max-width: 700px) {
-        gap: 10px;
-        font-size: 0.9rem;
-    }
-`;
-
-const HistoryHeader = styled.div`
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 20px;
-    padding: 0 0 10px;
-    border-bottom: 2px solid #d1d5db;
-    font-weight: 700;
-    color: #6b7280;
-
-    @media (max-width: 700px) {
-        gap: 10px;
-        font-size: 0.85rem;
-    }
-`;
-
-const HistoryUnit = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-`;
-
-const HistoryUnitType = styled.span`
-    color: #6b7280;
-    font-size: 0.85rem;
-`;
-
 const UnitNameButton = styled.button`
     border: none;
     background: none;
@@ -219,11 +168,17 @@ const UnitNameButton = styled.button`
 
 
 const FilterGroup = styled.div`
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 20px;
+    width: 100%;
+
+    @media (max-width: 700px) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 `;
+
 
 const FilterButton = styled.button<{ $active: boolean }>`
     display: flex;
@@ -231,20 +186,21 @@ const FilterButton = styled.button<{ $active: boolean }>`
     justify-content: center;
     gap: 10px;
 
-    min-width: 145px;
-    min-height: 58px;
-    padding: 12px 18px;
+    width: 100%;
+    min-width: 0;
+    min-height: 72px;
+    padding: 12px;
 
     border: 2px solid ${({ $active }) =>
-    $active ? '#111827' : '#d1d5db'};
-    border-radius: 10px;
+            $active ? '#111827' : '#d1d5db'};
+    border-radius: 12px;
 
     background: ${({ $active }) =>
-    $active ? '#111827' : '#ffffff'};
+            $active ? '#111827' : '#ffffff'};
     color: ${({ $active }) =>
-    $active ? '#ffffff' : '#111827'};
+            $active ? '#ffffff' : '#111827'};
 
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
 
@@ -252,14 +208,13 @@ const FilterButton = styled.button<{ $active: boolean }>`
 
     &:hover {
         background: ${({ $active }) =>
-    $active ? '#111827' : '#f3f4f6'};
+                $active ? '#111827' : '#f3f4f6'};
     }
 
-    @media (max-width: 600px) {
-        min-width: 120px;
-        min-height: 52px;
-        padding: 10px 12px;
-        font-size: 13px;
+    @media (max-width: 700px) {
+        min-height: 60px;
+        font-size: 14px;
+        padding: 10px;
     }
 `;
 
@@ -268,6 +223,94 @@ const ConferenceLogo = styled.img`
     height: 36px;
     object-fit: contain;
     flex-shrink: 0;
+`;
+
+
+const HistoryCard = styled.div`
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 16px;
+
+    h2 {
+        font-size: 18px;
+        margin: 0 0 14px;
+    }
+`;
+
+const HistoryRow = styled.div`
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 13px;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    @media (max-width: 700px) {
+        gap: 8px;
+        font-size: 12px;
+    }
+`;
+
+const HistoryHeader = styled.div`
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #d1d5db;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+
+    @media (max-width: 700px) {
+        gap: 8px;
+    }
+`;
+
+const HistoryUnit = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+`;
+
+const HistoryUnitType = styled.span`
+    color: #6b7280;
+    font-size: 11px;
+`;
+
+
+const HistoryPagination = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 14px;
+`;
+
+const HistoryPageButton = styled.button`
+    padding: 6px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: #f3f4f6;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
 `;
 
 export default function FreeAgents() {
@@ -279,10 +322,13 @@ export default function FreeAgents() {
     const [myRoster, setMyRoster] = useState<MyRosterUnit[]>([])
     const [member, setMember] = useState<LeagueMember | null>(null)
     const [transactions, setTransactions] = useState<FreeAgentTransaction[]>([])
+    const [historyPage, setHistoryPage] = useState(1)
+    const HISTORY_PAGE_SIZE = 8
+
     const [teams, setTeams] = useState<CollegeTeam[]>([])
     const [members, setMembers] = useState<LeagueMember[]>([])
 
-    const [selectedType, setSelectedType] = useState<UnitType | 'ALL'>('ALL')
+    const [selectedType, setSelectedType] = useState<UnitType>('PASSING')
     const [selectedConference, setSelectedConference] = useState('ALL')
     const [selectedFreeAgent, setSelectedFreeAgent] = useState<FreeAgentUnit | null>(null)
 
@@ -453,8 +499,8 @@ export default function FreeAgents() {
 
     const filteredFreeAgents =
         freeAgents.filter((unit) => {
-            const matchesType = selectedType === 'ALL' || unit.unitType === selectedType
-            const matchesConference = selectedConference === 'ALL' || unit.conference === selectedConference
+            const matchesType = (unit.unitType === selectedType)
+            const matchesConference = (selectedConference === 'ALL') || (unit.conference === selectedConference)
 
             return (matchesType && matchesConference)
         })
@@ -505,6 +551,22 @@ export default function FreeAgents() {
     }
 
 
+    const sortedTransactions = [...transactions].sort(
+        (a, b) =>
+            new Date(b.created_at).getTime() -
+            new Date(a.created_at).getTime()
+    )
+
+    const totalHistoryPages = Math.ceil(
+        sortedTransactions.length / HISTORY_PAGE_SIZE
+    )
+
+    const paginatedTransactions = sortedTransactions.slice(
+        (historyPage - 1) * HISTORY_PAGE_SIZE,
+        historyPage * HISTORY_PAGE_SIZE
+    )
+
+
     return (
         <FreeAgentsPage>
             <HeaderCard>
@@ -522,11 +584,11 @@ export default function FreeAgents() {
                     <h3>Unit Type</h3>
 
                     <FilterGroup>
-                        {['ALL', 'PASSING', 'RUSHING', 'RECEIVING', 'DEFENSE', 'SPECIAL_TEAMS'].map((type) => (
+                        {['PASSING', 'RUSHING', 'RECEIVING', 'DEFENSE', 'SPECIAL_TEAMS'].map((type) => (
                             <FilterButton
                                 key={type}
                                 $active={selectedType === type}
-                                onClick={() => setSelectedType(type as UnitType | 'ALL')}
+                                onClick={() => setSelectedType(type as UnitType)}
                             >
                                 {formatUnitType(type)}
                             </FilterButton>
@@ -682,6 +744,7 @@ export default function FreeAgents() {
                 </ModalBackdrop>
             )}
 
+
             <HistoryCard>
                 <h2>Free Agency History</h2>
 
@@ -695,7 +758,7 @@ export default function FreeAgents() {
                             <div>Dropped</div>
                         </HistoryHeader>
 
-                        {transactions.map((transaction) => {
+                        {paginatedTransactions.map((transaction) => {
                             const fantasyTeam = members.find(
                                 (member) =>
                                     member.id === transaction.league_member_id
@@ -706,25 +769,17 @@ export default function FreeAgents() {
 
                             return (
                                 <HistoryRow key={transaction.id}>
-                                    <strong>
-                                        {fantasyTeam?.team_name}
-                                    </strong>
+                                    <strong>{fantasyTeam?.team_name}</strong>
 
                                     <HistoryUnit>
-                                        <strong>
-                                            {addedTeam?.name}
-                                        </strong>
-
+                                        <strong>{addedTeam?.name}</strong>
                                         <HistoryUnitType>
                                             {formatUnitType(transaction.added_unit_type)}
                                         </HistoryUnitType>
                                     </HistoryUnit>
 
                                     <HistoryUnit>
-                                        <strong>
-                                            {droppedTeam?.name}
-                                        </strong>
-
+                                        <strong>{droppedTeam?.name}</strong>
                                         <HistoryUnitType>
                                             {formatUnitType(transaction.dropped_unit_type)}
                                         </HistoryUnitType>
@@ -732,9 +787,30 @@ export default function FreeAgents() {
                                 </HistoryRow>
                             )
                         })}
+
+                        {totalHistoryPages > 1 && (
+                            <HistoryPagination>
+                                <HistoryPageButton disabled={historyPage === 1}
+                                    onClick={() => setHistoryPage((page) => page - 1)}
+                                >
+                                    Previous
+                                </HistoryPageButton>
+
+                                <span>
+                                    Page {historyPage} of {totalHistoryPages}
+                                </span>
+
+                                <HistoryPageButton disabled={historyPage === totalHistoryPages}
+                                    onClick={() => setHistoryPage((page) => page + 1)}
+                                >
+                                    Next
+                                </HistoryPageButton>
+                            </HistoryPagination>
+                        )}
                     </>
                 )}
             </HistoryCard>
+
 
             {selectedStatsUnit && (
                 <TeamDetailsModal

@@ -174,6 +174,120 @@ const ConferenceLogo = styled.img`
     flex-shrink: 0;
 `;
 
+const TeamStatItem = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+`;
+
+const TeamStatLabel = styled.span`
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+`;
+
+const TeamStatValue = styled.span`
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+`;
+
+const HeaderConferenceLogo = styled.img`
+    width: 60px;
+    height: 36px;
+    object-fit: contain;
+    object-position: left center;
+`;
+
+const StyledTeamModalHeader = styled(ModalHeader)`
+    position: relative;
+    display: block;
+    padding: 0;
+`;
+
+const TeamHeaderContent = styled.div`
+    position: relative;
+    width: 100%;
+    min-height: 190px;
+    padding: 24px 24px 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+`;
+
+const TeamBackgroundLogo = styled.img`
+    position: absolute;
+    top: 5px;
+    right: 10px;
+
+    width: 220px;
+    height: 220px;
+    object-fit: contain;
+
+    opacity: 0.12;
+    pointer-events: none;
+    z-index: 0;
+
+    @media (max-width: 600px) {
+        width: 160px;
+        height: 160px;
+        right: 0;
+    }
+`;
+
+const TeamHeaderForeground = styled.div`
+    position: relative;
+    z-index: 1;
+`;
+
+const TeamNameRow = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin-bottom: 28px;
+    padding-right: 65px;
+`;
+
+const TeamHeaderName = styled.h2`
+    margin: 0;
+    font-size: 30px;
+    font-weight: 800;
+    color: #111827;
+`;
+
+const TeamUnitLabel = styled.span`
+    font-size: 16px;
+    font-weight: 500;
+    color: #6b7280;
+`;
+
+const TeamStatsRow = styled.div`
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    max-width: 520px;
+
+    @media (max-width: 600px) {
+        gap: 10px;
+    }
+`;
+
+const SmallCloseButton = styled(CloseButton)`
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 5;
+
+    padding: 5px 9px;
+    font-size: 12px;
+    border-radius: 6px;
+    min-height: 28px;
+`;
+
 export default function TeamDetails({teamName, teamId, unitType, isOpponent = false, teams, onClose,}: TeamDetailsModalProps) {
     const [activeTab, setActiveTab] = useState<Tab>('2025')
     const [season2026Stats, setSeason2026Stats] = useState<Season2026Stats[]>([])
@@ -251,54 +365,78 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
     return (
         <ModalBackdrop onClick={onClose}>
             <DetailsCard onClick={(event) => event.stopPropagation()}>
-                <ModalHeader>
-                    <TeamLogo src={getTeamLogo(teamName)} alt={teamName}/>
 
-                    <ModalTitle>
-                        <h2>{teamName}</h2>
 
-                        <p>
-                            {isOpponent ? getOpponentStatLabel(unitType) : formatUnitType(unitType)}
-                        </p>
+                <StyledTeamModalHeader>
+                    <TeamHeaderContent>
+                        <TeamBackgroundLogo
+                            src={getTeamLogo(teamName)}
+                            alt=""
+                            aria-hidden="true"
+                        />
 
-                        {conference && (
-                            <ConferenceInfo>
-                                {conferenceLogos[conference] && (
-                                    <ConferenceLogo
-                                        src={conferenceLogos[conference]}
-                                        alt={`${conference} logo`}
-                                    />
-                                )}
+                        <TeamHeaderForeground>
+                            <TeamNameRow>
+                                <TeamHeaderName>
+                                    {teamName}
+                                </TeamHeaderName>
 
-                                <span>{conference}</span>
-                            </ConferenceInfo>
-                        )}
+                                <TeamUnitLabel>
+                                    {isOpponent
+                                        ? getOpponentStatLabel(unitType)
+                                        : formatUnitType(unitType)}
+                                </TeamUnitLabel>
+                            </TeamNameRow>
 
-                        {!isOpponent && (
-                            <>
-                                <p>
-                                    <strong>
-                                        Pos. Rank:{' '}
-                                        {loadingRank
-                                            ? 'Calculating...' : positionRank !== null
-                                                ? `#${positionRank}` : 'N/A'}
-                                    </strong>
-                                </p>
+                            {!isOpponent && (
+                                <TeamStatsRow>
+                                    <TeamStatItem>
+                                        <TeamStatLabel>Conference</TeamStatLabel>
 
-                                <p>
-                                    <strong>
-                                        AVG PPG:{' '}
-                                        {loading2026
-                                            ? 'Calculating...' : team2026 && team2026.gamesPlayed > 0
-                                                ? getAveragePPG(team2026, unitType).toFixed(1) : 'N/A'}
-                                    </strong>
-                                </p>
-                            </>
-                        )}
-                    </ModalTitle>
+                                        {conference && conferenceLogos[conference] ? (
+                                            <HeaderConferenceLogo
+                                                src={conferenceLogos[conference]}
+                                                alt={conference}
+                                            />
+                                        ) : (
+                                            <TeamStatValue>
+                                                {conference ?? 'N/A'}
+                                            </TeamStatValue>
+                                        )}
+                                    </TeamStatItem>
 
-                    <CloseButton onClick={onClose}>Close</CloseButton>
-                </ModalHeader>
+                                    <TeamStatItem>
+                                        <TeamStatLabel>Pos. Rank</TeamStatLabel>
+
+                                        <TeamStatValue>
+                                            {loadingRank
+                                                ? '...'
+                                                : positionRank !== null
+                                                    ? `#${positionRank}`
+                                                    : 'N/A'}
+                                        </TeamStatValue>
+                                    </TeamStatItem>
+
+                                    <TeamStatItem>
+                                        <TeamStatLabel>AVG PPG</TeamStatLabel>
+
+                                        <TeamStatValue>
+                                            {loading2026
+                                                ? '...'
+                                                : team2026 && team2026.gamesPlayed > 0
+                                                    ? getAveragePPG(team2026, unitType).toFixed(1)
+                                                    : 'N/A'}
+                                        </TeamStatValue>
+                                    </TeamStatItem>
+                                </TeamStatsRow>
+                            )}
+                        </TeamHeaderForeground>
+                    </TeamHeaderContent>
+
+                    <SmallCloseButton onClick={onClose}>
+                        Close
+                    </SmallCloseButton>
+                </StyledTeamModalHeader>
 
                 <TabBar>
                     <TabButton $active={activeTab === '2025'} onClick={() => setActiveTab('2025')}>
