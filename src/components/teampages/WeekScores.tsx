@@ -14,7 +14,7 @@ import type { WeeklyTeamData } from '../../api/weeklyStats'
 import { BackButton } from "../../styles/commonstyles";
 import { getScoreBreakdown } from "../../utils/ScoringBreakdown"
 import { getLeagueStandings, type Standing } from '../../utils/standings'
-import { getPlayoffSeeds, PlayoffRound1, type PlayoffTeam } from '../../utils/playoffs'
+import { getPlayoffSeeds, PlayoffRound1, PlayoffRound2, PlayoffRound3, type PlayoffTeam } from '../../utils/playoffs'
 
 interface RosterRow {
     id: string
@@ -635,8 +635,7 @@ export default function WeekScores() {
                     const liveTeam = liveStatsMap.get(row.college_team_id)
 
                     const gameStarted =
-                        weeklyTeam?.gameStart !== null &&
-                        weeklyTeam?.gameStart !== undefined &&
+                        weeklyTeam?.gameStart !== null && weeklyTeam?.gameStart !== undefined &&
                         now.getTime() >= weeklyTeam.gameStart.getTime()
 
                     const stats = liveTeam?.stats ?? null
@@ -672,6 +671,14 @@ export default function WeekScores() {
                     await PlayoffRound1(leagueId)
                 }
 
+                if (week === 12 && CURRENT_WEEK >= 12) {
+                    await PlayoffRound2(leagueId)
+                }
+
+                if (week === 13 && CURRENT_WEEK >= 13) {
+                    await PlayoffRound3(leagueId)
+                }
+
                 const { data: weekMatchups, error: matchupError } =
                     await supabase
                         .from('league_matchups')
@@ -700,8 +707,19 @@ export default function WeekScores() {
                         .update(weekStarted
                             ? {
                                 team1_score: team1.starterTotal, team2_score: team2.starterTotal,
-                                winner_id: weekComplete ? team1.starterTotal >= team2.starterTotal
-                                    ? matchup.team1_id : matchup.team2_id : null,
+
+                                winner_id: weekComplete
+                                    ? team1.starterTotal > team2.starterTotal ? matchup.team1_id
+                                        : team2.starterTotal > team1.starterTotal ? matchup.team2_id
+                                            : week >= 11
+                                                ? playoffSeeds.find(
+                                                    (seed) => seed.memberId === matchup.team1_id)!.seed <
+                                                playoffSeeds.find(
+                                                    (seed) => seed.memberId === matchup.team2_id)!.seed
+                                                    ? matchup.team1_id : matchup.team2_id
+                                                : matchup.team1_id
+                                    : null,
+
                             } : {
                                 team1_score: null, team2_score: null, winner_id: null,
                             }
