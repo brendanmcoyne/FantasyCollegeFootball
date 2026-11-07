@@ -5,6 +5,7 @@ import styled from 'styled-components'
 import { BackButton } from '../../styles/commonstyles'
 import { getPlayoffSeeds, type PlayoffTeam } from '../../utils/playoffs'
 import { supabase } from '../lib/supabase'
+import { CURRENT_WEEK } from '../../bigseasonfile'
 
 const Page = styled.div`
     display: grid;
@@ -140,43 +141,56 @@ export default function Playoffs() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
-    useEffect(() => {
-        async function loadPlayoffs() {
-            if (!leagueId) {
-                setError('League ID is missing.')
-                setLoading(false)
-                return
-            }
 
+    useEffect(() => {
+        if (!leagueId) {
+            setError('League ID is missing.')
+            setLoading(false)
+            return
+        }
+
+        let cancelled = false
+
+        async function loadPlayoffs() {
             try {
-                const teams = await getPlayoffSeeds(leagueId)
+                const teams = await getPlayoffSeeds(leagueId!)
 
                 const { data, error: matchupError } = await supabase
                     .from('league_matchups')
-                    .select(
-                        'id, week, team1_id, team2_id, team1_score, team2_score, winner_id'
-                    )
-                    .eq('league_id', leagueId)
+                    .select('id, week, team1_id, team2_id, team1_score, team2_score, winner_id')
+                    .eq('league_id', leagueId!)
                     .gte('week', 11)
                     .lte('week', 13)
                     .order('week', { ascending: true })
 
                 if (matchupError) throw matchupError
 
-                setSeeds(teams)
-                setMatchups((data ?? []) as PlayoffMatchup[])
+                if (!cancelled) {
+                    setSeeds(teams)
+                    setMatchups((data ?? []) as PlayoffMatchup[])
+                    setError('')
+                }
             } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : 'Failed to load playoffs.'
-                )
+                if (!cancelled) {
+                    setError(err instanceof Error ? err.message : 'Failed to load playoffs.')
+                }
             } finally {
-                setLoading(false)
+                if (!cancelled) {
+                    setLoading(false)
+                }
             }
         }
 
         void loadPlayoffs()
+
+        const interval = window.setInterval(() => {
+            void loadPlayoffs()
+        }, 15000)
+
+        return () => {
+            cancelled = true
+            window.clearInterval(interval)
+        }
     }, [leagueId])
 
     if (loading) return <p>Loading playoffs...</p>
@@ -191,23 +205,13 @@ export default function Playoffs() {
     const getRound = (week: number) =>
         matchups.filter((matchup) => matchup.week === week)
 
-    const findMatchup = (
-        week: number,
-        teamA?: PlayoffTeam,
-        teamB?: PlayoffTeam
-    ) => {
+    const findMatchup = (week: number, teamA?: PlayoffTeam, teamB?: PlayoffTeam) => {
         if (!teamA || !teamB) return undefined
 
         return getRound(week).find(
             (game) =>
-                (
-                    game.team1_id === teamA.memberId &&
-                    game.team2_id === teamB.memberId
-                ) ||
-                (
-                    game.team1_id === teamB.memberId &&
-                    game.team2_id === teamA.memberId
-                )
+                (game.team1_id === teamA.memberId && game.team2_id === teamB.memberId) ||
+                (game.team1_id === teamB.memberId && game.team2_id === teamA.memberId)
         )
     }
 
@@ -253,13 +257,27 @@ export default function Playoffs() {
     const championship = getRound(13)[0]
     const champion = getWinner(championship)
 
+    const seasonComplete = CURRENT_WEEK >= 14
+    const declaredChampion = seasonComplete ? champion : undefined
+
     return (
         <Page>
-            <BackButton onClick={() => navigate(-1)}>
+            <BackButton onClick={() => navigate(`/league/${leagueId}`)}>
                 ← Back
             </BackButton>
 
             <h1>League Playoffs</h1>
+
+            {CURRENT_WEEK >= 14 && (
+                <ByeCard>
+                    <h2>Off-season</h2>
+                    <p>The 2026 Fantasy College Football season has concluded.</p>
+
+                    {declaredChampion ? (<h3>Champion: {declaredChampion.teamName}</h3>) : (
+                        <p>Championship results are awaiting finalization.</p>
+                    )}
+                </ByeCard>
+            )}
 
             <Bracket>
                 <Round>
@@ -375,9 +393,10 @@ export default function Playoffs() {
                         />
                     </Matchup>
 
-                    {champion && (
+                    {declaredChampion && (
                         <ByeCard>
-                            League Champion: {champion.teamName}
+                            <strong>League Champion: {declaredChampion.teamName}</strong>
+                            <p>2026 Fantasy College Football Champion</p>
                         </ByeCard>
                     )}
                 </Round>

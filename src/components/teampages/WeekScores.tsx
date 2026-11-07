@@ -527,9 +527,10 @@ export default function WeekScores() {
                 const loadedStandings = await getLeagueStandings(leagueId)
                 setStandings(loadedStandings)
 
+                const currentPlayoffSeeds = week >= 11 ? await getPlayoffSeeds(leagueId) : []
+
                 if (week >= 11) {
-                    const seeds = await getPlayoffSeeds(leagueId)
-                    setPlayoffSeeds(seeds)
+                    setPlayoffSeeds(currentPlayoffSeeds)
                 }
 
                 const [weeklyStats, collegeTeams] = await Promise.all([getWeeklyStats(week), getTeams()])
@@ -543,7 +544,7 @@ export default function WeekScores() {
                     throw membersError
                 }
 
-                if (week === CURRENT_WEEK) {
+                if (week <= CURRENT_WEEK && week <= 13) {
                     const { error: initializeError } = await supabase.rpc(
                         'initialize_weekly_rosters',
                         {
@@ -667,15 +668,15 @@ export default function WeekScores() {
                         }
                     })
 
-                if (week === 11 && CURRENT_WEEK >= 11) {
+                if (CURRENT_WEEK >= 11 && week >= 11) {
                     await PlayoffRound1(leagueId)
                 }
 
-                if (week === 12 && CURRENT_WEEK >= 12) {
+                if (CURRENT_WEEK >= 12 && week >= 12) {
                     await PlayoffRound2(leagueId)
                 }
 
-                if (week === 13 && CURRENT_WEEK >= 13) {
+                if (CURRENT_WEEK >= 13 && week >= 13) {
                     await PlayoffRound3(leagueId)
                 }
 
@@ -704,21 +705,39 @@ export default function WeekScores() {
 
                     const { error: updateError } = await supabase
                         .from('league_matchups')
-                        .update(weekStarted
-                            ? {
+                        .update(weekStarted ? {
                                 team1_score: team1.starterTotal, team2_score: team2.starterTotal,
 
                                 winner_id: weekComplete
-                                    ? team1.starterTotal > team2.starterTotal ? matchup.team1_id
-                                        : team2.starterTotal > team1.starterTotal ? matchup.team2_id
-                                            : week >= 11
-                                                ? playoffSeeds.find(
-                                                    (seed) => seed.memberId === matchup.team1_id)!.seed <
-                                                playoffSeeds.find(
-                                                    (seed) => seed.memberId === matchup.team2_id)!.seed
-                                                    ? matchup.team1_id : matchup.team2_id
-                                                : matchup.team1_id
+                                    ? (() => {
+                                        if (team1.starterTotal > team2.starterTotal) {
+                                            return matchup.team1_id
+                                        }
+
+                                        if (team2.starterTotal > team1.starterTotal) {
+                                            return matchup.team2_id
+                                        }
+
+                                        if (week >= 11 && week <= 13) {
+                                            const seed1 = currentPlayoffSeeds.find(
+                                                seed => seed.memberId === matchup.team1_id
+                                            )
+
+                                            const seed2 = currentPlayoffSeeds.find(
+                                                seed => seed.memberId === matchup.team2_id
+                                            )
+
+                                            if (!seed1 || !seed2) {
+                                                throw new Error(`Missing playoff seed for matchup ${matchup.id}`)
+                                            }
+
+                                            return seed1.seed < seed2.seed ? matchup.team1_id : matchup.team2_id
+                                        }
+
+                                        return matchup.team1_id
+                                    })()
                                     : null,
+
 
                             } : {
                                 team1_score: null, team2_score: null, winner_id: null,
@@ -788,10 +807,8 @@ export default function WeekScores() {
                     setScores((currentScores) =>
                         currentScores.map((team) => ({
                             ...team,
-                            starters: team.starters.map((unit) => ({
-                                ...unit, scoreChange: undefined})),
-                            bench: team.bench.map((unit) => ({
-                                ...unit, scoreChange: undefined})),
+                            starters: team.starters.map((unit) => ({...unit, scoreChange: undefined})),
+                            bench: team.bench.map((unit) => ({...unit, scoreChange: undefined})),
                         }))
                     )
                 }, 1500)
@@ -935,18 +952,20 @@ export default function WeekScores() {
                 </h1>
 
                 <WeekLinks>
-                    {Array.from({length: Math.max(10, Math.min(CURRENT_WEEK, 13))}, (_, index) => {
+                    {Array.from({length: Math.max(10, Math.min(CURRENT_WEEK, 14))}, (_, index) => {
                         const weekNumber = index + 1
 
                         return (
-                            <WeekLink key={weekNumber}
-                                to={`/league/${leagueId}/week-scores/${weekNumber}`}
-                                $active={weekNumber === week}
+                            <WeekLink key={weekNumber} to={
+                                weekNumber === 14 ? `/league/${leagueId}/playoffs`
+                                : `/league/${leagueId}/week-scores/${weekNumber}`
+                                } $active={weekNumber === week}
                             >
-                                {weekNumber === 11
-                                    ? 'Round 1' : weekNumber === 12
-                                    ? 'Round 2' : weekNumber === 13
-                                    ? 'Round 3' : `Week ${weekNumber}`}
+                                {weekNumber === 11 ? 'Round 1'
+                                    : weekNumber === 12 ? 'Round 2'
+                                    : weekNumber === 13 ? 'Round 3'
+                                    : weekNumber === 14 ? 'Off-season'
+                                    : `Week ${weekNumber}`}
                             </WeekLink>
                         )
                     })}

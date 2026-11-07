@@ -128,7 +128,6 @@ const UnitNameButton = styled.button`
 
 export default function Units() {
     const [teams, setTeams] = useState<CollegeTeam[]>([])
-    const [units, setUnits] = useState<DraftUnit[]>([])
     const [selectedType, setSelectedType] = useState<UnitType | 'ALL'>('ALL')
     const [selectedConference, setSelectedConference] = useState<string>('ALL')
     const [selectedStatsUnit, setSelectedStatsUnit] = useState<DraftUnit | null>(null)
@@ -142,7 +141,6 @@ export default function Units() {
                 const data = await getTeams()
 
                 setTeams(data)
-                setUnits(createDraftUnits(data))
             } catch (err) {
                 if (err instanceof Error) {
                     setError(err.message)
@@ -164,6 +162,8 @@ export default function Units() {
     if (error) {
         return <p>{error}</p>
     }
+
+    const units = createDraftUnits(teams)
 
     const filteredUnits = units.filter((unit) => {
         const matchesType = selectedType === 'ALL' || unit.unitType === selectedType
@@ -242,9 +242,12 @@ export default function Units() {
 
                             <UnitInfo>
                                 <UnitNameButton onClick={() => setSelectedStatsUnit(unit)}>
-                                    {unit.teamName}{' '}
-                                    {formatUnitType(unit.unitType)}
+                                    {unit.teamName}
                                 </UnitNameButton>
+
+                                <UnitMeta>
+                                    {formatUnitType(unit.unitType)}
+                                </UnitMeta>
 
                                 <UnitMeta>{unit.conference}</UnitMeta>
 

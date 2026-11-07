@@ -11,6 +11,7 @@ import type { DraftUnit, UnitType } from '../../types/fantasy'
 import type { CollegeTeam } from '../../types/football'
 import type { RosterUnitType } from '../../rosters'
 import TeamDetailsModal from '../../components/teampages/TeamDetails'
+import { get2026SeasonStats, type Season2026Stats } from '../../utils/2026stats'
 
 import { CURRENT_WEEK } from '../../bigseasonfile'
 import { BackButton } from "../../styles/commonstyles";
@@ -318,6 +319,8 @@ export default function FreeAgents() {
     const { user } = useAuth()
 
     const [units, setUnits] = useState<FreeAgentUnit[]>([])
+    const [seasonStats, setSeasonStats] = useState<Season2026Stats[]>([])
+    const [loadingRankings, setLoadingRankings] = useState(true)
     const [ownedUnits, setOwnedUnits] = useState<OwnedUnit[]>([])
     const [myRoster, setMyRoster] = useState<MyRosterUnit[]>([])
     const [member, setMember] = useState<LeagueMember | null>(null)
@@ -332,12 +335,39 @@ export default function FreeAgents() {
     const [selectedConference, setSelectedConference] = useState('ALL')
     const [selectedFreeAgent, setSelectedFreeAgent] = useState<FreeAgentUnit | null>(null)
 
-    const [selectedStatsUnit, setSelectedStatsUnit] =
-        useState<{ collegeTeamId: number, teamName: string, unitType: RosterUnitType } | null>(null)
+    const [selectedStatsUnit, setSelectedStatsUnit] = useState<{ collegeTeamId: number, teamName: string, unitType: RosterUnitType } | null>(null)
 
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const navigate = useNavigate()
+
+
+    useEffect(() => {
+        let cancelled = false
+
+        async function loadSeasonStats() {
+            try {
+                const stats = await get2026SeasonStats()
+
+                if (!cancelled) {
+                    setSeasonStats(stats)
+                }
+            } catch (error) {
+                console.error('Failed to load free agent rankings:', error)
+            } finally {
+                if (!cancelled) {
+                    setLoadingRankings(false)
+                }
+            }
+        }
+
+        void loadSeasonStats()
+
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
 
     useEffect(() => {
         async function loadFreeAgents() {
@@ -428,7 +458,6 @@ export default function FreeAgents() {
                         .map((unit) => {
                             const teamName = teamMap.get(unit.college_team_id)?.name ?? 'Unknown Team'
                             const weeklyTeam = weeklyMap.get(normalizeTeamName(teamName))
-
                             const gameStart = weeklyTeam?.gameStart ?? null
 
                             return {
@@ -447,9 +476,7 @@ export default function FreeAgents() {
                 if (err instanceof Error) {
                     setError(err.message)
                 } else {
-                    setError(
-                        'Failed to load free agents.'
-                    )
+                    setError('Failed to load free agents.')
                 }
             } finally {
                 setLoading(false)
@@ -486,9 +513,7 @@ export default function FreeAgents() {
         return <p>Loading free agents...</p>
     }
 
-    const teamMap = new Map(
-        teams.map((team) => [team.id, team])
-    )
+    const teamMap = new Map(teams.map((team) => [team.id, team]))
 
     const freeAgents = units.filter((unit) =>
         !ownedUnits.some(
@@ -497,12 +522,41 @@ export default function FreeAgents() {
         )
     )
 
-    const filteredFreeAgents =
-        freeAgents.filter((unit) => {
-            const matchesType = (unit.unitType === selectedType)
-            const matchesConference = (selectedConference === 'ALL') || (unit.conference === selectedConference)
 
-            return (matchesType && matchesConference)
+    const seasonStatsMap = new Map(
+        seasonStats.map((team) => [normalizeTeamName(team.team), team])
+    )
+
+    const getUnitAverage = (unit: FreeAgentUnit): number | null => {
+        const stats = seasonStatsMap.get(normalizeTeamName(unit.teamName))
+
+        if (!stats || stats.gamesPlayed <= 0) return null
+
+        return getAveragePPG(stats, unit.unitType as RosterUnitType)
+    }
+
+    const filteredFreeAgents = freeAgents
+        .filter((unit) => {
+            const matchesType = unit.unitType === selectedType
+            const matchesConference =
+                selectedConference === 'ALL' ||
+                unit.conference === selectedConference
+
+            return matchesType && matchesConference
+        })
+        .sort((a, b) => {
+            const aAverage = getUnitAverage(a)
+            const bAverage = getUnitAverage(b)
+
+            if (aAverage === null && bAverage === null) {
+                return a.teamName.localeCompare(b.teamName)
+            }
+
+            if (aAverage === null) return 1
+            if (bAverage === null) return -1
+
+            return bAverage - aAverage ||
+                a.teamName.localeCompare(b.teamName)
         })
 
     async function makeMove(dropUnit: MyRosterUnit) {
@@ -550,22 +604,8 @@ export default function FreeAgents() {
         window.location.reload()
     }
 
-
-    const sortedTransactions = [...transactions].sort(
-        (a, b) =>
-            new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime()
-    )
-
-    const totalHistoryPages = Math.ceil(
-        sortedTransactions.length / HISTORY_PAGE_SIZE
-    )
-
-    const paginatedTransactions = sortedTransactions.slice(
-        (historyPage - 1) * HISTORY_PAGE_SIZE,
-        historyPage * HISTORY_PAGE_SIZE
-    )
-
+    const totalHistoryPages = Math.ceil(transactions.length / HISTORY_PAGE_SIZE)
+    const paginatedTransactions = transactions.slice((historyPage - 1) * HISTORY_PAGE_SIZE, historyPage * HISTORY_PAGE_SIZE)
 
     return (
         <FreeAgentsPage>
@@ -645,19 +685,13 @@ export default function FreeAgents() {
                                     {unit.teamName}
                                 </UnitNameButton>
 
-                                {' '}
-                                {formatUnitType(unit.unitType)}
+                                <UnitMeta>
+                                    {formatUnitType(unit.unitType)}
+                                </UnitMeta>
                             </UnitName>
 
                             <UnitMeta>
-                                {unit.conference}
-
-                                {unit.gameStart && (
-                                    <>
-                                        {' • '}
-                                        {formatGameStart(unit.gameStart)}
-                                    </>
-                                )}
+                                AVG PPG: {loadingRankings ? '...' : getUnitAverage(unit)?.toFixed(1) ?? 'N/A'}
                             </UnitMeta>
                         </UnitInfo>
 
@@ -708,7 +742,21 @@ export default function FreeAgents() {
                             </p>
                         )}
 
-                        {myRoster.map((unit) => (
+                        {[...myRoster]
+                            .sort((a, b) => {
+                                const unitOrder: Record<RosterUnitType, number> = {
+                                    PASSING: 0,
+                                    RUSHING: 1,
+                                    RECEIVING: 2,
+                                    DEFENSE: 3,
+                                    SPECIAL_TEAMS: 4
+                                }
+
+                                return (
+                                    unitOrder[a.unitType] - unitOrder[b.unitType] || a.teamName.localeCompare(b.teamName)
+                                )
+                            })
+                            .map((unit) => (
                             <FreeAgentCard key={unit.id}>
                                 <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
 
@@ -726,8 +774,9 @@ export default function FreeAgents() {
                                             {unit.teamName}
                                         </UnitNameButton>
 
-                                        {' '}
-                                        {formatUnitType(unit.unitType)}
+                                        <UnitMeta>
+                                            {formatUnitType(unit.unitType)}
+                                        </UnitMeta>
                                     </UnitName>
 
                                     <UnitMeta>
@@ -759,11 +808,7 @@ export default function FreeAgents() {
                         </HistoryHeader>
 
                         {paginatedTransactions.map((transaction) => {
-                            const fantasyTeam = members.find(
-                                (member) =>
-                                    member.id === transaction.league_member_id
-                            )
-
+                            const fantasyTeam = members.find((member) => member.id === transaction.league_member_id)
                             const addedTeam = teamMap.get(transaction.added_college_team_id)
                             const droppedTeam = teamMap.get(transaction.dropped_college_team_id)
 
@@ -843,6 +888,29 @@ function formatGameStart(date: Date): string {
         }
     )
 }
+
+
+function getAveragePPG(team: Season2026Stats, unitType: RosterUnitType): number {
+    if (team.gamesPlayed <= 0) return 0
+
+    switch (unitType) {
+        case 'PASSING':
+            return team.passingFantasyPoints / team.gamesPlayed
+
+        case 'RUSHING':
+            return team.rushingFantasyPoints / team.gamesPlayed
+
+        case 'RECEIVING':
+            return team.receivingFantasyPoints / team.gamesPlayed
+
+        case 'DEFENSE':
+            return team.defenseFantasyPoints / team.gamesPlayed
+
+        case 'SPECIAL_TEAMS':
+            return team.specialTeamsFantasyPoints / team.gamesPlayed
+    }
+}
+
 
 function formatUnitType(type: string): string {
     if (type === 'ALL') {

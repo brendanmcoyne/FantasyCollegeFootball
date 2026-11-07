@@ -14,8 +14,8 @@ import { getStatRank, getStatRankByName, formatRank } from '../../utils/statRank
 import { getPositionRanks, getTeamPositionRank } from '../../utils/unitRankings'
 import { getTeamOpponent } from '../../utils/teamschedule'
 
-import { ModalBackdrop, ModalCard, ModalHeader, ModalTitle, CloseButton } from '../../utils/rosterstyles'
-import { getTeamLogo, TeamLogo } from '../../styles/logos'
+import { ModalBackdrop, ModalCard, ModalHeader, CloseButton } from '../../utils/rosterstyles'
+import { getTeamLogo } from '../../styles/logos'
 
 type Tab = '2025' | '2026' | 'SCHEDULE'
 
@@ -157,23 +157,6 @@ const BreakdownCloseButton = styled.button`
     }
 `;
 
-const ConferenceInfo = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 6px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #6b7280;
-`;
-
-const ConferenceLogo = styled.img`
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
-    flex-shrink: 0;
-`;
-
 const TeamStatItem = styled.div`
     display: flex;
     flex-direction: column;
@@ -288,6 +271,27 @@ const SmallCloseButton = styled(CloseButton)`
     min-height: 28px;
 `;
 
+
+const ConferenceValue = styled(TeamStatValue)`
+    @media (max-width: 600px) {
+        font-size: 18px;
+    }
+`;
+
+const MobileConference = styled.span`
+    display: none;
+
+    @media (max-width: 600px) {
+        display: inline;
+    }
+`;
+
+const DesktopConference = styled.span`
+    @media (max-width: 600px) {
+        display: none;
+    }
+`;
+
 export default function TeamDetails({teamName, teamId, unitType, isOpponent = false, teams, onClose,}: TeamDetailsModalProps) {
     const [activeTab, setActiveTab] = useState<Tab>('2025')
     const [season2026Stats, setSeason2026Stats] = useState<Season2026Stats[]>([])
@@ -315,9 +319,6 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
 
             try {
                 const stats = await get2026SeasonStats()
-
-                console.log('2026 Season Stats:', stats)
-
                 setSeason2026Stats(stats)
             } catch (error) {
                 console.error('Failed to load 2026 stats:', error)
@@ -399,9 +400,16 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
                                                 alt={conference}
                                             />
                                         ) : (
-                                            <TeamStatValue>
-                                                {conference ?? 'N/A'}
-                                            </TeamStatValue>
+                                            <ConferenceValue>
+                                                {conference === 'Independent' ? (
+                                                    <>
+                                                        <DesktopConference>Independent</DesktopConference>
+                                                        <MobileConference>Ind.</MobileConference>
+                                                    </>
+                                                ) : (
+                                                    conference ?? 'N/A'
+                                                )}
+                                            </ConferenceValue>
                                         )}
                                     </TeamStatItem>
 
@@ -1057,8 +1065,7 @@ function ScheduleContent({teamName, unitType}: { teamName: string, unitType: Ros
                         </ScheduleRow>
 
                         {selectedGame === game?.eventId &&
-                            selectedStats &&
-                            selectedFantasyScore !== null && (
+                            selectedStats && selectedFantasyScore !== null && (
                                 <BreakdownCard>
                                     <BreakdownHeader>
                                         <strong>
@@ -1126,19 +1133,10 @@ function getAveragePPG(team: Season2026Stats, unitType: RosterUnitType): number 
     }
 
     switch (unitType) {
-        case 'PASSING':
-            return team.passingFantasyPoints / team.gamesPlayed
-
-        case 'RUSHING':
-            return team.rushingFantasyPoints / team.gamesPlayed
-
-        case 'RECEIVING':
-            return team.receivingFantasyPoints / team.gamesPlayed
-
-        case 'DEFENSE':
-            return team.defenseFantasyPoints / team.gamesPlayed
-
-        case 'SPECIAL_TEAMS':
-            return team.specialTeamsFantasyPoints / team.gamesPlayed
+        case 'PASSING': return team.passingFantasyPoints / team.gamesPlayed
+        case 'RUSHING': return team.rushingFantasyPoints / team.gamesPlayed
+        case 'RECEIVING': return team.receivingFantasyPoints / team.gamesPlayed
+        case 'DEFENSE': return team.defenseFantasyPoints / team.gamesPlayed
+        case 'SPECIAL_TEAMS': return team.specialTeamsFantasyPoints / team.gamesPlayed
     }
 }
