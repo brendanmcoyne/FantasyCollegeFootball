@@ -113,8 +113,7 @@ async function createRound(leagueId: string, week: number, games: MatchupPair[])
 
     const { error } = await supabase.from('league_matchups')
         .insert(games.map((game) => ({
-            league_id: leagueId,
-            week,
+            league_id: leagueId, week,
             team1_id: game.team1_id,
             team2_id: game.team2_id,
             }))
@@ -281,5 +280,3 @@ async function setRound(leagueId: string, week: number): Promise<void> {
         if (error) throw error
     }
 }
-
-

@@ -81,7 +81,6 @@ const TeamRecord = styled.span`
     white-space: nowrap;
 `;
 
-
 interface PlayoffMatchup {
     id: string
     week: number

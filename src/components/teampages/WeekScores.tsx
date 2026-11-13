@@ -228,7 +228,6 @@ const MobileSectionTitle = styled.h4`
     color: #374151;
 `;
 
-
 const MobileUnitCell = styled.div<{ $side: 'left' | 'right' }>`
     display: flex;
     justify-content: space-between;
@@ -472,7 +471,6 @@ function formatUnitType(unitType: ScoringUnitType): string {
     return unitType === 'SPECIAL_TEAMS' ? 'Special Teams' : unitType.charAt(0) + unitType.slice(1).toLowerCase()
 }
 
-
 function playoffRoundName(week: number, size: PlayoffSize | null): string {
     if (size === null) return `Week ${week}`
 
@@ -492,7 +490,6 @@ function playoffRoundName(week: number, size: PlayoffSize | null): string {
 
     return `Week ${week}`
 }
-
 
 export default function WeekScores() {
     const { leagueId, week: weekParam } = useParams()
@@ -515,9 +512,7 @@ export default function WeekScores() {
     const weekStarted = week <= CURRENT_WEEK
     const weekComplete = week < CURRENT_WEEK
 
-    useEffect(() => {
-        scoresRef.current = scores
-    }, [scores])
+    useEffect(() => {scoresRef.current = scores}, [scores])
 
     useEffect(() => {
         if (matchups.length === 0) {
@@ -526,9 +521,7 @@ export default function WeekScores() {
         }
 
         setSelectedMatchupId((current) =>
-            matchups.some((matchup) => matchup.id === current)
-                ? current
-                : matchups[0].id
+            matchups.some((matchup) => matchup.id === current) ? current : matchups[0].id
         )
     }, [matchups])
 
@@ -656,7 +649,6 @@ export default function WeekScores() {
                     }
 
                     const weeklyTeam = weeklyMap.get(collegeTeam.name.trim().toLowerCase())
-
                     const liveTeam = liveStatsMap.get(row.college_team_id)
 
                     const gameStarted =
@@ -993,14 +985,11 @@ export default function WeekScores() {
             </BackButton>
 
                 <h1>
-                    {week >= 11
-                        ? `Week ${week} — ${playoffRoundName(week, playoffSize)}`
-                        : `Week ${week} League Scores`}
+                    {week >= 11 ? `Week ${week} — ${playoffRoundName(week, playoffSize)}` : `Week ${week} League Scores`}
                 </h1>
 
                 <WeekLinks>
                     {Array.from({length: Math.max(10, Math.min(CURRENT_WEEK, finals(playoffSize ?? 6)))}, (_, index) => {
-
                             const weekNumber = index + 1
 
                         return (
@@ -1039,18 +1028,14 @@ export default function WeekScores() {
                                 <MatchupTabTeam>
                                     <span>{team1.teamName}</span>
                                     <strong>
-                                        {weekStarted
-                                            ? team1.starterTotal.toFixed(1)
-                                            : '-'}
+                                        {weekStarted ? team1.starterTotal.toFixed(1) : '-'}
                                     </strong>
                                 </MatchupTabTeam>
 
                                 <MatchupTabTeam>
                                     <span>{team2.teamName}</span>
                                     <strong>
-                                        {weekStarted
-                                            ? team2.starterTotal.toFixed(1)
-                                            : '-'}
+                                        {weekStarted ? team2.starterTotal.toFixed(1) : '-'}
                                     </strong>
                                 </MatchupTabTeam>
                             </MatchupTab>
@@ -1081,15 +1066,11 @@ export default function WeekScores() {
                         if (!weekStarted) {
                             return (
                                 <FutureMatchupCard key={matchup.id}>
-                                    <FutureTeamLeft>
-                                        {team1.teamName}
-                                    </FutureTeamLeft>
+                                    <FutureTeamLeft>{team1.teamName}</FutureTeamLeft>
 
                                     <VsText>vs</VsText>
 
-                                    <FutureTeamRight>
-                                        {team2.teamName}
-                                    </FutureTeamRight>
+                                    <FutureTeamRight>{team2.teamName}</FutureTeamRight>
                                 </FutureMatchupCard>
                             )
                         }
@@ -1097,10 +1078,7 @@ export default function WeekScores() {
                         return (
                             <MatchupCard key={matchup.id}>
                                 <GroupedMatchup>
-                                    <GroupedMatchupDisplay
-                                        team1={team1}
-                                        team2={team2}
-                                    />
+                                    <GroupedMatchupDisplay team1={team1} team2={team2}/>
                                 </GroupedMatchup>
                             </MatchupCard>
                         )
@@ -1114,13 +1092,8 @@ export default function WeekScores() {
                             {playoffSeeds.slice(0, 2).map((team) => (
                                 <ByeTeam key={team.memberId}>
                                 <span>
-                                    <strong>
-                                        #{team.seed} {team.teamName}
-                                    </strong>
-
-                                    <TeamRecord>
-                                        {' '}({team.wins}-{team.losses})
-                                    </TeamRecord>
+                                    <strong>#{team.seed} {team.teamName}</strong>
+                                    <TeamRecord>{' '}({team.wins}-{team.losses})</TeamRecord>
                                 </span>
 
                                     <ByeLabel>BYE</ByeLabel>
@@ -1137,18 +1110,12 @@ export default function WeekScores() {
 
                 <ModalBackdrop onClick={() => setSelectedUnit(null)}>
                     <ModalCard onClick={(event) => event.stopPropagation()}>
-                        <h2>
-                            {selectedUnit.teamName}{' '}
-                            {formatUnitType(selectedUnit.unitType)}
-                        </h2>
-
+                        <h2>{selectedUnit.teamName}{' '}{formatUnitType(selectedUnit.unitType)}</h2>
                         <h3>Fantasy Score: {selectedUnit.score.toFixed(1)}</h3>
 
                         {getScoreBreakdown(selectedUnit.unitType, selectedUnit.stats)}
 
-                        <CloseButton onClick={() => setSelectedUnit(null)}>
-                            Close
-                        </CloseButton>
+                        <CloseButton onClick={() => setSelectedUnit(null)}>Close</CloseButton>
                     </ModalCard>
                 </ModalBackdrop>
             )}

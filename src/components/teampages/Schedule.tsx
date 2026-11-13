@@ -254,7 +254,6 @@ export default function Schedule() {
                 ← Back
             </BackButton>
 
-
             <h1>League Schedule</h1>
 
             <SeasonToggle>
@@ -262,8 +261,7 @@ export default function Schedule() {
                     Regular Season
                 </SeasonButton>
 
-                <SeasonButton
-                    $active={selectedSeason === 'postseason'} disabled={CURRENT_WEEK < 11}
+                <SeasonButton $active={selectedSeason === 'postseason'} disabled={CURRENT_WEEK < 11}
                     onClick={() => setSelectedSeason('postseason')}
                 >
                     Postseason
