@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate, Link, useParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { BackButton } from '../../styles/commonstyles'
-
+import { CURRENT_WEEK } from '../../bigseasonfile'
 import { supabase } from '../lib/supabase'
+import { finals, getPlayoffSize, advancePlayoffs, type PlayoffSize } from '../../utils/playoffs'
 
 interface LeagueMember {
     id: string
@@ -94,6 +95,56 @@ const Score = styled.div`
     }
 `;
 
+
+const SeasonToggle = styled.div`
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+`;
+
+const SeasonButton = styled.button<{ $active: boolean }>`
+    padding: 12px 20px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+
+    background: ${({ $active }) =>
+    $active ? '#1f2937' : '#ffffff'};
+
+    color: ${({ $active }) =>
+    $active ? '#ffffff' : '#374151'};
+
+    &:hover:not(:disabled) {
+        background: ${({ $active }) =>
+    $active ? '#111827' : '#f3f4f6'};
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 700px) {
+        flex: 1;
+        padding: 10px 12px;
+    }
+`;
+
+function playoffRoundName(week: number, size: PlayoffSize): string {
+    const championshipWeek = finals(size)
+
+    if (week === championshipWeek) {
+        return 'Championship'
+    }
+
+    if (week === championshipWeek - 1) {
+        return 'Semifinals'
+    }
+
+    return 'Quarterfinals'
+}
+
 export default function Schedule() {
     const { leagueId } = useParams()
 
@@ -101,7 +152,9 @@ export default function Schedule() {
     const [matchups, setMatchups] = useState<Matchup[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const [selectedSeason, setSelectedSeason] = useState<'regular' | 'postseason'>('regular')
     const navigate = useNavigate()
+    const [playoffSize, setPlayoffSize] = useState<PlayoffSize | null>(null)
 
     useEffect(() => {
         async function loadSchedule() {
@@ -109,6 +162,10 @@ export default function Schedule() {
                 setError('League ID is missing.')
                 setLoading(false)
                 return
+            }
+
+            if (CURRENT_WEEK >= 11) {
+                await advancePlayoffs(leagueId, CURRENT_WEEK)
             }
 
             try {
@@ -131,8 +188,11 @@ export default function Schedule() {
                     throw matchupError
                 }
 
-                setMembers(memberData ?? [])
+                const leagueMembers = memberData ?? []
+
+                setMembers(leagueMembers)
                 setMatchups(matchupData ?? [])
+                setPlayoffSize(getPlayoffSize(leagueMembers.length))
             } catch (err) {
                 if (err instanceof Error) {
                     setError(err.message)
@@ -193,19 +253,36 @@ export default function Schedule() {
             <BackButton onClick={() => navigate(-1)}>
                 ← Back
             </BackButton>
-            
+
+
             <h1>League Schedule</h1>
 
-            {Array.from(
-                { length: 10 },
+            <SeasonToggle>
+                <SeasonButton $active={selectedSeason === 'regular'} onClick={() => setSelectedSeason('regular')}>
+                    Regular Season
+                </SeasonButton>
+
+                <SeasonButton
+                    $active={selectedSeason === 'postseason'} disabled={CURRENT_WEEK < 11}
+                    onClick={() => setSelectedSeason('postseason')}
+                >
+                    Postseason
+                </SeasonButton>
+            </SeasonToggle>
+
+            {Array.from({length: selectedSeason === 'regular' ? 10 :
+                playoffSize === null ? 0 : Math.max(0, Math.min(CURRENT_WEEK, finals(playoffSize)) - 10)},
                 (_, index) => {
-                    const week = index + 1
+                    const week = selectedSeason === 'regular' ? index + 1 : index + 11
                     const weekMatchups = matchups.filter((matchup) => matchup.week === week)
 
                     return (
                         <WeekCard key={week}>
                             <WeekHeader to={`/league/${leagueId}/week-scores/${week}`}>
-                                <h2>Week {week}</h2>
+                                <h2>
+                                    Week {week}
+                                    {selectedSeason === 'postseason' && playoffSize !== null && ` — ${playoffRoundName(week, playoffSize)}`}
+                                </h2>
                             </WeekHeader>
 
                             {weekMatchups.length === 0 ? (

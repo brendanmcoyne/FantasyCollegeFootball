@@ -9,10 +9,28 @@ export interface PlayoffTeam {
     losses: number
 }
 
-export async function getPlayoffSeeds(leagueId: string): Promise<PlayoffTeam[]> {
-    const standings = await getLeagueStandings(leagueId)
+export type PlayoffSize = 2 | 4 | 6 | 8
 
-    return standings.slice(0, 6).map((team, index) => ({
+export function getPlayoffSize(teamCount: number): PlayoffSize {
+    if (teamCount >= 8) return 8
+    if (teamCount === 6) return 6
+    if (teamCount === 4) return 4
+    if (teamCount === 2) return 2
+
+    throw new Error(`Unsupported league size: ${teamCount}`)
+}
+
+export function finals(playoffSize: PlayoffSize): number {
+    if (playoffSize === 2) return 11
+    if (playoffSize === 4) return 12
+    return 13
+}
+
+export async function getSeeds(leagueId: string): Promise<PlayoffTeam[]> {
+    const standings = await getLeagueStandings(leagueId)
+    const playoffSize = getPlayoffSize(standings.length)
+
+    return standings.slice(0, playoffSize).map((team, index) => ({
         memberId: team.memberId,
         teamName: team.teamName,
         seed: index + 1,
@@ -20,55 +38,6 @@ export async function getPlayoffSeeds(leagueId: string): Promise<PlayoffTeam[]> 
         losses: team.losses,
     }))
 }
-
-
-export async function PlayoffRound1(leagueId: string): Promise<void> {
-    const seeds = await getPlayoffSeeds(leagueId)
-
-    if (seeds.length < 6) {
-        throw new Error(
-            'At least 6 teams are required for the playoffs.'
-        )
-    }
-
-    const { data: existing, error: existingError } =
-        await supabase
-            .from('league_matchups')
-            .select('id')
-            .eq('league_id', leagueId)
-            .eq('week', 11)
-
-    if (existingError) throw existingError
-
-    if (existing && existing.length > 0) {
-        if (existing.length !== 2) {
-            throw new Error('Week 11 already has an unexpected number of matchups.')
-        }
-        return
-    }
-
-    const matchups = [
-        {
-            league_id: leagueId,
-            week: 11,
-            team1_id: seeds[2].memberId,
-            team2_id: seeds[5].memberId,
-        },
-        {
-            league_id: leagueId,
-            week: 11,
-            team1_id: seeds[3].memberId,
-            team2_id: seeds[4].memberId,
-        },
-    ]
-
-    const { error } = await supabase
-        .from('league_matchups')
-        .insert(matchups)
-
-    if (error) throw error
-}
-
 
 interface CompletedMatchup {
     id: string
@@ -79,7 +48,12 @@ interface CompletedMatchup {
     winner_id: string | null
 }
 
-async function getRoundMatchups(leagueId: string, week: number): Promise<CompletedMatchup[]> {
+interface MatchupPair {
+    team1_id: string
+    team2_id: string
+}
+
+async function roundMatchups(leagueId: string, week: number): Promise<CompletedMatchup[]> {
     const { data, error } = await supabase
         .from('league_matchups')
         .select('id, team1_id, team2_id, team1_score, team2_score, winner_id')
@@ -94,9 +68,7 @@ async function getRoundMatchups(leagueId: string, week: number): Promise<Complet
 
 function getWinner(matchup: CompletedMatchup): string {
     if (!matchup.winner_id) {
-        throw new Error(
-            'Previous playoff round has not finished yet.'
-        )
+        throw new Error('Previous playoff round has not finished yet.')
     }
 
     if (matchup.winner_id !== matchup.team1_id && matchup.winner_id !== matchup.team2_id) {
@@ -106,114 +78,208 @@ function getWinner(matchup: CompletedMatchup): string {
     return matchup.winner_id
 }
 
-async function createRound(leagueId: string, week: number, games: { team1_id: string; team2_id: string }[]): Promise<void> {
-    const existing = await getRoundMatchups(leagueId, week)
+function findMatchup(matchups: CompletedMatchup[], teamA: string, teamB: string): CompletedMatchup {
+    const matchup = matchups.find(
+        (game) =>
+            (game.team1_id === teamA && game.team2_id === teamB) ||
+            (game.team1_id === teamB && game.team2_id === teamA)
+    )
+
+    if (!matchup) {
+        throw new Error('Required playoff matchup was not found.')
+    }
+
+    return matchup
+}
+
+async function createRound(leagueId: string, week: number, games: MatchupPair[]): Promise<void> {
+    const existing = await roundMatchups(leagueId, week)
 
     if (existing.length > 0) {
         if (existing.length !== games.length) {
-            throw new Error(
-                `Week ${week} has an unexpected number of matchups.`
-            )
+            throw new Error(`Week ${week} has an unexpected number of matchups.`)
+        }
+
+        const matchesExpected = games.every((game) =>
+            existing.some((saved) => saved.team1_id === game.team1_id && saved.team2_id === game.team2_id)
+        )
+
+        if (!matchesExpected) {
+            throw new Error(`Week ${week} contains different playoff matchups.`)
         }
 
         return
     }
 
-    const { error } = await supabase
-        .from('league_matchups')
-        .insert(
-            games.map((game) => ({
-                league_id: leagueId,
-                week,
-                team1_id: game.team1_id,
-                team2_id: game.team2_id
+    const { error } = await supabase.from('league_matchups')
+        .insert(games.map((game) => ({
+            league_id: leagueId,
+            week,
+            team1_id: game.team1_id,
+            team2_id: game.team2_id,
             }))
         )
 
     if (error) throw error
 }
 
-export async function PlayoffRound2(leagueId: string): Promise<void> {
-    const existing = await getRoundMatchups(leagueId, 12)
+export async function Round1(leagueId: string): Promise<void> {
+    const seeds = await getSeeds(leagueId)
+    const size = getPlayoffSize(seeds.length)
 
-    if (existing.length === 2) return
+    const seed = (number: number) => seeds[number - 1].memberId
+    let games: MatchupPair[]
 
-    if (existing.length !== 0) {
-        throw new Error('Week 12 has incomplete matchups.')
+    switch (size) {
+        case 2:
+            games = [{ team1_id: seed(1), team2_id: seed(2) }]
+            break
+
+        case 4:
+            games = [{ team1_id: seed(1), team2_id: seed(4) }, { team1_id: seed(2), team2_id: seed(3) }]
+            break
+
+        case 6:
+            games = [{ team1_id: seed(3), team2_id: seed(6) }, { team1_id: seed(4), team2_id: seed(5) }]
+            break
+
+        case 8:
+            games = [{ team1_id: seed(1), team2_id: seed(8) }, { team1_id: seed(4), team2_id: seed(5) },
+                { team1_id: seed(2), team2_id: seed(7) }, { team1_id: seed(3), team2_id: seed(6) }]
+            break
     }
 
-    const seeds = await getPlayoffSeeds(leagueId)
-    const round1 = await getRoundMatchups(leagueId, 11)
-
-    if (seeds.length !== 6 || round1.length !== 2) {
-        throw new Error('Week 11 playoffs are not ready.')
-    }
-
-    const findWinner = (seedA: number, seedB: number) => {
-        const teamA = seeds[seedA - 1].memberId
-        const teamB = seeds[seedB - 1].memberId
-
-        const matchup = round1.find(
-            (game) =>
-                (game.team1_id === teamA && game.team2_id === teamB) ||
-                (game.team1_id === teamB && game.team2_id === teamA)
-        )
-
-        if (!matchup) {
-            throw new Error(`Missing playoff matchup: #${seedA} vs #${seedB}`)
-        }
-
-        return getWinner(matchup)
-    }
-
-    const winner36 = findWinner(3, 6)
-    const winner45 = findWinner(4, 5)
-
-    await createRound(leagueId, 12, [
-        {
-            team1_id: seeds[0].memberId,
-            team2_id: winner45
-        },
-        {
-            team1_id: seeds[1].memberId,
-            team2_id: winner36
-        }
-    ])
+    await createRound(leagueId, 11, games)
 }
 
-export async function PlayoffRound3(leagueId: string): Promise<void> {
-    const existing = await getRoundMatchups(leagueId, 13)
+export async function Round2(leagueId: string): Promise<void> {
+    const seeds = await getSeeds(leagueId)
+    const size = getPlayoffSize(seeds.length)
 
-    if (existing.length === 1) return
+    if (size === 2) return
 
-    if (existing.length !== 0) {
-        throw new Error('Week 13 has unexpected matchups.')
+    const round1 = await roundMatchups(leagueId, 11)
+    const seed = (number: number) => seeds[number - 1].memberId
+    const winner = (a: number, b: number) => getWinner(findMatchup(round1, seed(a), seed(b)))
+
+    let games: MatchupPair[]
+
+    if (size === 4) {
+        if (round1.length !== 2) {
+            throw new Error('Week 11 semifinals are not ready.')
+        }
+
+        games = [{ team1_id: winner(1, 4), team2_id: winner(2, 3) }]
+    } else if (size === 6) {
+        if (round1.length !== 2) {
+            throw new Error('Week 11 quarterfinals are not ready.')
+        }
+
+        games = [{ team1_id: seed(1), team2_id: winner(4, 5) }, { team1_id: seed(2), team2_id: winner(3, 6) }]
+
+    } else {
+        if (round1.length !== 4) {
+            throw new Error('Week 11 quarterfinals are not ready.')
+        }
+
+        games = [{ team1_id: winner(1, 8), team2_id: winner(4, 5) }, { team1_id: winner(2, 7), team2_id: winner(3, 6) }]
     }
 
-    const round2 = await getRoundMatchups(leagueId, 12)
+    await createRound(leagueId, 12, games)
+}
+
+export async function Round3(leagueId: string): Promise<void> {
+    const seeds = await getSeeds(leagueId)
+    const size = getPlayoffSize(seeds.length)
+
+    if (size === 2 || size === 4) return
+
+    const round2 = await roundMatchups(leagueId, 12)
 
     if (round2.length !== 2) {
-        throw new Error('Week 12 playoffs are not ready.')
+        throw new Error('Week 12 semifinals are not ready.')
     }
 
-    const seeds = await getPlayoffSeeds(leagueId)
+    let semifinal1: CompletedMatchup
+    let semifinal2: CompletedMatchup
 
-    const semifinal1 = round2.find(
-        (game) => game.team1_id === seeds[0].memberId
-    )
+    if (size === 6) {
+        semifinal1 = round2.find((game) => game.team1_id === seeds[0].memberId)!
+        semifinal2 = round2.find((game) => game.team1_id === seeds[1].memberId)!
 
-    const semifinal2 = round2.find(
-        (game) => game.team1_id === seeds[1].memberId
-    )
-
-    if (!semifinal1 || !semifinal2) {
-        throw new Error('Semifinal matchups are invalid.')
-    }
-
-    await createRound(leagueId, 13, [
-        {
-            team1_id: getWinner(semifinal1),
-            team2_id: getWinner(semifinal2)
+        if (!semifinal1 || !semifinal2) {
+            throw new Error('Semifinal matchups are invalid.')
         }
-    ])
+    } else {
+        const firstRound = await roundMatchups(leagueId, 11)
+        const seed = (number: number) => seeds[number - 1].memberId
+        const winner = (a: number, b: number) => getWinner(findMatchup(firstRound, seed(a), seed(b)))
+
+        semifinal1 = findMatchup(round2, winner(1, 8), winner(4, 5))
+        semifinal2 = findMatchup(round2, winner(2, 7), winner(3, 6))
+    }
+
+    await createRound(leagueId, 13, [{ team1_id: getWinner(semifinal1), team2_id: getWinner(semifinal2) }])
 }
+
+export async function advancePlayoffs(leagueId: string, currentWeek: number): Promise<void> {
+    if (currentWeek < 11) return
+
+    await Round1(leagueId)
+
+    if (currentWeek >= 12) {
+        await setRound(leagueId, 11)
+        await Round2(leagueId)
+    }
+
+    if (currentWeek >= 13) {
+        await setRound(leagueId, 12)
+        await Round3(leagueId)
+    }
+
+    const size = getPlayoffSize((await getSeeds(leagueId)).length)
+    const championshipWeek = finals(size)
+
+    if (currentWeek > championshipWeek) {
+        await setRound(leagueId, championshipWeek)
+    }
+}
+
+
+async function setRound(leagueId: string, week: number): Promise<void> {
+    const seeds = await getSeeds(leagueId)
+    const matchups = await roundMatchups(leagueId, week)
+
+    for (const matchup of matchups) {
+        if (matchup.team1_score === null || matchup.team2_score === null) {
+            throw new Error(`Week ${week} is unfinished.`)
+        }
+
+        const seed1 = seeds.find((team) => team.memberId === matchup.team1_id)
+        const seed2 = seeds.find((team) => team.memberId === matchup.team2_id)
+
+        if (!seed1 || !seed2) {
+            throw new Error(`Missing seeds for matchup ${matchup.id}`)
+        }
+
+        const winnerId =
+            matchup.team1_score > matchup.team2_score
+                ? matchup.team1_id : matchup.team2_score > matchup.team1_score
+                    ? matchup.team2_id : seed1.seed < seed2.seed
+                        ? matchup.team1_id : matchup.team2_id
+
+        if (matchup.winner_id === winnerId) {
+            continue
+        }
+
+        const { error } = await supabase
+            .from('league_matchups')
+            .update({ winner_id: winnerId })
+            .eq('id', matchup.id)
+            .eq('league_id', leagueId)
+
+        if (error) throw error
+    }
+}
+
+

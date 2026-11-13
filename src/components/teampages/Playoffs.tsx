@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { BackButton } from '../../styles/commonstyles'
-import { getPlayoffSeeds, type PlayoffTeam } from '../../utils/playoffs'
+import { getSeeds, getPlayoffSize, finals, advancePlayoffs, type PlayoffTeam, type PlayoffSize } from '../../utils/playoffs'
 import { supabase } from '../lib/supabase'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 
@@ -12,9 +12,9 @@ const Page = styled.div`
     gap: 24px;
 `;
 
-const Bracket = styled.div`
+const Bracket = styled.div<{ $rounds: number }>`
     display: grid;
-    grid-template-columns: repeat(3, minmax(250px, 1fr));
+    grid-template-columns: repeat(${({ $rounds }) => $rounds}, minmax(250px, 1fr));
     gap: 24px;
     overflow-x: auto;
     padding: 8px 0 24px;
@@ -92,37 +92,22 @@ interface PlayoffMatchup {
     winner_id: string | null
 }
 
-function TeamRow({
-                     team,
-                     placeholder = 'TBD',
-                     score,
-                     winner = false
-                 }: {
+function TeamRow({team, placeholder = 'TBD', score, winner = false}: {
     team?: PlayoffTeam
     placeholder?: string
     score?: number | null
     winner?: boolean
 }) {
     return (
-        <MatchupTeam
-            style={{
-                background: winner ? '#f0fdf4' : 'white'
-            }}
-        >
+        <MatchupTeam style={{background: winner ? '#f0fdf4' : 'white'}}>
             <span>
                 {team && <Seed>#{team.seed}</Seed>}
 
-                <span style={{
-                    fontWeight: winner ? 800 : 600
-                }}>
+                <span style={{fontWeight: winner ? 800 : 600}}>
                     {team?.teamName ?? placeholder}
                 </span>
 
-                {team && (
-                    <TeamRecord>
-                        ({team.wins}-{team.losses})
-                    </TeamRecord>
-                )}
+                {team && (<TeamRecord>({team.wins}-{team.losses})</TeamRecord>)}
             </span>
 
             {score != null && (
@@ -153,7 +138,8 @@ export default function Playoffs() {
 
         async function loadPlayoffs() {
             try {
-                const teams = await getPlayoffSeeds(leagueId!)
+                await advancePlayoffs(leagueId!, CURRENT_WEEK)
+                const teams = await getSeeds(leagueId!)
 
                 const { data, error: matchupError } = await supabase
                     .from('league_matchups')
@@ -182,10 +168,7 @@ export default function Playoffs() {
         }
 
         void loadPlayoffs()
-
-        const interval = window.setInterval(() => {
-            void loadPlayoffs()
-        }, 15000)
+        const interval = window.setInterval(() => {void loadPlayoffs()}, 15000)
 
         return () => {
             cancelled = true
@@ -215,15 +198,7 @@ export default function Playoffs() {
         )
     }
 
-    const getWinner = (matchup?: PlayoffMatchup) =>
-        matchup?.winner_id
-            ? getTeam(matchup.winner_id)
-            : undefined
-
-    const getScore = (
-        matchup: PlayoffMatchup | undefined,
-        team?: PlayoffTeam
-    ) => {
+    const getScore = (matchup: PlayoffMatchup | undefined, team?: PlayoffTeam) => {
         if (!matchup || !team) return null
 
         if (matchup.team1_id === team.memberId) {
@@ -237,27 +212,170 @@ export default function Playoffs() {
         return null
     }
 
-    const game36 = findMatchup(11, seed(3), seed(6))
-    const game45 = findMatchup(11, seed(4), seed(5))
+    const playoffSize: PlayoffSize = getPlayoffSize(seeds.length)
+    const championshipWeek = finals(playoffSize)
+    const roundCount = championshipWeek - 10
 
-    const winner36 = getWinner(game36)
-    const winner45 = getWinner(game45)
+    const getMatchupWinner = (matchup?: PlayoffMatchup): PlayoffTeam | undefined => {
+        if (!matchup?.winner_id) return undefined
 
-    const semifinal1 = getRound(12).find(
-        (game) => game.team1_id === seed(1)?.memberId
-    )
+        return getTeam(matchup.winner_id)
+    }
 
-    const semifinal2 = getRound(12).find(
-        (game) => game.team1_id === seed(2)?.memberId
-    )
+    interface BracketGame {
+        team1?: PlayoffTeam
+        team2?: PlayoffTeam
+        placeholder1?: string
+        placeholder2?: string
+        matchup?: PlayoffMatchup
+    }
 
-    const finalist1 = getWinner(semifinal1)
-    const finalist2 = getWinner(semifinal2)
+    interface BracketRound {
+        week: number
+        title: string
+        games: BracketGame[]
+    }
 
-    const championship = getRound(13)[0]
-    const champion = getWinner(championship)
+    const bracketRounds: BracketRound[] = []
 
-    const seasonComplete = CURRENT_WEEK >= 14
+    if (playoffSize === 2) {
+        bracketRounds.push({
+            week: 11,
+            title: 'Championship',
+            games: [{
+                team1: seed(1), team2: seed(2),
+                matchup: findMatchup(11, seed(1), seed(2))
+            }]
+        })
+    }
+
+    if (playoffSize === 4) {
+        const game14 = findMatchup(11, seed(1), seed(4))
+        const game23 = findMatchup(11, seed(2), seed(3))
+
+        const winner14 = getMatchupWinner(game14)
+        const winner23 = getMatchupWinner(game23)
+
+        bracketRounds.push(
+            {
+                week: 11,
+                title: 'Semifinals',
+                games: [
+                    { team1: seed(1), team2: seed(4), matchup: game14 },
+                    { team1: seed(2), team2: seed(3), matchup: game23 }
+                ]
+            },
+            {
+                week: 12,
+                title: 'Championship',
+                games: [{
+                    team1: winner14, placeholder1: 'Winner of #1 vs #4',
+                    team2: winner23, placeholder2: 'Winner of #2 vs #3',
+                    matchup: winner14 && winner23 ? findMatchup(12, winner14, winner23) : undefined
+                }]
+            }
+        )
+    }
+
+    if (playoffSize === 6) {
+        const game36 = findMatchup(11, seed(3), seed(6))
+        const game45 = findMatchup(11, seed(4), seed(5))
+
+        const winner36 = getMatchupWinner(game36)
+        const winner45 = getMatchupWinner(game45)
+
+        const semifinal1 = winner45 ? findMatchup(12, seed(1), winner45) : undefined
+        const semifinal2 = winner36 ? findMatchup(12, seed(2), winner36) : undefined
+
+        const finalist1 = getMatchupWinner(semifinal1)
+        const finalist2 = getMatchupWinner(semifinal2)
+
+        bracketRounds.push(
+            {
+                week: 11,
+                title: 'Quarterfinals',
+                games: [
+                    { team1: seed(3), team2: seed(6), matchup: game36 },
+                    { team1: seed(4), team2: seed(5), matchup: game45 }
+                ]
+            },
+            {
+                week: 12,
+                title: 'Semifinals',
+                games: [
+                    { team1: seed(1), team2: winner45, placeholder2: 'Winner of #4 vs #5', matchup: semifinal1 },
+                    { team1: seed(2), team2: winner36, placeholder2: 'Winner of #3 vs #6', matchup: semifinal2 }
+                ]
+            },
+            {
+                week: 13,
+                title: 'Championship',
+                games: [{
+                    team1: finalist1, placeholder1: 'Semifinal 1 winner',
+                    team2: finalist2, placeholder2: 'Semifinal 2 winner',
+                    matchup: finalist1 && finalist2 ? findMatchup(13, finalist1, finalist2) : undefined
+                }]
+            }
+        )
+    }
+
+    if (playoffSize === 8) {
+        const game18 = findMatchup(11, seed(1), seed(8))
+        const game45 = findMatchup(11, seed(4), seed(5))
+        const game27 = findMatchup(11, seed(2), seed(7))
+        const game36 = findMatchup(11, seed(3), seed(6))
+
+        const winner18 = getMatchupWinner(game18)
+        const winner45 = getMatchupWinner(game45)
+        const winner27 = getMatchupWinner(game27)
+        const winner36 = getMatchupWinner(game36)
+
+        const semifinal1 = winner18 && winner45 ? findMatchup(12, winner18, winner45) : undefined
+        const semifinal2 = winner27 && winner36 ? findMatchup(12, winner27, winner36) : undefined
+
+        const finalist1 = getMatchupWinner(semifinal1)
+        const finalist2 = getMatchupWinner(semifinal2)
+
+        bracketRounds.push(
+            {
+                week: 11,
+                title: 'Quarterfinals',
+                games: [
+                    { team1: seed(1), team2: seed(8), matchup: game18 }, { team1: seed(4), team2: seed(5), matchup: game45 },
+                    { team1: seed(2), team2: seed(7), matchup: game27 }, { team1: seed(3), team2: seed(6), matchup: game36 }]
+            },
+            {
+                week: 12,
+                title: 'Semifinals',
+                games: [
+                    {
+                        team1: winner18, placeholder1: 'Winner of #1 vs #8',
+                        team2: winner45, placeholder2: 'Winner of #4 vs #5',
+                        matchup: semifinal1
+                    },
+                    {
+                        team1: winner27, placeholder1: 'Winner of #2 vs #7',
+                        team2: winner36, placeholder2: 'Winner of #3 vs #6',
+                        matchup: semifinal2
+                    }
+                ]
+            },
+            {
+                week: 13,
+                title: 'Championship',
+                games: [{
+                    team1: finalist1, placeholder1: 'Semifinal 1 winner',
+                    team2: finalist2, placeholder2: 'Semifinal 2 winner',
+                    matchup: finalist1 && finalist2 ? findMatchup(13, finalist1, finalist2) : undefined
+                }]
+            }
+        )
+    }
+
+    const championship = getRound(championshipWeek)[0]
+    const champion = getMatchupWinner(championship)
+
+    const seasonComplete = CURRENT_WEEK > championshipWeek
     const declaredChampion = seasonComplete ? champion : undefined
 
     return (
@@ -268,7 +386,7 @@ export default function Playoffs() {
 
             <h1>League Playoffs</h1>
 
-            {CURRENT_WEEK >= 14 && (
+            {seasonComplete && (
                 <ByeCard>
                     <h2>Off-season</h2>
                     <p>The 2026 Fantasy College Football season has concluded.</p>
@@ -279,127 +397,41 @@ export default function Playoffs() {
                 </ByeCard>
             )}
 
-            <Bracket>
-                <Round>
-                    <RoundTitle>
-                        <h2>First Round</h2>
-                        <p>Week 11</p>
-                    </RoundTitle>
 
-                    <Matchup>
-                        <TeamRow
-                            team={seed(3)}
-                            score={getScore(game36, seed(3))}
-                            winner={game36?.winner_id === seed(3)?.memberId}
-                        />
-                        <TeamRow
-                            team={seed(6)}
-                            score={getScore(game36, seed(6))}
-                            winner={game36?.winner_id === seed(6)?.memberId}
-                        />
-                    </Matchup>
+            <Bracket $rounds={roundCount}>
+                {bracketRounds.map((round) => (
+                    <Round key={round.week}>
+                        <RoundTitle>
+                            <h2>{round.title}</h2>
+                            <p>Week {round.week}</p>
+                        </RoundTitle>
 
-                    <Matchup>
-                        <TeamRow
-                            team={seed(4)}
-                            score={getScore(game45, seed(4))}
-                            winner={game45?.winner_id === seed(4)?.memberId}
-                        />
-                        <TeamRow
-                            team={seed(5)}
-                            score={getScore(game45, seed(5))}
-                            winner={game45?.winner_id === seed(5)?.memberId}
-                        />
-                    </Matchup>
+                        {round.games.map((game, index) => (
+                            <Matchup key={`${round.week}-${index}`}>
+                                <TeamRow
+                                    team={game.team1}
+                                    placeholder={game.placeholder1}
+                                    score={getScore(game.matchup, game.team1)}
+                                    winner={!!game.team1 && game.matchup?.winner_id === game.team1.memberId}
+                                />
 
-                    <ByeCard>
-                        #1 {seed(1)?.teamName ?? 'TBD'} — First-round bye
-                    </ByeCard>
+                                <TeamRow
+                                    team={game.team2}
+                                    placeholder={game.placeholder2}
+                                    score={getScore(game.matchup, game.team2)}
+                                    winner={!!game.team2 && game.matchup?.winner_id === game.team2.memberId}
+                                />
+                            </Matchup>
+                        ))}
 
-                    <ByeCard>
-                        #2 {seed(2)?.teamName ?? 'TBD'} — First-round bye
-                    </ByeCard>
-                </Round>
-
-                <Round>
-                    <RoundTitle>
-                        <h2>Semifinals</h2>
-                        <p>Week 12</p>
-                    </RoundTitle>
-
-                    <Matchup>
-                        <TeamRow
-                            team={seed(1)}
-                            score={getScore(semifinal1, seed(1))}
-                            winner={
-                                semifinal1?.winner_id === seed(1)?.memberId
-                            }
-                        />
-                        <TeamRow
-                            team={winner45}
-                            placeholder="Winner of #4 vs #5"
-                            score={getScore(semifinal1, winner45)}
-                            winner={
-                                !!winner45 &&
-                                semifinal1?.winner_id === winner45.memberId
-                            }
-                        />
-                    </Matchup>
-
-                    <Matchup>
-                        <TeamRow
-                            team={seed(2)}
-                            score={getScore(semifinal2, seed(2))}
-                            winner={
-                                semifinal2?.winner_id === seed(2)?.memberId
-                            }
-                        />
-                        <TeamRow
-                            team={winner36}
-                            placeholder="Winner of #3 vs #6"
-                            score={getScore(semifinal2, winner36)}
-                            winner={
-                                !!winner36 &&
-                                semifinal2?.winner_id === winner36.memberId
-                            }
-                        />
-                    </Matchup>
-                </Round>
-
-                <Round>
-                    <RoundTitle>
-                        <h2>Championship</h2>
-                        <p>Week 13</p>
-                    </RoundTitle>
-
-                    <Matchup>
-                        <TeamRow
-                            team={finalist1}
-                            placeholder="Semifinal 1 winner"
-                            score={getScore(championship, finalist1)}
-                            winner={
-                                !!finalist1 &&
-                                championship?.winner_id === finalist1.memberId
-                            }
-                        />
-                        <TeamRow
-                            team={finalist2}
-                            placeholder="Semifinal 2 winner"
-                            score={getScore(championship, finalist2)}
-                            winner={
-                                !!finalist2 &&
-                                championship?.winner_id === finalist2.memberId
-                            }
-                        />
-                    </Matchup>
-
-                    {declaredChampion && (
-                        <ByeCard>
-                            <strong>League Champion: {declaredChampion.teamName}</strong>
-                            <p>2026 Fantasy College Football Champion</p>
-                        </ByeCard>
-                    )}
-                </Round>
+                        {round.week === championshipWeek && declaredChampion && (
+                            <ByeCard>
+                                <strong>League Champion: {declaredChampion.teamName}</strong>
+                                <p>2026 Fantasy College Football Champion</p>
+                            </ByeCard>
+                        )}
+                    </Round>
+                ))}
             </Bracket>
         </Page>
     )

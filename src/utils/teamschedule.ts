@@ -14,6 +14,7 @@ export type Schedule = {
     week10?: string
     week11?: string
     week12?: string
+    week13?: string
 }
 
 export const schedules: Schedule[] = [
@@ -32,6 +33,7 @@ export const schedules: Schedule[] = [
         week10: "Duke",
         week11: "Syracuse",
         week12: "Florida State",
+        week13: "North Carolina",
     },
     {
         team: "Florida State",
@@ -49,6 +51,7 @@ export const schedules: Schedule[] = [
         week10: "Boston College",
         week11: "Pittsburgh",
         week12: "NC State",
+        week13: "Florida",
     },
     {
         team: "Louisville",
@@ -65,6 +68,7 @@ export const schedules: Schedule[] = [
         week10: "Georgia Tech",
         week11: "North Carolina",
         week12: "Pittsburgh",
+        week13: "Kentucky",
     },
     {
         team: "Boston College",
@@ -81,6 +85,7 @@ export const schedules: Schedule[] = [
         week10: "Florida State",
         week11: "Notre Dame",
         week12: "Syracuse",
+        week13: "Miami",
     },
     {
         team: "Miami",
@@ -97,6 +102,7 @@ export const schedules: Schedule[] = [
         week10: "Notre Dame",
         week11: "Duke",
         week12: "Virginia Tech",
+        week13: "Boston College",
     },
     {
         team: "Wake Forest",
@@ -113,6 +119,7 @@ export const schedules: Schedule[] = [
         week10: "FCS",
         week11: "SMU",
         week12: "Georgia Tech",
+        week13: "Duke",
     },
     {
         team: "Virginia Tech",
@@ -129,6 +136,7 @@ export const schedules: Schedule[] = [
         week10: "SMU",
         week11: "Stanford",
         week12: "Miami",
+        week13: "Virginia",
     },
     {
         team: "Georgia Tech",
@@ -145,6 +153,7 @@ export const schedules: Schedule[] = [
         week10: "Louisville",
         week11: "Clemson",
         week12: "Wake Forest",
+        week13: "Georgia",
     },
     {
         team: "SMU",
@@ -161,6 +170,7 @@ export const schedules: Schedule[] = [
         week10: "Virginia Tech",
         week11: "Wake Forest",
         week12: "Notre Dame",
+        week13: "Stanford",
     },
     {
         team: "Syracuse",
@@ -177,6 +187,7 @@ export const schedules: Schedule[] = [
         week10: "Clemson",
         week11: "NC State",
         week12: "Boston College",
+        week13: "Notre Dame",
     },
     {
         team: "North Carolina",
@@ -193,6 +204,7 @@ export const schedules: Schedule[] = [
         week10: "Independent",
         week11: "Louisville",
         week12: "Virginia",
+        week13: "NC State",
     },
     {
         team: "Stanford",
@@ -210,6 +222,7 @@ export const schedules: Schedule[] = [
         week10: "BYE",
         week11: "Virginia Tech",
         week12: "California",
+        week13: "SMU",
     },
     {
         team: "Virginia",
@@ -226,6 +239,7 @@ export const schedules: Schedule[] = [
         week10: "BYE",
         week11: "California",
         week12: "North Carolina",
+        week13: "Virginia Tech",
     },
     {
         team: "Clemson",
@@ -242,6 +256,7 @@ export const schedules: Schedule[] = [
         week10: "Syracuse",
         week11: "Georgia Tech",
         week12: "Duke",
+        week13: "South Carolina",
     },
     {
         team: "Pittsburgh",
@@ -258,6 +273,7 @@ export const schedules: Schedule[] = [
         week10: "BYE",
         week11: "Florida State",
         week12: "Louisville",
+        week13: "California",
     },
     {
         team: "Duke",
@@ -274,6 +290,7 @@ export const schedules: Schedule[] = [
         week10: "NC State",
         week11: "Miami",
         week12: "Clemson",
+        week13: "Wake Forest",
     },
     {
         team: "California",
@@ -290,6 +307,7 @@ export const schedules: Schedule[] = [
         week10: "BYE",
         week11: "Virginia",
         week12: "Stanford",
+        week13: "Pittsburgh",
     },
     {
         team: "Notre Dame",
@@ -306,6 +324,7 @@ export const schedules: Schedule[] = [
         week10: "Miami",
         week11: "Boston College",
         week12: "SMU",
+        week13: "Syracuse",
     },
     {
         team: "Arizona State",
@@ -322,6 +341,7 @@ export const schedules: Schedule[] = [
         week10: "Colorado",
         week11: "UCF",
         week12: "Oklahoma State",
+        week13: "Arizona",
     },
     {
         team: "Kansas State",
@@ -338,6 +358,7 @@ export const schedules: Schedule[] = [
         week10: "Oklahoma State",
         week11: "TCU",
         week12: "Arizona",
+        week13: "Iowa State",
     },
     {
         team: "Texas Tech",
@@ -354,6 +375,7 @@ export const schedules: Schedule[] = [
         week10: "West Virginia",
         week11: "Oklahoma State",
         week12: "Baylor",
+        week13: "TCU",
     },
     {
         team: "Utah",
@@ -370,6 +392,7 @@ export const schedules: Schedule[] = [
         week10: "BYU",
         week11: "Arizona",
         week12: "TCU",
+        week13: "West Virginia",
     },
     {
         team: "Houston",
@@ -386,6 +409,7 @@ export const schedules: Schedule[] = [
         week10: "Cincinnati",
         week11: "Colorado",
         week12: "West Virginia",
+        week13: "Baylor",
     },
     {
         team: "Cincinnati",
@@ -402,6 +426,7 @@ export const schedules: Schedule[] = [
         week10: "Houston",
         week11: "Iowa State",
         week12: "Colorado",
+        week13: "BYU",
     },
     {
         team: "UCF",
@@ -418,6 +443,7 @@ export const schedules: Schedule[] = [
         week10: "Kansas",
         week11: "Arizona State",
         week12: "Iowa State",
+        week13: "Colorado",
     },
     {
         team: "BYU",
@@ -434,6 +460,7 @@ export const schedules: Schedule[] = [
         week10: "Utah",
         week11: "Baylor",
         week12: "Kansas",
+        week13: "Cincinnati",
     },
     {
         team: "West Virginia",
@@ -450,6 +477,7 @@ export const schedules: Schedule[] = [
         week10: "Texas Tech",
         week11: "Kansas",
         week12: "Houston",
+        week13: "Utah",
     },
     {
         team: "Baylor",
@@ -466,6 +494,7 @@ export const schedules: Schedule[] = [
         week10: "Iowa State",
         week11: "BYU",
         week12: "Texas Tech",
+        week13: "Houston",
     },
     {
         team: "Arizona",
@@ -482,6 +511,7 @@ export const schedules: Schedule[] = [
         week10: "TCU",
         week11: "Utah",
         week12: "Kansas State",
+        week13: "Arizona State",
     },
     {
         team: "TCU",
@@ -498,6 +528,7 @@ export const schedules: Schedule[] = [
         week10: "Arizona",
         week11: "Kansas State",
         week12: "Utah",
+        week13: "Texas Tech",
     },
     {
         team: "Colorado",
@@ -514,6 +545,7 @@ export const schedules: Schedule[] = [
         week10: "Arizona State",
         week11: "Houston",
         week12: "Cincinnati",
+        week13: "UCF",
     },
     {
         team: "Kansas",
@@ -530,6 +562,7 @@ export const schedules: Schedule[] = [
         week10: "Baylor",
         week11: "West Virginia",
         week12: "BYU",
+        week13: "Oklahoma State",
     },
     {
         team: "Iowa State",
@@ -546,6 +579,7 @@ export const schedules: Schedule[] = [
         week10: "Baylor",
         week11: "Cincinnati",
         week12: "UCF",
+        week13: "Kansas State",
     },
     {
         team: "Oklahoma State",
@@ -562,6 +596,7 @@ export const schedules: Schedule[] = [
         week10: "Kansas State",
         week11: "Oklahoma State",
         week12: "Arizona State",
+        week13: "Kansas",
     },
     {
         team: "Michigan State",
@@ -578,6 +613,7 @@ export const schedules: Schedule[] = [
         week10: "Michigan",
         week11: "Washington",
         week12: "Oregon",
+        week13: "Rutgers",
     },
     {
         team: "Illinois",
@@ -594,6 +630,7 @@ export const schedules: Schedule[] = [
         week10: "Nebraska",
         week11: "UCLA",
         week12: "Iowa",
+        week13: "Northwestern",
     },
     {
         team: "UCLA",
@@ -610,6 +647,7 @@ export const schedules: Schedule[] = [
         week10: "Minnesota",
         week11: "Illinois",
         week12: "Michigan",
+        week13: "USC",
     },
     {
         team: "Purdue",
@@ -626,6 +664,7 @@ export const schedules: Schedule[] = [
         week10: "Maryland",
         week11: "Iowa",
         week12: "Wisconsin",
+        week13: "Indiana",
     },
     {
         team: "Oregon",
@@ -642,6 +681,7 @@ export const schedules: Schedule[] = [
         week10: "Ohio State",
         week11: "Michigan",
         week12: "Michigan State",
+        week13: "Washington",
     },
     {
         team: "Minnesota",
@@ -658,6 +698,7 @@ export const schedules: Schedule[] = [
         week10: "UCLA",
         week11: "Penn State",
         week12: "Northwestern",
+        week13: "Wisconsin",
     },
     {
         team: "Washington",
@@ -674,6 +715,7 @@ export const schedules: Schedule[] = [
         week10: "Penn State",
         week11: "Michigan State",
         week12: "Indiana",
+        week13: "Oregon",
     },
     {
         team: "Wisconsin",
@@ -690,6 +732,7 @@ export const schedules: Schedule[] = [
         week10: "Rutgers",
         week11: "Maryland",
         week12: "Purdue",
+        week13: "Minnesota",
     },
     {
         team: "Northwestern",
@@ -706,6 +749,7 @@ export const schedules: Schedule[] = [
         week10: "Iowa",
         week11: "Ohio State",
         week12: "Minnesota",
+        week13: "Illinois",
     },
     {
         team: "USC",
@@ -723,6 +767,7 @@ export const schedules: Schedule[] = [
         week10: "BYE",
         week11: "Indiana",
         week12: "Maryland",
+        week13: "UCLA",
     },
     {
         team: "Nebraska",
@@ -739,6 +784,7 @@ export const schedules: Schedule[] = [
         week10: "Illinois",
         week11: "Rutgers",
         week12: "Ohio State",
+        week13: "Iowa",
     },
     {
         team: "Ohio State",
@@ -755,6 +801,7 @@ export const schedules: Schedule[] = [
         week10: "Oregon",
         week11: "Northwestern",
         week12: "Nebraska",
+        week13: "Michigan",
     },
     {
         team: "Iowa",
@@ -771,6 +818,7 @@ export const schedules: Schedule[] = [
         week10: "Northwestern",
         week11: "Purdue",
         week12: "Illinois",
+        week13: "Nebraska",
     },
     {
         team: "Rutgers",
@@ -787,6 +835,7 @@ export const schedules: Schedule[] = [
         week10: "Wisconsin",
         week11: "Nebraska",
         week12: "Penn State",
+        week13: "Michigan State",
     },
     {
         team: "Michigan",
@@ -803,6 +852,7 @@ export const schedules: Schedule[] = [
         week10: "Michigan State",
         week11: "Oregon",
         week12: "UCLA",
+        week13: "Ohio State",
     },
     {
         team: "Maryland",
@@ -819,6 +869,7 @@ export const schedules: Schedule[] = [
         week10: "Purdue",
         week11: "Wisconsin",
         week12: "USC",
+        week13: "Penn State",
     },
     {
         team: "Penn State",
@@ -835,6 +886,7 @@ export const schedules: Schedule[] = [
         week10: "Washington",
         week11: "Minnesota",
         week12: "Rutgers",
+        week13: "Maryland",
     },
     {
         team: "Indiana",
@@ -851,6 +903,7 @@ export const schedules: Schedule[] = [
         week10: "BYE",
         week11: "USC",
         week12: "Washington",
+        week13: "Purdue",
     },
     {
         team: "Alabama",
@@ -867,6 +920,7 @@ export const schedules: Schedule[] = [
         week10: "LSU",
         week11: "Vanderbilt",
         week12: "FCS",
+        week13: "Auburn",
     },
     {
         team: "Oklahoma",
@@ -883,6 +937,7 @@ export const schedules: Schedule[] = [
         week10: "Florida",
         week11: "Mississippi",
         week12: "Texas A&M",
+        week13: "Missouri",
     },
     {
         team: "Georgia",
@@ -899,6 +954,7 @@ export const schedules: Schedule[] = [
         week10: "Mississippi",
         week11: "Missouri",
         week12: "South Carolina",
+        week13: "Georgia Tech",
     },
     {
         team: "Kentucky",
@@ -915,6 +971,7 @@ export const schedules: Schedule[] = [
         week10: "Tennessee",
         week11: "Florida",
         week12: "Missouri",
+        week13: "Louisville",
     },
     {
         team: "Mississippi State",
@@ -931,6 +988,7 @@ export const schedules: Schedule[] = [
         week10: "Vanderbilt",
         week11: "Auburn",
         week12: "FCS",
+        week13: "Mississippi",
     },
     {
         team: "Missouri",
@@ -947,6 +1005,7 @@ export const schedules: Schedule[] = [
         week10: "Texas",
         week11: "Georgia",
         week12: "Kentucky",
+        week13: "Oklahoma",
     },
     {
         team: "South Carolina",
@@ -963,6 +1022,7 @@ export const schedules: Schedule[] = [
         week10: "South Carolina",
         week11: "Arkansas",
         week12: "Georgia",
+        week13: "Clemson",
     },
     {
         team: "Vanderbilt",
@@ -979,6 +1039,7 @@ export const schedules: Schedule[] = [
         week10: "Mississippi State",
         week11: "Alabama",
         week12: "Florida",
+        week13: "Tennessee",
     },
     {
         team: "Tennessee",
@@ -995,6 +1056,7 @@ export const schedules: Schedule[] = [
         week10: "Kentucky",
         week11: "Texas A&M",
         week12: "LSU",
+        week13: "Vanderbilt",
     },
     {
         team: "Texas",
@@ -1011,6 +1073,7 @@ export const schedules: Schedule[] = [
         week10: "Missouri",
         week11: "LSU",
         week12: "Arkansas",
+        week13: "Texas A&M",
     },
     {
         team: "Florida",
@@ -1027,6 +1090,7 @@ export const schedules: Schedule[] = [
         week10: "Oklahoma",
         week11: "Kentucky",
         week12: "Vanderbilt",
+        week13: "Florida State",
     },
     {
         team: "Texas A&M",
@@ -1043,6 +1107,7 @@ export const schedules: Schedule[] = [
         week10: "South Carolina",
         week11: "Tennessee",
         week12: "Oklahoma",
+        week13: "Texas",
     },
     {
         team: "Mississippi",
@@ -1059,6 +1124,7 @@ export const schedules: Schedule[] = [
         week10: "Georgia",
         week11: "Oklahoma",
         week12: "FCS",
+        week13: "Mississippi State",
     },
     {
         team: "Auburn",
@@ -1075,6 +1141,7 @@ export const schedules: Schedule[] = [
         week10: "Arkansas",
         week11: "Mississippi State",
         week12: "FCS",
+        week13: "Alabama",
     },
     {
         team: "LSU",
@@ -1091,6 +1158,7 @@ export const schedules: Schedule[] = [
         week10: "Alabama",
         week11: "Texas",
         week12: "Tennessee",
+        week13: "Arkansas",
     },
     {
         team: "Arkansas",
@@ -1107,6 +1175,7 @@ export const schedules: Schedule[] = [
         week10: "Auburn",
         week11: "South Carolina",
         week12: "Texas",
+        week13: "LSU",
     },
 ]
 
