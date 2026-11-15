@@ -746,6 +746,33 @@ export default function WeekScores() {
 
                 setMatchups(currentMatchups)
 
+                if (week >= 1 && week <= 10) {
+                    const verifiedMatchups = currentMatchups.map((matchup) => {
+                        const team1 = fantasyScores.find(
+                            (team) => team.memberId === matchup.team1_id
+                        )
+
+                        const team2 = fantasyScores.find(
+                            (team) => team.memberId === matchup.team2_id
+                        )
+
+                        return {
+                            week,
+                            matchup_id: matchup.id,
+                            team1_id: matchup.team1_id,
+                            team1_name: team1?.teamName ?? 'Unknown',
+                            team1_score: team1?.starterTotal ?? null,
+                            team2_id: matchup.team2_id,
+                            team2_name: team2?.teamName ?? 'Unknown',
+                            team2_score: team2?.starterTotal ?? null,
+                        }
+                    })
+
+                    console.log(
+                        `VERIFIED WEEK ${week} MATCHUPS:`,
+                        JSON.stringify(verifiedMatchups, null, 2)
+                    )
+                }
                 /*
                     for (const matchup of weekComplete ? [] : currentMatchups) {
                         const team1 = fantasyScores.find((team) => team.memberId === matchup.team1_id)
