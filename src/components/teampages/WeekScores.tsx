@@ -744,7 +744,7 @@ export default function WeekScores() {
 
                 setMatchups(currentMatchups)
 
-                for (const matchup of currentMatchups) {
+                for (const matchup of weekComplete ? [] : currentMatchups) {
                     const team1 = fantasyScores.find((team) => team.memberId === matchup.team1_id)
                     const team2 = fantasyScores.find((team) => team.memberId === matchup.team2_id)
 
