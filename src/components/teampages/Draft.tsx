@@ -8,6 +8,7 @@ import { useAuth } from '../Auth'
 import { STARTERS, BENCH, ROSTER_SIZE } from '../../rosters'
 import type { CollegeTeam } from '../../types/football'
 import { getUnitStats } from '../../utils/unitStats'
+import TeamDetailsModal from '../../components/teampages/TeamDetails'
 
 import type { DraftUnit, UnitType } from '../../types/fantasy'
 import {BackButton} from "../../styles/commonstyles";
@@ -253,7 +254,7 @@ const DraftPickRow = styled.div`
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 12px;
-
+    
     @media (max-width: 700px) {
         grid-template-columns: 40px 48px minmax(0, 1fr);
         gap: 10px;
@@ -277,6 +278,51 @@ const DraftOwner = styled.div`
     }
 `;
 
+const DraftRound = styled.section`
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+`;
+
+const DraftRoundHeader = styled.h2`
+    margin: 0;
+    padding: 12px 16px;
+    background: #f3f4f6;
+    border-radius: 10px;
+    color: #111827;
+    font-size: 1.2rem;
+`;
+
+const DraftPickDetails = styled.div`
+    grid-column: 1 / -1;
+    padding: 14px;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+`;
+
+const PickTeamButton = styled.button`
+    border: none;
+    background: none;
+    padding: 0;
+
+    color: #111827;
+    font: inherit;
+    font-weight: 700;
+
+    cursor: pointer;
+    text-align: left;
+
+    &:hover {
+        text-decoration: underline;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: 3px;
+        border-radius: 3px;
+    }
+`;
+
 export default function Draft() {
     const { leagueId } = useParams()
     const { user } = useAuth()
@@ -287,6 +333,7 @@ export default function Draft() {
     const [league, setLeague] = useState<LeagueData | null>(null)
     const [order, setOrder] = useState<DraftOrder[]>([])
     const [members, setMembers] = useState<LeagueMember[]>([])
+    const [selectedStatsUnit, setSelectedStatsUnit] = useState<DraftUnit | null>(null)
 
     const [teams, setTeams] = useState<CollegeTeam[]>([])
     const [selectedType, setSelectedType] = useState<UnitType | 'ALL'>('ALL')
@@ -464,6 +511,12 @@ export default function Draft() {
     const nextTurn = getNextEligibleDrafter(league.current_turn_number)
 
     if (!nextTurn) {
+        const sortedPicks = [...draftPicks].sort(
+            (a, b) => a.pick_number - b.pick_number
+        )
+
+        const totalRounds = Math.ceil(sortedPicks.length / memberCount)
+
         return (
             <ResultsPage>
                 <ResultsHeader>
@@ -472,37 +525,86 @@ export default function Draft() {
                     </BackButton>
 
                     <h1>Draft Results</h1>
-                    <p>Draft complete!</p>
+                    <p>Draft complete! Select any pick to view its statistics.</p>
                 </ResultsHeader>
 
                 <ResultsList>
-                    {draftPicks.map((pick) => {
-                        const unit = units.find(
-                            (unit) => unit.teamId === pick.college_team_id && unit.unitType === pick.unit_type
+                    {Array.from({ length: totalRounds }, (_, roundIndex) => {
+                        const roundPicks = sortedPicks.filter(
+                            (pick) =>
+                                Math.floor((pick.pick_number - 1) / memberCount) === roundIndex
                         )
 
-                        const drafter = members.find(
-                            (member) => member.id === pick.league_member_id
-                        )
+                        if (roundPicks.length === 0) {
+                            return null
+                        }
 
                         return (
-                            <DraftPickRow key={pick.id}>
-                                <PickNumber>#{pick.pick_number}</PickNumber>
+                            <DraftRound key={roundIndex}>
+                                <DraftRoundHeader>
+                                    Round {roundIndex + 1}
+                                </DraftRoundHeader>
 
-                                {unit && (
-                                    <TeamLogo src={getTeamLogo(unit.teamName)} alt={unit.teamName}/>
-                                )}
+                                {roundPicks.map((pick) => {
+                                    const unit = units.find(
+                                        (unit) =>
+                                            unit.teamId === pick.college_team_id &&
+                                            unit.unitType === pick.unit_type
+                                    )
 
-                                <PickInfo>
-                                    <PickTeam>{unit?.teamName ?? 'Unknown Team'}</PickTeam>
-                                    <PickType>{formatUnitType(pick.unit_type)}</PickType>
-                                </PickInfo>
+                                    const collegeTeam = teams.find(
+                                        (team) => team.id === pick.college_team_id
+                                    )
 
-                                <DraftOwner>{drafter?.team_name ?? 'Unknown Team'}</DraftOwner>
-                            </DraftPickRow>
+                                    const drafter = members.find(
+                                        (member) => member.id === pick.league_member_id
+                                    )
+
+                                    return (
+                                        <DraftPickRow key={pick.id}>
+                                            <PickNumber>#{pick.pick_number}</PickNumber>
+
+                                            {unit && (
+                                                <TeamLogo
+                                                    src={getTeamLogo(unit.teamName)}
+                                                    alt={unit.teamName}
+                                                />
+                                            )}
+
+                                            <PickInfo>
+                                                {unit ? (
+                                                    <PickTeamButton onClick={() => setSelectedStatsUnit(unit)}>
+                                                        {unit.teamName}
+                                                    </PickTeamButton>
+                                                ) : (
+                                                    <PickTeam>Unknown Team</PickTeam>
+                                                )}
+
+                                                <PickType>
+                                                    {formatUnitType(pick.unit_type)}
+                                                </PickType>
+                                            </PickInfo>
+
+                                            <DraftOwner>
+                                                {drafter?.team_name ?? 'Unknown Team'}
+                                            </DraftOwner>
+                                        </DraftPickRow>
+                                    )
+                                })}
+                            </DraftRound>
                         )
                     })}
                 </ResultsList>
+
+                {selectedStatsUnit && (
+                    <TeamDetailsModal
+                        teamName={selectedStatsUnit.teamName}
+                        teamId={selectedStatsUnit.teamId}
+                        unitType={selectedStatsUnit.unitType}
+                        teams={teams}
+                        onClose={() => setSelectedStatsUnit(null)}
+                    />
+                )}
             </ResultsPage>
         )
     }
@@ -511,9 +613,7 @@ export default function Draft() {
     const actualTurnNumber = nextTurn.turn
 
     const round = Math.floor((actualTurnNumber - 1) / memberCount)
-
     const myTurn = currentDrafter.league_member_id === member.id
-
     const countRoster = rosterCounts()
 
     const benchUsed =
@@ -665,8 +765,7 @@ export default function Draft() {
 
     function isDrafted(unit: DraftUnit) {
         return draftPicks.some(
-            (pick) =>
-                pick.college_team_id === unit.teamId && pick.unit_type === unit.unitType
+            (pick) => (pick.college_team_id === unit.teamId) && (pick.unit_type === unit.unitType)
         )
     }
 
@@ -694,8 +793,7 @@ export default function Draft() {
 
                 <TurnStatus $myTurn={myTurn}>
                     {myTurn
-                        ? `Your turn! (${member.team_name})`
-                        : `On the clock: ${
+                        ? `Your turn! (${member.team_name})` : `On the clock: ${
                             members.find(
                                 (team) => team.id === currentDrafter.league_member_id
                             )?.team_name ?? 'Unknown Team'

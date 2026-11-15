@@ -229,8 +229,10 @@ const MobileSectionTitle = styled.h4`
 `;
 
 const MobileUnitCell = styled.div<{ $side: 'left' | 'right' }>`
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: ${({ $side }) =>
+            $side === 'left' ? 'minmax(0, 1fr) auto' : 'auto minmax(0, 1fr)'};
+
     align-items: center;
     gap: 8px;
     min-width: 0;
@@ -238,10 +240,6 @@ const MobileUnitCell = styled.div<{ $side: 'left' | 'right' }>`
     border-radius: 6px;
     cursor: pointer;
     transition: background 0.15s ease;
-
-    ${({ $side }) => $side === 'right' && `
-        flex-direction: row-reverse;
-    `}
 
     &:hover {
         background: #f3f4f6;
@@ -251,7 +249,26 @@ const MobileUnitCell = styled.div<{ $side: 'left' | 'right' }>`
         min-width: 0;
         overflow-wrap: anywhere;
         font-size: 0.85rem;
+
+        text-align: ${({ $side }) =>
+                $side === 'left' ? 'left' : 'right'};
     }
+
+    strong {
+        white-space: nowrap;
+    }
+
+    ${({ $side }) => $side === 'right' && `
+        strong {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        span {
+            grid-column: 2;
+            grid-row: 1;
+        }
+    `}
 `;
 
 const TeamRecord = styled.span`
