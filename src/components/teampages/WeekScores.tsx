@@ -512,8 +512,6 @@ export default function WeekScores() {
     const weekStarted = week <= CURRENT_WEEK
     const weekComplete = week < CURRENT_WEEK
 
-    useEffect(() => {scoresRef.current = scores}, [scores])
-
     useEffect(() => {
         if (matchups.length === 0) {
             setSelectedMatchupId(null)
@@ -563,21 +561,6 @@ export default function WeekScores() {
                 if (membersError) {
                     throw membersError
                 }
-
-                /*
-                    if (week <= CURRENT_WEEK && week <= 13) {
-                        const {error: initializeError} = await supabase.rpc('initialize_weekly_rosters',
-                            {
-                                target_league_id: leagueId,
-                                target_week: week,
-                            }
-                        )
-
-                        if (initializeError) {
-                            throw initializeError
-                        }
-                    }
-                */
 
                 const { data: weeklyRosterRows, error: weeklyRosterError } =
                     await supabase
@@ -821,6 +804,7 @@ export default function WeekScores() {
                     }
                 */
 
+                scoresRef.current = fantasyScores
                 setScores(fantasyScores)
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load weekly scores.')
@@ -838,6 +822,10 @@ export default function WeekScores() {
         }
 
         const interval = window.setInterval(() => {
+            if (scoresRef.current.length === 0) {
+                return
+            }
+
             void Promise.all(
                 scoresRef.current.map(async (team) => {
                     async function refreshUnit(unit: ScoredUnit): Promise<ScoredUnit> {
@@ -871,7 +859,12 @@ export default function WeekScores() {
                         benchTotal: bench.reduce((total, unit) => total + unit.score, 0)
                     }
                 })
-            ).then((updatedScores) => {
+            ).then(async (updatedScores) => {
+                if (updatedScores.length === 0) {
+                    return
+                }
+
+                scoresRef.current = updatedScores
                 setScores(updatedScores)
 
                 window.setTimeout(() => {

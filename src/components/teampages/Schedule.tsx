@@ -6,6 +6,10 @@ import { CURRENT_WEEK } from '../../bigseasonfile'
 import { supabase } from '../lib/supabase'
 import { finals, getPlayoffSize, advancePlayoffs, type PlayoffSize } from '../../utils/playoffs'
 
+import { getTeams } from '../../api/cfbApi'
+import { getWeeklyStats, getLiveTeamStats } from '../../api/weeklyStats'
+import { calculateUnitScore, type ScoringUnitType } from '../../utils/scoring'
+
 interface LeagueMember {
     id: string
     team_name: string
@@ -155,6 +159,92 @@ export default function Schedule() {
     const [selectedSeason, setSelectedSeason] = useState<'regular' | 'postseason'>('regular')
     const navigate = useNavigate()
     const [playoffSize, setPlayoffSize] = useState<PlayoffSize | null>(null)
+    const [liveScores, setLiveScores] = useState<Record<string, number>>({})
+
+    useEffect(() => {
+        if (!leagueId || CURRENT_WEEK < 11 || CURRENT_WEEK > 13) {
+            return
+        }
+
+        let cancelled = false
+        let refreshing = false
+
+        async function refreshLiveScores() {
+            if (refreshing || !leagueId) return
+
+            refreshing = true
+
+            try {
+                const [collegeTeams, weeklyStats, rosterResult] = await Promise.all([
+                    getTeams(),
+                    getWeeklyStats(CURRENT_WEEK),
+                    supabase
+                        .from('weekly_rosters')
+                        .select('league_member_id, college_team_id, unit_type, roster_slot')
+                        .eq('league_id', leagueId)
+                        .eq('week', CURRENT_WEEK)
+                        .eq('roster_slot', 'STARTER')
+                ])
+
+                if (rosterResult.error) {
+                    throw rosterResult.error
+                }
+
+                const teamMap = new Map(collegeTeams.map(team => [team.id, team]))
+                const weeklyMap = new Map(
+                    weeklyStats.map(team => [team.team.trim().toLowerCase(), team])
+                )
+
+                const totals: Record<string, number> = {}
+                const now = new Date()
+
+                await Promise.all(
+                    (rosterResult.data ?? []).map(async row => {
+                        const collegeTeam = teamMap.get(row.college_team_id)
+                        if (!collegeTeam) return
+
+                        const weeklyTeam = weeklyMap.get(collegeTeam.name.trim().toLowerCase())
+                        const gameStart = weeklyTeam?.gameStart
+
+                        if (!gameStart || now < gameStart) {
+                            return
+                        }
+
+                        const liveTeam = await getLiveTeamStats(collegeTeam.name, CURRENT_WEEK)
+
+                        if (!liveTeam?.stats) return
+
+                        const score = calculateUnitScore(
+                            row.unit_type as ScoringUnitType,
+                            liveTeam.stats
+                        )
+
+                        totals[row.league_member_id] =
+                            (totals[row.league_member_id] ?? 0) + score
+                    })
+                )
+
+                if (!cancelled) {
+                    setLiveScores(totals)
+                }
+            } catch (error) {
+                console.error('Failed to refresh live schedule scores:', error)
+            } finally {
+                refreshing = false
+            }
+        }
+
+        void refreshLiveScores()
+
+        const interval = window.setInterval(() => {
+            void refreshLiveScores()
+        }, 15000)
+
+        return () => {
+            cancelled = true
+            window.clearInterval(interval)
+        }
+    }, [leagueId])
 
     useEffect(() => {
         async function loadSchedule() {
@@ -163,10 +253,6 @@ export default function Schedule() {
                 setLoading(false)
                 return
             }
-
-            //if (CURRENT_WEEK >= 11) {
-            //    await advancePlayoffs(leagueId, CURRENT_WEEK)
-            //}
 
             try {
                 const {data: memberData, error: memberError,} = await supabase
@@ -291,14 +377,22 @@ export default function Schedule() {
                                         const team1Name = getTeamName(matchup.team1_id)
                                         const team2Name = getTeamName(matchup.team2_id)
 
-                                        const hasScore = (matchup.team1_score !== null) && (matchup.team2_score !== null)
+                                        const isLiveWeek = week === CURRENT_WEEK && week >= 11 && week <= 13
+
+                                        const team1Score =
+                                            isLiveWeek ? liveScores[matchup.team1_id] ?? matchup.team1_score : matchup.team1_score
+
+                                        const team2Score =
+                                            isLiveWeek ? liveScores[matchup.team2_id] ?? matchup.team2_score : matchup.team2_score
+
+                                        const hasScore = team1Score !== null && team2Score !== null
 
                                         return (
                                             <MatchupRow key={matchup.id}>
                                                 <Team1>{team1Name}</Team1>
 
                                                 <Score>
-                                                    {hasScore ? `${matchup.team1_score?.toFixed(1)} - ${matchup.team2_score?.toFixed(1)}` : 'vs'}
+                                                    {hasScore ? `${team1Score?.toFixed(1)} - ${team2Score?.toFixed(1)}` : 'vs'}
                                                 </Score>
 
                                                 <Team2>{team2Name}</Team2>

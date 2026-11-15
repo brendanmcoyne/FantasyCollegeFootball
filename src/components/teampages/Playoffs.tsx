@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { BackButton } from '../../styles/commonstyles'
-import { getSeeds, getPlayoffSize, finals, advancePlayoffs, type PlayoffTeam, type PlayoffSize } from '../../utils/playoffs'
+import { getSeeds, getPlayoffSize, finals, type PlayoffTeam, type PlayoffSize } from '../../utils/playoffs'
 import { supabase } from '../lib/supabase'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 
@@ -137,7 +137,6 @@ export default function Playoffs() {
 
         async function loadPlayoffs() {
             try {
-                //await advancePlayoffs(leagueId!, CURRENT_WEEK)
                 const teams = await getSeeds(leagueId!)
 
                 const { data, error: matchupError } = await supabase
