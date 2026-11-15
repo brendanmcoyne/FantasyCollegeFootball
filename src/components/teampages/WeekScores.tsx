@@ -564,18 +564,20 @@ export default function WeekScores() {
                     throw membersError
                 }
 
-                if (week <= CURRENT_WEEK && week <= 13) {
-                    const { error: initializeError } = await supabase.rpc('initialize_weekly_rosters',
-                        {
-                            target_league_id: leagueId,
-                            target_week: week,
-                        }
-                    )
+                /*
+                    if (week <= CURRENT_WEEK && week <= 13) {
+                        const {error: initializeError} = await supabase.rpc('initialize_weekly_rosters',
+                            {
+                                target_league_id: leagueId,
+                                target_week: week,
+                            }
+                        )
 
-                    if (initializeError) {
-                        throw initializeError
+                        if (initializeError) {
+                            throw initializeError
+                        }
                     }
-                }
+                */
 
                 const { data: weeklyRosterRows, error: weeklyRosterError } =
                     await supabase
@@ -683,17 +685,17 @@ export default function WeekScores() {
                         }
                     })
 
-                if (week >= 11 && CURRENT_WEEK >= 11) {
-                    await Round1(leagueId)
-                }
+                //if (week >= 11 && CURRENT_WEEK >= 11) {
+                //    await Round1(leagueId)
+                //}
 
-                if (week >= 12 && CURRENT_WEEK >= 12 && size >= 4) {
-                    await Round2(leagueId)
-                }
+                //if (week >= 12 && CURRENT_WEEK >= 12 && size >= 4) {
+                //    await Round2(leagueId)
+                //}
 
-                if (week >= 13 && CURRENT_WEEK >= 13 && size >= 6) {
-                    await Round3(leagueId)
-                }
+                //if (week >= 13 && CURRENT_WEEK >= 13 && size >= 6) {
+                //    await Round3(leagueId)
+                //}
 
                 const { data: weekMatchups, error: matchupError } =
                     await supabase
@@ -744,51 +746,53 @@ export default function WeekScores() {
 
                 setMatchups(currentMatchups)
 
-                for (const matchup of weekComplete ? [] : currentMatchups) {
-                    const team1 = fantasyScores.find((team) => team.memberId === matchup.team1_id)
-                    const team2 = fantasyScores.find((team) => team.memberId === matchup.team2_id)
+                /*
+                    for (const matchup of weekComplete ? [] : currentMatchups) {
+                        const team1 = fantasyScores.find((team) => team.memberId === matchup.team1_id)
+                        const team2 = fantasyScores.find((team) => team.memberId === matchup.team2_id)
 
-                    if (!team1 || !team2) {
-                        continue
-                    }
-
-                    const { error: updateError } = await supabase
-                        .from('league_matchups')
-                        .update(weekStarted ? {
-                            team1_score: team1.starterTotal, team2_score: team2.starterTotal,
-                            winner_id: weekComplete
-                                ? (() => {
-                                    if (team1.starterTotal > team2.starterTotal) {
-                                        return matchup.team1_id
-                                    }
-
-                                    if (team2.starterTotal > team1.starterTotal) {
-                                        return matchup.team2_id
-                                    }
-
-                                    if (week >= 11 && week <= 13) {
-                                        const higherSeed = currentPlayoffSeeds
-                                            .filter((seed) => seed.memberId === matchup.team1_id || seed.memberId === matchup.team2_id)
-                                            .sort((a, b) => a.seed - b.seed)[0]
-
-                                        if (!higherSeed) {
-                                            throw new Error(`Missing playoff seed for matchup ${matchup.id}`)
-                                        }
-
-                                        return higherSeed.memberId
-                                    }
-
-                                    return matchup.team1_id
-                                })() : null,
-                        } : {
-                            team1_score: null, team2_score: null, winner_id: null,
+                        if (!team1 || !team2) {
+                            continue
                         }
-                        ).eq('id', matchup.id)
 
-                    if (updateError) {
-                        throw updateError
+                        const {error: updateError} = await supabase
+                            .from('league_matchups')
+                            .update(weekStarted ? {
+                                    team1_score: team1.starterTotal, team2_score: team2.starterTotal,
+                                    winner_id: weekComplete
+                                        ? (() => {
+                                            if (team1.starterTotal > team2.starterTotal) {
+                                                return matchup.team1_id
+                                            }
+
+                                            if (team2.starterTotal > team1.starterTotal) {
+                                                return matchup.team2_id
+                                            }
+
+                                            if (week >= 11 && week <= 13) {
+                                                const higherSeed = currentPlayoffSeeds
+                                                    .filter((seed) => seed.memberId === matchup.team1_id || seed.memberId === matchup.team2_id)
+                                                    .sort((a, b) => a.seed - b.seed)[0]
+
+                                                if (!higherSeed) {
+                                                    throw new Error(`Missing playoff seed for matchup ${matchup.id}`)
+                                                }
+
+                                                return higherSeed.memberId
+                                            }
+
+                                            return matchup.team1_id
+                                        })() : null,
+                                } : {
+                                    team1_score: null, team2_score: null, winner_id: null,
+                                }
+                            ).eq('id', matchup.id)
+
+                        if (updateError) {
+                            throw updateError
+                        }
                     }
-                }
+                */
 
                 setScores(fantasyScores)
             } catch (err) {

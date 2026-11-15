@@ -137,7 +137,7 @@ export default function Playoffs() {
 
         async function loadPlayoffs() {
             try {
-                await advancePlayoffs(leagueId!, CURRENT_WEEK)
+                //await advancePlayoffs(leagueId!, CURRENT_WEEK)
                 const teams = await getSeeds(leagueId!)
 
                 const { data, error: matchupError } = await supabase

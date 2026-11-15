@@ -164,9 +164,9 @@ export default function Schedule() {
                 return
             }
 
-            if (CURRENT_WEEK >= 11) {
-                await advancePlayoffs(leagueId, CURRENT_WEEK)
-            }
+            //if (CURRENT_WEEK >= 11) {
+            //    await advancePlayoffs(leagueId, CURRENT_WEEK)
+            //}
 
             try {
                 const {data: memberData, error: memberError,} = await supabase
