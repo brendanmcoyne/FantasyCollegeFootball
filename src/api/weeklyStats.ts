@@ -211,6 +211,7 @@ export interface LiveTeamStats {
     teamName: string
     eventId: string
     stats: TeamStats
+    gameStatus?: string | null
 }
 
 export async function getLiveGameStats(eventId: string): Promise<LiveTeamStats[]> {
@@ -395,9 +396,7 @@ export async function getEspnTeamSchedule(espnTeamId: string, season = 2026): Pr
     )
 
     if (!response.ok) {
-        throw new Error(
-            `Failed to load ESPN schedule for team ${espnTeamId}.`
-        )
+        throw new Error(`Failed to load ESPN schedule for team ${espnTeamId}.`)
     }
 
     const data: EspnTeamScheduleResponse = await response.json()
@@ -418,13 +417,6 @@ export async function getEspnTeamSchedule(espnTeamId: string, season = 2026): Pr
     }))
 }
 
-export async function getEspnEventIdForWeek(espnTeamId: string, week: number, season = 2026): Promise<string | null> {
-    const schedule = await getEspnTeamSchedule(espnTeamId, season)
-    const game = schedule.find((game) => game.week === week)
-
-    return game?.eventId ?? null
-}
-
 export async function getLiveTeamStats(teamName: string, week: number, season = 2026): Promise<LiveTeamStats | null> {
     const espnTeamId = await getEspnTeamId(teamName)
 
@@ -432,15 +424,25 @@ export async function getLiveTeamStats(teamName: string, week: number, season = 
         return null
     }
 
-    const eventId = await getEspnEventIdForWeek(espnTeamId, week, season)
+    const schedule = await getEspnTeamSchedule(espnTeamId, season)
+    const game = schedule.find((game) => game.week === week)
 
-    if (!eventId) {
+    if (!game) {
         return null
     }
 
-    const gameStats = await getLiveGameStats(eventId)
+    const gameStats = await getLiveGameStats(game.eventId)
 
-    return (
-        gameStats.find((team) => team.espnTeamId === espnTeamId) ?? null
+    const teamStats = gameStats.find(
+        (team) => team.espnTeamId === espnTeamId
     )
+
+    if (!teamStats) {
+        return null
+    }
+
+    return {
+        ...teamStats,
+        gameStatus: game.status
+    }
 }

@@ -203,12 +203,15 @@ export async function Round3(leagueId: string): Promise<void> {
     let semifinal2: CompletedMatchup
 
     if (size === 6) {
-        semifinal1 = round2.find((game) => game.team1_id === seeds[0].memberId)!
-        semifinal2 = round2.find((game) => game.team1_id === seeds[1].memberId)!
+        const first = round2.find((game) => game.team1_id === seeds[0].memberId)
+        const second = round2.find((game) => game.team1_id === seeds[1].memberId)
 
-        if (!semifinal1 || !semifinal2) {
+        if (!first || !second) {
             throw new Error('Semifinal matchups are invalid.')
         }
+
+        semifinal1 = first
+        semifinal2 = second
     } else {
         const firstRound = await roundMatchups(leagueId, 11)
         const seed = (number: number) => seeds[number - 1].memberId
@@ -221,26 +224,38 @@ export async function Round3(leagueId: string): Promise<void> {
     await createRound(leagueId, 13, [{ team1_id: getWinner(semifinal1), team2_id: getWinner(semifinal2) }])
 }
 
+const advancingLeagues = new Set<string>()
+
 export async function advancePlayoffs(leagueId: string, currentWeek: number): Promise<void> {
     if (currentWeek < 11) return
 
-    await Round1(leagueId)
-
-    if (currentWeek >= 12) {
-        await setRound(leagueId, 11)
-        await Round2(leagueId)
+    if (advancingLeagues.has(leagueId)) {
+        return
     }
 
-    if (currentWeek >= 13) {
-        await setRound(leagueId, 12)
-        await Round3(leagueId)
-    }
+    advancingLeagues.add(leagueId)
 
-    const size = getPlayoffSize((await getSeeds(leagueId)).length)
-    const championshipWeek = finals(size)
+    try {
+        await Round1(leagueId)
 
-    if (currentWeek > championshipWeek) {
-        await setRound(leagueId, championshipWeek)
+        if (currentWeek >= 12) {
+            await setRound(leagueId, 11)
+            await Round2(leagueId)
+        }
+
+        if (currentWeek >= 13) {
+            await setRound(leagueId, 12)
+            await Round3(leagueId)
+        }
+
+        const size = getPlayoffSize((await getSeeds(leagueId)).length)
+        const championshipWeek = finals(size)
+
+        if (currentWeek > championshipWeek) {
+            await setRound(leagueId, championshipWeek)
+        }
+    } finally {
+        advancingLeagues.delete(leagueId)
     }
 }
 
@@ -267,7 +282,11 @@ async function setRound(leagueId: string, week: number): Promise<void> {
                     ? matchup.team2_id : seed1.seed < seed2.seed
                         ? matchup.team1_id : matchup.team2_id
 
-        if (matchup.winner_id === winnerId) {
+        if (matchup.winner_id !== null) {
+            if (matchup.winner_id !== winnerId) {
+                throw new Error(`Matchup is already finalized.`)
+            }
+
             continue
         }
 

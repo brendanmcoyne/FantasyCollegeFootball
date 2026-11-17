@@ -14,7 +14,7 @@ import type { WeeklyTeamData } from '../../api/weeklyStats'
 import { BackButton } from "../../styles/commonstyles";
 import { getScoreBreakdown } from "../../utils/ScoringBreakdown"
 import { getLeagueStandings, type Standing } from '../../utils/standings'
-import { getSeeds, Round1, Round2, Round3, finals, getPlayoffSize, type PlayoffTeam, type PlayoffSize } from '../../utils/playoffs'
+import { getSeeds, finals, getPlayoffSize, type PlayoffTeam, type PlayoffSize } from '../../utils/playoffs'
 
 interface RosterRow {
     id: string
@@ -685,18 +685,6 @@ export default function WeekScores() {
                         }
                     })
 
-                //if (week >= 11 && CURRENT_WEEK >= 11) {
-                //    await Round1(leagueId)
-                //}
-
-                //if (week >= 12 && CURRENT_WEEK >= 12 && size >= 4) {
-                //    await Round2(leagueId)
-                //}
-
-                //if (week >= 13 && CURRENT_WEEK >= 13 && size >= 6) {
-                //    await Round3(leagueId)
-                //}
-
                 const { data: weekMatchups, error: matchupError } =
                     await supabase
                         .from('league_matchups')
@@ -745,82 +733,6 @@ export default function WeekScores() {
                     })
 
                 setMatchups(currentMatchups)
-
-                if (week >= 1 && week <= 10) {
-                    const verifiedMatchups = currentMatchups.map((matchup) => {
-                        const team1 = fantasyScores.find(
-                            (team) => team.memberId === matchup.team1_id
-                        )
-
-                        const team2 = fantasyScores.find(
-                            (team) => team.memberId === matchup.team2_id
-                        )
-
-                        return {
-                            week,
-                            matchup_id: matchup.id,
-                            team1_id: matchup.team1_id,
-                            team1_name: team1?.teamName ?? 'Unknown',
-                            team1_score: team1?.starterTotal ?? null,
-                            team2_id: matchup.team2_id,
-                            team2_name: team2?.teamName ?? 'Unknown',
-                            team2_score: team2?.starterTotal ?? null,
-                        }
-                    })
-
-                    console.log(
-                        `VERIFIED WEEK ${week} MATCHUPS:`,
-                        JSON.stringify(verifiedMatchups, null, 2)
-                    )
-                }
-                /*
-                    for (const matchup of weekComplete ? [] : currentMatchups) {
-                        const team1 = fantasyScores.find((team) => team.memberId === matchup.team1_id)
-                        const team2 = fantasyScores.find((team) => team.memberId === matchup.team2_id)
-
-                        if (!team1 || !team2) {
-                            continue
-                        }
-
-                        const {error: updateError} = await supabase
-                            .from('league_matchups')
-                            .update(weekStarted ? {
-                                    team1_score: team1.starterTotal, team2_score: team2.starterTotal,
-                                    winner_id: weekComplete
-                                        ? (() => {
-                                            if (team1.starterTotal > team2.starterTotal) {
-                                                return matchup.team1_id
-                                            }
-
-                                            if (team2.starterTotal > team1.starterTotal) {
-                                                return matchup.team2_id
-                                            }
-
-                                            if (week >= 11 && week <= 13) {
-                                                const higherSeed = currentPlayoffSeeds
-                                                    .filter((seed) => seed.memberId === matchup.team1_id || seed.memberId === matchup.team2_id)
-                                                    .sort((a, b) => a.seed - b.seed)[0]
-
-                                                if (!higherSeed) {
-                                                    throw new Error(`Missing playoff seed for matchup ${matchup.id}`)
-                                                }
-
-                                                return higherSeed.memberId
-                                            }
-
-                                            return matchup.team1_id
-                                        })() : null,
-                                } : {
-                                    team1_score: null, team2_score: null, winner_id: null,
-                                }
-                            ).eq('id', matchup.id)
-
-                        if (updateError) {
-                            throw updateError
-                        }
-                    }
-                */
-
                 scoresRef.current = fantasyScores
                 setScores(fantasyScores)
             } catch (err) {
@@ -831,7 +743,7 @@ export default function WeekScores() {
         }
 
         void loadScores()
-    }, [leagueId, week, weekStarted, weekComplete])
+    }, [leagueId, week, weekStarted])
 
     useEffect(() => {
         if (week !== CURRENT_WEEK) {
@@ -899,7 +811,7 @@ export default function WeekScores() {
         return () => {
             window.clearInterval(interval)
         }
-    }, [week])
+    }, [week, matchups])
 
     function GroupedMatchupDisplay({team1, team2,}: { team1: FantasyTeamScore, team2: FantasyTeamScore }) {
         const getRecord = (team: FantasyTeamScore) => {
@@ -1061,8 +973,7 @@ export default function WeekScores() {
 
                         return (
                             <MatchupTab
-                                key={matchup.id}
-                                type="button"
+                                key={matchup.id} type="button"
                                 $active={selectedMatchupId === matchup.id}
                                 onClick={() => setSelectedMatchupId(matchup.id)}
                             >
@@ -1092,13 +1003,8 @@ export default function WeekScores() {
                 {matchups
                     .filter((matchup) => matchup.id === selectedMatchupId)
                     .map((matchup) => {
-                        const team1 = scores.find(
-                            (team) => team.memberId === matchup.team1_id
-                        )
-
-                        const team2 = scores.find(
-                            (team) => team.memberId === matchup.team2_id
-                        )
+                        const team1 = scores.find((team) => team.memberId === matchup.team1_id)
+                        const team2 = scores.find((team) => team.memberId === matchup.team2_id)
 
                         if (!team1 || !team2) {
                             return null

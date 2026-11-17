@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { BackButton } from '../../styles/commonstyles'
-import { getSeeds, getPlayoffSize, finals, type PlayoffTeam, type PlayoffSize } from '../../utils/playoffs'
+import { getSeeds, getPlayoffSize, finals, advancePlayoffs, type PlayoffTeam, type PlayoffSize } from '../../utils/playoffs'
 import { supabase } from '../lib/supabase'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 
@@ -126,6 +126,7 @@ export default function Playoffs() {
     const [error, setError] = useState('')
 
 
+
     useEffect(() => {
         if (!leagueId) {
             setError('League ID is missing.')
@@ -134,8 +135,12 @@ export default function Playoffs() {
         }
 
         let cancelled = false
+        let refreshing = false
 
         async function loadPlayoffs() {
+            if (refreshing) return
+            refreshing = true
+
             try {
                 const teams = await getSeeds(leagueId!)
 
@@ -159,14 +164,35 @@ export default function Playoffs() {
                     setError(err instanceof Error ? err.message : 'Failed to load playoffs.')
                 }
             } finally {
+                refreshing = false
+
                 if (!cancelled) {
                     setLoading(false)
                 }
             }
         }
 
-        void loadPlayoffs()
-        const interval = window.setInterval(() => {void loadPlayoffs()}, 15000)
+        async function initializePlayoffs() {
+            if (CURRENT_WEEK >= 12) {
+                try {
+                    await advancePlayoffs(leagueId!, CURRENT_WEEK)
+                } catch (err) {
+                    if (!cancelled) {
+                        setError(err instanceof Error ? err.message : 'Failed to advance playoffs.')
+                    }
+                }
+            }
+
+            if (!cancelled) {
+                await loadPlayoffs()
+            }
+        }
+
+        void initializePlayoffs()
+
+        const interval = window.setInterval(() => {
+            void loadPlayoffs()
+        }, 15000)
 
         return () => {
             cancelled = true

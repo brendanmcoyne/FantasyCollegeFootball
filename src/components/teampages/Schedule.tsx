@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { BackButton } from '../../styles/commonstyles'
 import { CURRENT_WEEK } from '../../bigseasonfile'
 import { supabase } from '../lib/supabase'
-import { finals, getPlayoffSize, advancePlayoffs, type PlayoffSize } from '../../utils/playoffs'
+import { finals, getPlayoffSize, type PlayoffSize } from '../../utils/playoffs'
 
 import { getTeams } from '../../api/cfbApi'
 import { getWeeklyStats, getLiveTeamStats } from '../../api/weeklyStats'
@@ -214,13 +214,8 @@ export default function Schedule() {
 
                         if (!liveTeam?.stats) return
 
-                        const score = calculateUnitScore(
-                            row.unit_type as ScoringUnitType,
-                            liveTeam.stats
-                        )
-
-                        totals[row.league_member_id] =
-                            (totals[row.league_member_id] ?? 0) + score
+                        const score = calculateUnitScore(row.unit_type as ScoringUnitType, liveTeam.stats)
+                        totals[row.league_member_id] = (totals[row.league_member_id] ?? 0) + score
                     })
                 )
 
