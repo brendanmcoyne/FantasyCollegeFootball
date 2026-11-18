@@ -89,10 +89,11 @@ const WeekLinks = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    align-items: center;
 
     @media (max-width: 700px) {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
     }
 `;
@@ -446,10 +447,8 @@ const MatchupTab = styled.button<{ $active: boolean }>`
     min-width: 0;
     padding: 14px 16px;
     border-radius: 10px;
-    border: 2px solid ${({ $active }) =>
-            $active ? '#2563eb' : '#e5e7eb'};
-    background: ${({ $active }) =>
-            $active ? '#eff6ff' : '#ffffff'};
+    border: 2px solid ${({ $active }) => $active ? '#2563eb' : '#e5e7eb'};
+    background: ${({ $active }) => $active ? '#eff6ff' : '#ffffff'};
     color: #111827;
     cursor: pointer;
     text-align: left;
@@ -482,6 +481,12 @@ const MatchupTabTeam = styled.div`
     strong {
         flex-shrink: 0;
     }
+`;
+
+const WeekNavigation = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 `;
 
 function formatUnitType(unitType: ScoringUnitType): string {
@@ -544,7 +549,7 @@ export default function WeekScores() {
         async function loadScores() {
             const maxWeek = Math.min(CURRENT_WEEK, 13)
 
-            if (!leagueId || !Number.isInteger(week) || week < 1 || week > 13 || (week >= 11 && week > maxWeek)) {
+            if (!leagueId || !Number.isInteger(week) || week < 1 || week > 13) {
                 setError('This week is not available yet.')
                 setLoading(false)
                 return
@@ -561,8 +566,15 @@ export default function WeekScores() {
                 const size = getPlayoffSize(loadedStandings.length)
                 setPlayoffSize(size)
 
+                if (week >= 11 && week > maxWeek && week <= finals(size)) {
+                    throw new Error('This week is not available yet.')
+                }
+
                 if (week >= 11 && week > finals(size)) {
-                    throw new Error(`This league's playoffs ended in Week ${finals(size)}.`)
+                    navigate(`/league/${leagueId}/week-scores/${finals(size)}`, {
+                        replace: true
+                    })
+                    return
                 }
 
                 const currentPlayoffSeeds = week >= 11 ? await getSeeds(leagueId) : []
@@ -941,18 +953,44 @@ export default function WeekScores() {
                     {week >= 11 ? `Week ${week} — ${playoffRoundName(week, playoffSize)}` : `Week ${week} League Scores`}
                 </h1>
 
-                <WeekLinks>
-                    {Array.from({length: Math.max(10, Math.min(CURRENT_WEEK, finals(playoffSize ?? 6)))}, (_, index) => {
+                <WeekNavigation>
+                    <WeekLinks>
+                        {Array.from({ length: 10 }, (_, index) => {
                             const weekNumber = index + 1
 
-                        return (
-                            <WeekLink key={weekNumber} to={weekNumber === 14 ? `/league/${leagueId}/playoffs`
-                                : `/league/${leagueId}/week-scores/${weekNumber}`} $active={weekNumber === week}>
-                                {weekNumber >= 11 ? playoffRoundName(weekNumber, playoffSize) : `Week ${weekNumber}`}
-                            </WeekLink>
-                        )
-                    })}
-                </WeekLinks>
+                            return (
+                                <WeekLink
+                                    key={weekNumber}
+                                    to={`/league/${leagueId}/week-scores/${weekNumber}`}
+                                    $active={weekNumber === week}
+                                >
+                                    Week {weekNumber}
+                                </WeekLink>
+                            )
+                        })}
+                    </WeekLinks>
+
+                    <WeekLinks>
+                        {Array.from(
+                            {
+                                length: Math.max(0, Math.min(CURRENT_WEEK, finals(playoffSize ?? 6)) - 10)
+                            },
+                            (_, index) => {
+                                const weekNumber = index + 11
+
+                                return (
+                                    <WeekLink
+                                        key={weekNumber}
+                                        to={`/league/${leagueId}/week-scores/${weekNumber}`}
+                                        $active={weekNumber === week}
+                                    >
+                                        {playoffRoundName(weekNumber, playoffSize)}
+                                    </WeekLink>
+                                )
+                            }
+                        )}
+                    </WeekLinks>
+                </WeekNavigation>
 
             <p>
                 <Status>{weekComplete ? 'Final' : weekStarted ? 'In Progress' : 'Not Started'}</Status>

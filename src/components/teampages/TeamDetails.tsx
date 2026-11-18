@@ -372,15 +372,12 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
                     <TeamHeaderContent>
                         <TeamBackgroundLogo
                             src={getTeamLogo(teamName)}
-                            alt=""
-                            aria-hidden="true"
+                            alt="" aria-hidden="true"
                         />
 
                         <TeamHeaderForeground>
                             <TeamNameRow>
-                                <TeamHeaderName>
-                                    {teamName}
-                                </TeamHeaderName>
+                                <TeamHeaderName>{teamName}</TeamHeaderName>
 
                                 <TeamUnitLabel>
                                     {isOpponent
@@ -441,9 +438,7 @@ export default function TeamDetails({teamName, teamId, unitType, isOpponent = fa
                         </TeamHeaderForeground>
                     </TeamHeaderContent>
 
-                    <SmallCloseButton onClick={onClose}>
-                        Close
-                    </SmallCloseButton>
+                    <SmallCloseButton onClick={onClose}>Close</SmallCloseButton>
                 </StyledTeamModalHeader>
 
                 <TabBar>
@@ -941,10 +936,8 @@ function ScheduleContent({teamName, unitType}: { teamName: string, unitType: Ros
                     )
 
                     return (
-                        team?.score !== null &&
-                        team?.score !== undefined &&
-                        opponent?.score !== null &&
-                        opponent?.score !== undefined
+                        team?.score !== null && team?.score !== undefined &&
+                        opponent?.score !== null && opponent?.score !== undefined
                     )
                 })
 
@@ -1006,7 +999,7 @@ function ScheduleContent({teamName, unitType}: { teamName: string, unitType: Ros
 
     return (
         <ScheduleList>
-            {Array.from({ length: 13 }, (_, week) => week).map((week) => {
+            {Array.from({ length: 14 }, (_, week) => week).map((week) => {
                 const opponent = getTeamOpponent(teamName, week)
 
                 if (opponent === 'BYE') {
